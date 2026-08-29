@@ -77,17 +77,18 @@
      (capabilities . (rust x86_64 assembly runtime testing proof))
      (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2))
      (origin . wsm-os)
-     (status . reopened-ci-failure)
+     (done . t)
+     (context . "verified 2026-08-29: demangled exact allowlist passes locally and in GitHub Actions run 33266814494; raw Rust crate hashes are intentionally excluded from the stable boundary. Corrective commits c7b8536 and 5986e67.")
      (description . "Replace the hosted-runtime blacklist grep with an exact undefined-symbol allowlist at the freestanding link boundary. Inspect the final bare runtime object/archive with nm or llvm-nm; permit only explicitly documented compiler/runtime support symbols and versioned wsm_* ABI imports as appropriate, and fail on every other undefined symbol. Prove that calloc/realloc/write/open/socket/pthread/__libc-style leaks cannot pass merely because they were absent from the old blacklist.")))
 
    ("WSM-OS-SERIAL-BOOT-WITNESS-M3C" .
     ((priority . 9.0)
-     (status . reopened-ci-failure)
+     (done . t)
      (capabilities . (rust x86_64 uefi qemu serial testing ci proof))
      (depends-on . (WSM-OS-BOOT-TOOLCHAIN-PIN-M3B1))
      (origin . wsm-os)
      (description . "Create the minimal freestanding boot image with entry point, panic path and serial writer. Under a bounded QEMU run emit exactly WSM-OS BOOT schema=1 arch=x86_64 status=ok and exit through the selected test mechanism. CI must distinguish success, panic and timeout. QEMU evidence only; no physical-disk or hardware write.")
-     (context . "completed 2026-08-29: COM1 serial writer, structured BOOT/PANIC protocol, isa-debug-exit, run-qemu-uefi.sh, and CI step. Commit da3be30.")))
+     (context . "verified 2026-08-29: COM1 serial writer emitted the exact final BOOT witness under bounded QEMU/UEFI; panic and timeout remain distinct exits. GitHub Actions run 33266814494 passed. Implementation da3be30; corrective commits c7b8536, 6cc1f35, 5986e67.")))
 
    ("WSM-OS-FIRST-QEMU-PARITY-M4" .
     ((priority . 10.0)
