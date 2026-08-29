@@ -25,7 +25,7 @@ fn main() {
     let source_digest = data_sha(source.as_bytes());
 
     let exprs = cml::parser::parse(source).unwrap();
-    let program = cml::lower::lower_program(&exprs).unwrap();
+    let program = cml::lower::lower_program_with_tail_calls(&exprs).unwrap();
     let assembly_str = X86FreestandingBackend::new()
         .compile_program(&program)
         .unwrap();

@@ -63,7 +63,7 @@ pub const MY_LISP_CONTRACT: &str = "3.0";
 pub const MY_LISP_SHA: &str = "667b587394dc8d3fc8dadff7c925e5bce68ed887";
 pub const CML_CLAIMED_CONTRACT: &str = "2.0";
 pub const CML_SHA: &str = "58a76ce2a2a02fa766761c9eb1fed6afd7efd87d";
-pub const FIRST_FIXTURE_SOURCE: &str = "(cons (quote A) (quote B))";
+pub const FIRST_FIXTURE_SOURCE: &str = "(def loop (lambda (n) (cond ((eq n 0) (quote A)) (t (loop (- n 1)))))) (loop 100000)";
 pub const FIRST_FIXTURE_EXPECTED: &str = "(A . B)";
 
 /// Encode a signed 61-bit fixnum. Values outside the target ABI fail closed.

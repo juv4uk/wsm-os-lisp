@@ -11,5 +11,5 @@ wsm-os-runtime = { path = "../wsm-os-runtime" }
 wsm-os-target = { path = "../wsm-os-target" }
 
 [build-dependencies]
-cml = { git = "https://github.com/juv4uk/cml.git", rev = "58a76ce2a2a02fa766761c9eb1fed6afd7efd87d" }
+cml = { git = "https://github.com/juv4uk/cml.git", rev = "dd5382f2be6924be6b170092ba0989e68381b045" }
 wsm-os-target = { path = "../wsm-os-target" }
