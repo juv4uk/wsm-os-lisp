@@ -1,0 +1,9 @@
+[package]
+name = "wsm-os-runtime"
+version = "0.1.0"
+edition = "2024"
+description = "Bounded no_std runtime core for the wsm-os target ABI"
+publish = false
+
+[dependencies]
+wsm-os-target = { path = "../wsm-os-target" }

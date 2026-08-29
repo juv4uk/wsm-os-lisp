@@ -94,10 +94,12 @@ pub const fn encode_symbol(id: Word) -> Option<Word> {
 
 pub const fn decode_symbol(word: Word) -> Option<Word> {
     if tag(word) == Tag::Symbol as Word {
-        Some(word >> TAG_BITS)
-    } else {
-        None
+        let id = word >> TAG_BITS;
+        if id != 0 {
+            return Some(id);
+        }
     }
+    None
 }
 
 pub const fn tag(word: Word) -> Word {

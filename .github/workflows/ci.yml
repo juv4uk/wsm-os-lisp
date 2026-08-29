@@ -12,10 +12,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install stable Rust
-        run: rustup toolchain install stable --profile minimal
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup target add x86_64-unknown-none
       - name: Check formatting
         run: cargo fmt --check
       - name: Check no_std target library
         run: cargo check -p wsm-os-target --lib
+      - name: Check runtime on the bare-metal target
+        run: cargo check -p wsm-os-runtime --lib --target x86_64-unknown-none
+      - name: Prove runtime core has no host imports
+        run: scripts/check-runtime-symbols.sh
       - name: Run ABI and projection tests
-        run: cargo test -p wsm-os-target
+        run: cargo test --workspace

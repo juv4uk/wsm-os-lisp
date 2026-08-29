@@ -1,0 +1,15 @@
+[package]
+name = "wsm-os-hosted"
+version = "0.1.0"
+edition = "2024"
+description = "Hosted evidence harness for the wsm-os runtime ABI"
+publish = false
+build = "build.rs"
+
+[dependencies]
+wsm-os-runtime = { path = "../wsm-os-runtime" }
+wsm-os-target = { path = "../wsm-os-target" }
+
+[build-dependencies]
+cml = { git = "https://github.com/juv4uk/cml.git", rev = "45cbdc6cbbec756e1b03ef50dc3d1a77647ab14f" }
+wsm-os-target = { path = "../wsm-os-target" }

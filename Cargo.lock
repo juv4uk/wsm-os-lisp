@@ -3,5 +3,34 @@
 version = 4
 
 [[package]]
+name = "cml"
+version = "0.1.0"
+source = "git+https://github.com/juv4uk/cml.git?rev=45cbdc6cbbec756e1b03ef50dc3d1a77647ab14f#45cbdc6cbbec756e1b03ef50dc3d1a77647ab14f"
+dependencies = [
+ "wsm-os-target 0.1.0 (git+https://github.com/juv4uk/wsm-os.git?rev=fe168ebc572c82c237faa4a952eec63e531dcc47)",
+]
+
+[[package]]
+name = "wsm-os-hosted"
+version = "0.1.0"
+dependencies = [
+ "cml",
+ "wsm-os-runtime",
+ "wsm-os-target 0.1.0",
+]
+
+[[package]]
+name = "wsm-os-runtime"
+version = "0.1.0"
+dependencies = [
+ "wsm-os-target 0.1.0",
+]
+
+[[package]]
 name = "wsm-os-target"
 version = "0.1.0"
+
+[[package]]
+name = "wsm-os-target"
+version = "0.1.0"
+source = "git+https://github.com/juv4uk/wsm-os.git?rev=fe168ebc572c82c237faa4a952eec63e531dcc47#fe168ebc572c82c237faa4a952eec63e531dcc47"
