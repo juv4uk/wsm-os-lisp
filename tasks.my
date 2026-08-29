@@ -52,14 +52,17 @@
      (depends-on . (WSM-OS-BOOT-SUBSTRATE-DECISION-M3A))
      (origin . wsm-os)
      (done . t)
-     (description . "Reconcile ADR-002 with the executable boot path. The ADR selects maintained bootloader v0.11 and UEFI, while the current code resolves bootloader 0.9.x and cargo bootimage. Choose and implement one honest path; if the ratified UEFI decision remains, migrate to the v0.11 bootloader_api/builder flow and remove legacy bootimage assumptions. Exact dependency, lockfile, image format, build command, QEMU firmware and CI evidence must agree. Do not call a legacy BIOS bootimage UEFI evidence.")))
+     (description . "Reconcile ADR-002 with the executable boot path. The ADR selects maintained bootloader v0.11 and UEFI, while the current code resolves bootloader 0.9.x and cargo bootimage. Choose and implement one honest path; if the ratified UEFI decision remains, migrate to the v0.11 bootloader_api/builder flow and remove legacy bootimage assumptions. Exact dependency, lockfile, image format, build command, QEMU firmware and CI evidence must agree. Do not call a legacy BIOS bootimage UEFI evidence.")
+     (context . "completed 2026-08-29 under direct owner assignment: a5797f5 replaces the temporary legacy-only 755e0e9 resolution with bootloader_api/UefiBoot 0.11.17, an explicit UEFI image-builder and no bootimage runner. Local 2,162,688-byte UEFI image created; GitHub Actions 33257753471 SUCCESS after formatting follow-up 64ba9df.")))
 
    ("WSM-OS-BOOT-TOOLCHAIN-PIN-M3B1" .
     ((priority . 9.5)
+     (done . t)
      (capabilities . (guix rust qemu x86_64 build ci testing proof))
      (depends-on . (WSM-OS-BOOT-SUBSTRATE-REALIGN-M3A1))
      (origin . wsm-os)
-     (description . "Make the selected boot toolchain reproducible rather than merely working on latest nightly. Pin the exact Rust nightly/components and every image-builder or bootimage tool actually used; record QEMU/firmware discovery and bounded build commands in repo configuration and CI. Completion requires a clean build from the declared pins and a pushed CI run; moving nightly or an undeclared global cargo tool is not pinned evidence.")))
+     (description . "Make the selected boot toolchain reproducible rather than merely working on latest nightly. Pin the exact Rust nightly/components and every image-builder or bootimage tool actually used; record QEMU/firmware discovery and bounded build commands in repo configuration and CI. Completion requires a clean build from the declared pins and a pushed CI run; moving nightly or an undeclared global cargo tool is not pinned evidence.")
+     (context . "completed 2026-08-29: rust-toolchain.toml pins nightly-2026-07-27, rust-src, llvm-tools-preview and x86_64-unknown-none; Cargo pins bootloader/bootloader_api 0.11.17. Moving nightly wcslen failure is documented. GitHub Actions 33257753471 built the kernel and non-empty UEFI image successfully.")))
 
    ("WSM-OS-M2-ORACLE-EVIDENCE-REALIGN" .
     ((priority . 9.5)
