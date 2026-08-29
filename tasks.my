@@ -60,6 +60,27 @@
      (origin . wsm-os)
      (description . "Link the exact CML-generated M1 object and M2 runtime into the M3 image, boot in QEMU, and emit WSM-OS RESULT schema=1 value=(A . B) status=ok. Commit source fixture, oracle output, contract SHAs, generated-artifact digest and serial transcript together. Compare canonical value and failure class, not only exit status. Mark QEMU-BOOT-PARITY, never physical-hardware parity.")))
 
+   ("WSM-OS-M4-COMPILER-ARTIFACT-BUNDLE" .
+    ((priority . 9.5)
+     (capabilities . (cml compiler x86_64 assembly reproducibility testing proof))
+     (depends-on . (WSM-OS-CML-X86-FREESTANDING-M1 WSM-OS-HOST-RUNTIME-PARITY-M2))
+     (origin . wsm-os)
+     (description . "Prepare the compiler-owned half of M4 without touching boot/runtime: one deterministic command must compile the frozen WSM fixture through pinned CML into GNU assembly and an object, then emit a manifest containing source digest, CML SHA, target-contract SHA, object digest, exported entry symbol and exact undefined wsm_* imports. Run twice and require byte-identical assembly/object/manifest; fail closed on any extra import. Commit the small fixture bundle or a reproducible generator as decided by existing artifact policy. Do not add language features or claim QEMU parity.")))
+
+   ("WSM-OS-CML-X86-FIXNUM-BRANCH-M5A" .
+    ((priority . 7.5)
+     (capabilities . (cml compiler x86_64 assembly conformance testing proof))
+     (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
+     (origin . wsm-os)
+     (description . "Extend the x86_64 freestanding backend by exactly one conformance slice: ABI-range fixnum literals, atomic eq, and cond branching on canonical NIL only. Add target preflight, host-link parity and QEMU parity fixtures against the pinned my-lisp oracle. Unsupported arithmetic and closures must remain named compile errors; no silent fallback.")))
+
+   ("WSM-OS-CML-X86-ARITHMETIC-M5B" .
+    ((priority . 7.0)
+     (capabilities . (cml compiler x86_64 assembly arithmetic conformance testing proof))
+     (depends-on . (WSM-OS-CML-X86-FIXNUM-BRANCH-M5A))
+     (origin . wsm-os)
+     (description . "Add the next isolated x86_64 conformance slice: checked fixnum addition and subtraction with exact overflow mapped to the ratified runtime error boundary. Differentially verify boundary values against pinned my-lisp in hosted and QEMU paths. Do not add multiplication, closures, GC, or widen the numeric model in the same change.")))
+
    ("WSM-OS-CONFORMANCE-LADDER-M5" .
     ((priority . 7.0)
      (capabilities . (my-lisp cml x86_64 assembly conformance testing proof))
@@ -72,6 +93,7 @@
      (capabilities . (rust no-std my-lisp architecture testing evidence))
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
      (origin . wsm-os)
+     (description . "After the AOT witness is green, run a bounded portability spike for my-lisp core: classify std imports, move eligible containers to alloc/core behind features, make time/stdin/global capability registry explicit platform services, and test no_std+alloc compilation separately. Decide with measured code size/complexity whether to retain AOT only or add an interactive interpreter. Do not rewrite the hosted core or claim Rc collects cycles.")))
 
    ("WSM-OS-COPYING-GC-M7" .
     ((priority . 5.0)
