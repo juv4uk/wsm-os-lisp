@@ -51,6 +51,7 @@
      (capabilities . (research rust x86_64 uefi qemu architecture testing proof))
      (depends-on . (WSM-OS-BOOT-SUBSTRATE-DECISION-M3A))
      (origin . wsm-os)
+     (done . t)
      (description . "Reconcile ADR-002 with the executable boot path. The ADR selects maintained bootloader v0.11 and UEFI, while the current code resolves bootloader 0.9.x and cargo bootimage. Choose and implement one honest path; if the ratified UEFI decision remains, migrate to the v0.11 bootloader_api/builder flow and remove legacy bootimage assumptions. Exact dependency, lockfile, image format, build command, QEMU firmware and CI evidence must agree. Do not call a legacy BIOS bootimage UEFI evidence.")))
 
    ("WSM-OS-BOOT-TOOLCHAIN-PIN-M3B1" .
