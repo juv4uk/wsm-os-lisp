@@ -1,0 +1,36 @@
+<*mut core::mem::maybe_uninit::MaybeUninit<wsm_os_runtime::ConsCell>>::is_null
+<*mut wsm_os_runtime::RuntimeContext>::as_mut
+<core::option::Option<&mut wsm_os_runtime::RuntimeContext>>::unwrap_or_else::<wsm_os_runtime::context_mut::{closure#0}>
+<core::option::Option<i64>>::is_some
+<core::option::Option<u64>>::is_some
+<core::option::Option<usize>>::ok_or::<wsm_os_runtime::RuntimeError>
+<core::result::Result<&wsm_os_runtime::ConsCell, wsm_os_runtime::RuntimeError> as core::ops::try_trait::FromResidual<core::result::Result<core::convert::Infallible, wsm_os_runtime::RuntimeError>>>::from_residual
+<core::result::Result<&wsm_os_runtime::ConsCell, wsm_os_runtime::RuntimeError> as core::ops::try_trait::Try>::branch
+<core::result::Result<u64, wsm_os_runtime::RuntimeError> as core::ops::try_trait::FromResidual<core::result::Result<core::convert::Infallible, wsm_os_runtime::RuntimeError>>>::from_residual
+<core::result::Result<u64, wsm_os_runtime::RuntimeError>>::unwrap_or_else::<wsm_os_runtime::wsm_atom::{closure#0}>
+<core::result::Result<u64, wsm_os_runtime::RuntimeError>>::unwrap_or_else::<wsm_os_runtime::wsm_car::{closure#0}>
+<core::result::Result<u64, wsm_os_runtime::RuntimeError>>::unwrap_or_else::<wsm_os_runtime::wsm_cdr::{closure#0}>
+<core::result::Result<u64, wsm_os_runtime::RuntimeError>>::unwrap_or_else::<wsm_os_runtime::wsm_cons::{closure#0}>
+<core::result::Result<u64, wsm_os_runtime::RuntimeError>>::unwrap_or_else::<wsm_os_runtime::wsm_eq::{closure#0}>
+<core::result::Result<usize, core::num::error::TryFromIntError>>::map_err::<wsm_os_runtime::RuntimeError, <wsm_os_runtime::RuntimeContext>::cell::{closure#0}>
+<core::result::Result<usize, wsm_os_runtime::RuntimeError> as core::ops::try_trait::Try>::branch
+<core::result::Result<wsm_os_runtime::ValueClass, wsm_os_runtime::RuntimeError> as core::ops::try_trait::FromResidual<core::result::Result<core::convert::Infallible, wsm_os_runtime::RuntimeError>>>::from_residual
+<core::result::Result<wsm_os_runtime::ValueClass, wsm_os_runtime::RuntimeError> as core::ops::try_trait::Try>::branch
+<usize as core::convert::TryFrom<u64>>::try_from
+<usize>::checked_sub
+<usize>::is_multiple_of
+<wsm_os_runtime::RuntimeContext>::cell::{closure#0}
+<wsm_os_runtime::RuntimeContext>::fail
+core::panicking::panic_const::panic_const_add_overflow
+core::panicking::panic_const::panic_const_div_by_zero
+core::panicking::panic_const::panic_const_rem_by_zero
+wsm_os_runtime::context_mut::{closure#0}
+wsm_os_runtime::panic_context
+wsm_os_runtime::wsm_atom::{closure#0}
+wsm_os_runtime::wsm_car::{closure#0}
+wsm_os_runtime::wsm_cdr::{closure#0}
+wsm_os_runtime::wsm_cons::{closure#0}
+wsm_os_runtime::wsm_eq::{closure#0}
+wsm_os_target::decode_fixnum
+wsm_os_target::decode_symbol
+wsm_os_target::is_aligned_cons_pointer
