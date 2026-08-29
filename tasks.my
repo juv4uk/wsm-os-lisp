@@ -110,10 +110,45 @@
      (origin . wsm-os)
      (description . "Add the next isolated x86_64 conformance slice: checked fixnum addition and subtraction with exact overflow mapped to the ratified runtime error boundary. Differentially verify boundary values against pinned my-lisp in hosted and QEMU paths. Do not add multiplication, closures, GC, or widen the numeric model in the same change.")))
 
+   ("WSM-OS-CML-TAIL-CALL-PROOF-M5C" .
+    ((priority . 8.5)
+     (capabilities . (cml compiler x86_64 assembly tail-calls conformance testing proof))
+     (depends-on . (WSM-OS-CML-X86-FIXNUM-BRANCH-M5A))
+     (origin . wsm-os)
+     (description . "Preserve tail position as explicit admitted CML metadata and prove target-level stack safety before general closures. Implement exactly one first-order self-tail-call path whose x86 lowering restores/reuses the current frame and jumps rather than accumulating native calls. Differentially run the pinned 100,000-deep tail-recursion obligation through my-lisp, hosted generated x86 and QEMU; record bounded stack evidence. Non-tail calls, mutual recursion, closures and continuations remain separately unsupported unless explicitly added.")))
+
+   ("WSM-OS-DEFINITION-CAPSULE-M5D" .
+    ((priority . 7.8)
+     (capabilities . (cml compiler metadata reproducibility debugging proof))
+     (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4 WSM-OS-M4-COMPILER-ARTIFACT-BUNDLE))
+     (origin . wsm-os)
+     (description . "Turn the deterministic M4 artifact manifest into one versioned definition capsule: stable definition ID, source digest and source map, contract revisions, code range/entry, literal and symbol table digests, callers/dependencies, imports and object digest. Validate deterministic regeneration and reject mismatched sections. This is inspectable metadata only: do not implement hot replacement, a loader or a world image in the same task.")))
+
+   ("WSM-OS-SEMANTIC-TRACE-M5E" .
+    ((priority . 7.6)
+     (capabilities . (my-lisp cml x86_64 qemu fpga protocol conformance debugging proof))
+     (depends-on . (WSM-OS-DEFINITION-CAPSULE-M5D WSM-OS-CML-TAIL-CALL-PROOF-M5C))
+     (origin . wsm-os)
+     (description . "Define and prove a bounded versioned semantic trace shared by my-lisp oracle, hosted generated x86 and QEMU, with an explicitly deferred fpga-lisp consumer. Minimum events: enter-definition, primitive-call, allocate logical-cell-id, branch, return and fail. Compare stable definition/object IDs and canonical values, never raw addresses, wall time or target instructions. Add one divergence fixture proving the checker reports the first semantic mismatch; a longer trace is execution evidence, not stronger truth authority.")))
+
+   ("WSM-OS-IMMUTABLE-LITERAL-SPACE-DECISION-M5F" .
+    ((priority . 6.8)
+     (capabilities . (architecture cml x86_64 memory image contract proof))
+     (depends-on . (WSM-OS-DEFINITION-CAPSULE-M5D))
+     (origin . wsm-os)
+     (description . "Decide whether quoted immutable cons graphs may live in a relocatable read-only image section instead of consuming the mutable bump heap at boot. Reconcile the proposal with the current ABI rule that every cons pointer is owned by the active heap; specify pointer validation, object identity, relocation, printer traversal and future GC interaction. Benchmark boot allocation on representative quoted fixtures. No backend may emit read-only cons pointers until the target contract is explicitly ratified and negative ownership tests exist.")))
+
+   ("WSM-OS-STRUCTURED-CONDITION-RECORD-M5G" .
+    ((priority . 6.5)
+     (capabilities . (runtime errors debugging architecture contract testing))
+     (depends-on . (WSM-OS-DEFINITION-CAPSULE-M5D))
+     (origin . wsm-os)
+     (description . "Extend the opaque RuntimeContext with a versioned structured condition record while retaining the small noreturn wsm_fail(context, code) boot ABI. Record operation, offending values, definition/source identity and explicit restart-capability IDs; prove deterministic hosted/QEMU serialization for type and OOM failures. Do not claim resumable conditions, capture native continuations or implement arbitrary restart jumps in this task.")))
+
    ("WSM-OS-CONFORMANCE-LADDER-M5" .
     ((priority . 7.0)
      (capabilities . (my-lisp cml x86_64 assembly conformance testing proof))
-     (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
+     (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4 WSM-OS-CML-TAIL-CALL-PROOF-M5C))
      (origin . wsm-os)
      (description . "Expand conformance one obligation at a time: () truth/branch; fixnum and symbol identity; car/cdr/cons; nested canonical printing; named type/arity/OOM errors; one closure only after environment layout is ratified. Every fixture must match pinned my-lisp through CML admission, hosted runtime and QEMU. Do not broaden to keyboard/disk/network/GUI.")))
 
@@ -127,7 +162,7 @@
    ("WSM-OS-COPYING-GC-M7" .
     ((priority . 5.0)
      (capabilities . (rust memory x86_64 garbage-collection architecture))
-     (depends-on . (WSM-OS-CONFORMANCE-LADDER-M5))
+     (depends-on . (WSM-OS-CONFORMANCE-LADDER-M5 WSM-OS-SEMANTIC-TRACE-M5E WSM-OS-IMMUTABLE-LITERAL-SPACE-DECISION-M5F))
      (origin . wsm-os)
      (description . "Replace the initial bounded bump allocator with a semi-space copying collector. Leverage the fact that all cons cells are 16-bytes and tags perfectly distinguish pointers. Implement from-space/to-space swapping, root tracing from the WsmContext, and graph traversal. Do not implement generational or ephemeral GC. Maintain explicit OOM when both spaces are full.")))
 

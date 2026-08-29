@@ -160,7 +160,9 @@ Expand one semantic obligation at a time:
 3. `car`/`cdr`/`cons`;
 4. nested lists and canonical printer;
 5. named type/arity/OOM errors;
-6. one closure only after environment layout is ratified.
+6. preserve tail position explicitly in CML metadata and the x86 calling path;
+7. prove a 100,000-deep first-order self-tail-call with bounded native stack;
+8. one closure only after environment layout and active-frame rules are ratified.
 
 Every addition requires:
 
@@ -171,6 +173,34 @@ my-lisp oracle
 ```
 
 Do not add keyboard, disk, network or GUI work during this milestone.
+
+Tail-call behavior is a language obligation, not a host optimization. A small
+fixture passing with ordinary nested x86 `call` instructions is insufficient:
+the generated target must preserve the `my-lisp` constant-host-stack guarantee
+for tail recursion. The first proof may use a first-order self call; general
+closures and continuations remain later work.
+
+## M5 metadata seams — preserve before the system becomes opaque
+
+After first QEMU parity, add three bounded architectural seams without turning
+them into a live environment prematurely:
+
+1. **Definition capsule:** extend the deterministic compiler artifact with a
+   stable definition ID, source digest/map, contract versions, code range,
+   literal/symbol table and dependency/import list. This is metadata only; it
+   does not authorize hot replacement.
+2. **Semantic trace:** define a small versioned event vocabulary shared by the
+   oracle, hosted x86, QEMU and later FPGA paths. Compare logical operations
+   and stable object IDs, never raw addresses or target instruction traces.
+3. **Immutable literal-space decision:** decide whether quoted cons graphs may
+   reside in a relocatable read-only image section. The current target ABI
+   admits cons pointers only from the active heap, so no backend may silently
+   emit read-only cons pointers before that ownership rule is ratified.
+
+Structured conditions should extend the opaque `RuntimeContext`: retain the
+small `wsm_fail(context, code)` boot ABI while allowing a later condition
+record containing operation, values, definition/source identity and explicit
+restart capabilities. A condition record alone does not imply resumability.
 
 ## M6 — decide full interpreter portability
 
@@ -203,14 +233,19 @@ green.
 ## Immediate execution order
 
 ```text
-1. TARGET-VALUE-AND-RUNTIME-ABI
-2. CML-FREESTANDING-X86-SEAM
-3. HOST-LINK-ORACLE-PARITY
-4. BOOT-SUBSTRATE-DECISION
-5. SERIAL-BOOT-WITNESS
-6. FIRST-WSM-ORACLE-PARITY
+1. BOOT-SUBSTRATE-REALIGN
+2. REPRODUCIBLE-BOOT-TOOLCHAIN
+3. INDEPENDENT-M2-ORACLE-EVIDENCE
+4. SERIAL-BOOT-WITNESS
+5. FIRST-WSM-ORACLE-PARITY
+6. FIXNUM-AND-BRANCH-SLICE
+7. TAIL-POSITION-AND-STACK-SAFETY
+8. DEFINITION-CAPSULE
+9. CROSS-SUBSTRATE-SEMANTIC-TRACE
+10. IMMUTABLE-LITERAL-SPACE-DECISION
 ```
 
-The next implementation action is `TARGET-VALUE-AND-RUNTIME-ABI`. The later
-`BOOT-SUBSTRATE-DECISION` is the only item allowed to introduce a third-party
-boot dependency.
+M0–M2 and the compiler-owned M4 artifact bundle already have pushed evidence.
+The current critical path is boot-substrate realignment, pinned tool discovery,
+independent oracle evidence and then the first QEMU parity witness. No later
+metadata or language task may be used to bypass that chain.

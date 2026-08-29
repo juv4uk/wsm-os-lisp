@@ -354,18 +354,21 @@ For `wsm-os`:
 
 ### Add to early architecture, without expanding v0.1
 
-1. CML definition IDs and source maps.
-2. Runtime object IDs distinct from raw addresses.
-3. Structured condition records while retaining the small boot error ABI.
-4. A versioned serial inspector protocol.
-5. A bounded logical event ring.
+1. Explicit tail-position metadata and a target-level constant-stack proof.
+2. CML definition IDs and source maps.
+3. Runtime object IDs distinct from raw addresses.
+4. Structured condition records while retaining the small boot error ABI.
+5. A versioned serial inspector protocol.
+6. A bounded logical event ring.
 
 ### Prototype after first QEMU oracle parity
 
-6. Definition-level replacement with active-frame safety rules.
-7. Presentation records consumed by Tauri.
-8. Relocatable logical image format with capability rebinding.
-9. Managed task frames as the path toward stack groups/restarts.
+7. A cross-substrate semantic trace using logical IDs rather than addresses.
+8. A ratified immutable literal-space ownership model.
+9. Definition-level replacement with active-frame safety rules.
+10. Presentation records consumed by Tauri.
+11. Relocatable logical image format with capability rebinding.
+12. Managed task frames as the path toward stack groups/restarts.
 
 ### Keep deferred
 
