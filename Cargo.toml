@@ -1,7 +1,8 @@
 [workspace]
 members = [
-    "crates/wsm-os-hosted",
+    "crates/wsm-os-hosted", "crates/wsm-os-kernel",
     "crates/wsm-os-runtime",
     "crates/wsm-os-target",
+    "crates/wsm-os-kernel",
 ]
 resolver = "2"
