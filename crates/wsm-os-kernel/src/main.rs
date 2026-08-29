@@ -1,8 +1,8 @@
 #![no_std]
 #![no_main]
 
-use core::panic::PanicInfo;
 use bootloader::entry_point;
+use core::panic::PanicInfo;
 
 entry_point!(kernel_main);
 
