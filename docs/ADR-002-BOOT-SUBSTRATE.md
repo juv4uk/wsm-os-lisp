@@ -1,37 +1,63 @@
 # ADR-002: Boot Substrate Selection
 
-**Status:** REVISED
+**Status:** ACCEPTED AND EXECUTABLE
 **Date:** 2026-08-29
 
 ## Context
-Task M3A required choosing a maintained x86_64 boot substrate for `wsm-os`. The initial decision falsely claimed migration to v0.11 UEFI while the codebase actually implemented v0.9.35 legacy BIOS with `bootimage`. We must resolve this discrepancy and document the actual executable evidence.
+
+`wsm-os` targets the owner's Gigabyte H170-Gaming 3 through UEFI and uses QEMU
+as the first machine witness. The initial implementation temporarily used
+`bootloader` 0.9 with `cargo bootimage`, which produced a real legacy image but
+contradicted the accepted UEFI design. Documenting that implementation as the
+final decision would remove the contradiction only on paper while preserving
+the wrong target path.
 
 ## Decision
-We select the **`bootloader` crate at `v0.9.35` and the legacy `bootimage` tool**
-(by Philipp Oppermann) as the primary legacy BIOS boot substrate for Phase 1.
 
-## Rationale & Toolchain Alignment
+Use `bootloader` and `bootloader_api` **exactly 0.11.17**:
 
-1. **Licensing:**
-   - `bootloader` is licensed under **MIT / Apache-2.0**.
-   - This complies strictly with the ecosystem `LICENSE-MATRIX.md` (MIT repos only).
+- `wsm-os-kernel` depends only on `bootloader_api` and exposes the v0.11
+  `fn(&'static mut BootInfo) -> !` entry point;
+- the hosted `wsm-os-image` tool depends on the UEFI-only `bootloader` feature
+  and converts the already-built kernel ELF into a FAT/GPT UEFI disk image;
+- `cargo bootimage`, the v0.9 kernel API, and an implicit Cargo runner are not
+  part of this path.
 
-2. **Rust Target Requirements:**
-   - The OS kernel compiles to a custom JSON target (`x86_64-wsm-os.json`) as required by v0.9 legacy tooling, rather than the pure `x86_64-unknown-none` target used in v0.11.
+The toolchain is pinned to **nightly-2026-07-27** with `rust-src`,
+`llvm-tools-preview`, and `x86_64-unknown-none`. This date matches the
+`bootloader` 0.11.17 release window. The moving 2026-08-29 nightly was tested
+and rejected because its UEFI link failed on an unresolved `wcslen` symbol.
 
-3. **Deterministic Serial Test Path:**
-   - The build system relies on `bootimage` (which bundles the legacy BIOS bootloader).
-   - QEMU invocation, `isa-debug-exit`, serial capture and timeout remain explicit `wsm-os` test-harness responsibilities.
-   - We implement our own minimal UART serial writer (COM1 at `0x3F8`) using `x86_64` crate instructions to emit canonical parity format (`WSM-OS RESULT schema=1 ...`).
+## Boundaries
 
-4. **Comparison with v0.11 UEFI:**
-   - Transitioning to v0.11 UEFI would require writing a custom Rust build script to invoke `bootloader::UefiBoot` and fundamentally changing the kernel entry point to use `bootloader_api`. While this is the modern standard, our current CI and codebase successfully prove execution using the legacy v0.9 BIOS path. Upgrading to v0.11 is deferred to a future task.
+- The kernel owns WSM runtime/entry semantics, not disk-image construction.
+- The image tool owns packaging only; it does not parse or evaluate WSM.
+- QEMU firmware selection, serial capture, `isa-debug-exit`, and timeout are
+  explicit test-harness responsibilities in M3C.
+- Creating a non-empty UEFI image proves image construction, not successful
+  boot, serial output, oracle parity, or physical-hardware parity.
 
-## Consequences
-- The kernel depends on `bootloader = "0.9.35"`.
-- We require nightly Rust with `llvm-tools-preview` and `bootimage` installed via `cargo install`.
-- The generated CML `fixture.s` object will link directly into this kernel without OS modifications.
+## Licensing
 
-## Primary implementation evidence
-- `crates/wsm-os-kernel/Cargo.toml` specifies `bootloader = "0.9.35"`.
-- GitHub Actions CI uses `cargo bootimage` to build the legacy BIOS image.
+`bootloader` and `bootloader_api` are dual-licensed `MIT OR Apache-2.0`.
+This is compatible with the repository's MIT policy. Dependency source and
+license remain recorded by Cargo; no third-party source is copied into this
+repository.
+
+## Required evidence
+
+```text
+kernel using bootloader_api 0.11.17
+  -> x86_64-unknown-none ELF
+  -> UefiBoot image builder 0.11.17
+  -> non-empty UEFI disk image
+```
+
+The next M3C task must boot that exact image under QEMU/OVMF and produce the
+versioned serial witness. It must not fall back to a BIOS image.
+
+## Primary sources
+
+- [`bootloader` README](https://github.com/rust-osdev/bootloader)
+- [`v0.9` migration guide](https://github.com/rust-osdev/bootloader/blob/main/docs/migration/v0.9.md)
+- [`bootloader` v0.11.17 release commit](https://github.com/rust-osdev/bootloader/commit/ec8a8b4b59bd94f3c0280adc1bcdae530251b003)

@@ -11,10 +11,12 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Install stable Rust
+      - name: Install pinned Rust toolchain
         run: |
-          rustup toolchain install stable --profile minimal
-          rustup target add x86_64-unknown-none
+          rustup toolchain install nightly-2026-07-27 --profile minimal \
+            --component rustfmt,rust-src,llvm-tools-preview \
+            --target x86_64-unknown-none
+          rustc --version --verbose
       - name: Check formatting
         run: cargo fmt --check
       - name: Check no_std target library
@@ -23,12 +25,13 @@ jobs:
         run: cargo check -p wsm-os-runtime --lib --target x86_64-unknown-none
       - name: Prove runtime core has no host imports
         run: scripts/check-runtime-symbols.sh
-      - name: Install bootimage
+      - name: Build bare-metal kernel
+        run: cargo build -p wsm-os-kernel --target x86_64-unknown-none
+      - name: Create UEFI boot image
         run: |
-          rustup toolchain install nightly --profile minimal --component rust-src,llvm-tools-preview
-          rustup target add --toolchain nightly x86_64-unknown-none
-          cargo install bootimage
-      - name: Build bare-metal boot image
-        run: cargo +nightly bootimage -p wsm-os-kernel --target x86_64-unknown-none
+          cargo run -p wsm-os-image -- \
+            target/x86_64-unknown-none/debug/wsm-os-kernel \
+            target/wsm-os-uefi.img
+          test -s target/wsm-os-uefi.img
       - name: Run ABI and projection tests
         run: cargo test --workspace

@@ -10,10 +10,5 @@ test = false
 bench = false
 
 [dependencies]
-bootloader = "0.9.23"
+bootloader_api = "=0.11.17"
 wsm-os-runtime = { path = "../wsm-os-runtime" }
-
-[package.metadata.bootimage]
-test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-serial", "stdio", "-display", "none"]
-test-success-exit-code = 33
-test-timeout = 30
