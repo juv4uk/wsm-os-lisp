@@ -41,3 +41,6 @@ The compiler-first ownership decision is recorded in
 [docs/ADR-001-COMPILER-FIRST.md](docs/ADR-001-COMPILER-FIRST.md).
 
 Executable swarm work is tracked in [`tasks.my`](tasks.my).
+
+The first machine-readable ABI and its generated WSM projection are documented
+in [`docs/TARGET-ABI.md`](docs/TARGET-ABI.md).

@@ -1,0 +1,21 @@
+name: wsm-os contracts
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  target-abi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install stable Rust
+        run: rustup toolchain install stable --profile minimal
+      - name: Check formatting
+        run: cargo fmt --check
+      - name: Check no_std target library
+        run: cargo check -p wsm-os-target --lib
+      - name: Run ABI and projection tests
+        run: cargo test -p wsm-os-target
