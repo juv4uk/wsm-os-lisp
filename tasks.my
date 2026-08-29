@@ -70,4 +70,31 @@
      (capabilities . (rust no-std my-lisp architecture testing evidence))
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
      (origin . wsm-os)
-     (description . "After the AOT witness is green, run a bounded portability spike for my-lisp core: classify std imports, move eligible containers to alloc/core behind features, make time/stdin/global capability registry explicit platform services, and test no_std+alloc compilation separately. Decide with measured code size/complexity whether to retain AOT only or add an interactive interpreter. Do not rewrite the hosted core or claim Rc collects cycles."))))))
+
+   ("WSM-OS-COPYING-GC-M7" .
+    ((priority . 5.0)
+     (capabilities . (rust memory x86_64 garbage-collection architecture))
+     (depends-on . (WSM-OS-CONFORMANCE-LADDER-M5))
+     (origin . wsm-os)
+     (description . "Replace the initial bounded bump allocator with a semi-space copying collector. Leverage the fact that all cons cells are 16-bytes and tags perfectly distinguish pointers. Implement from-space/to-space swapping, root tracing from the WsmContext, and graph traversal. Do not implement generational or ephemeral GC. Maintain explicit OOM when both spaces are full.")))
+
+   ("WSM-OS-STACK-BUFFER-M8" .
+    ((priority . 5.0)
+     (capabilities . (rust memory architecture runtime))
+     (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2))
+     (origin . wsm-os)
+     (description . "Implement the WSM call stack as a contiguous array of Word in the WsmContext (stack_start, stack_ptr, stack_end). Use this for execution frames instead of heap-allocating every frame. Keep it strictly as the third storage primitive alongside registers and the cons heap.")))
+
+   ("WSM-OS-TINY-ISA-M9" .
+    ((priority . 4.0)
+     (capabilities . (cml compiler architecture interpreter))
+     (depends-on . (WSM-OS-MYLISP-NOSTD-DECISION-M6))
+     (origin . wsm-os)
+     (description . "Design a tiny ~15-instruction WSM bytecode ISA (LOAD_CONST, LOAD_SYMBOL, CONS, CAR, CALL, BRANCH_FALSE, etc.). Add a second backend path to CML to emit this bytecode, and implement a tiny tag-dispatch interpreter in wsm-os. This provides a portable alternative to x86_64 AOT emission and sets the stage for fpga-lisp.")))
+
+   ("WSM-OS-LIVE-IMAGE-M10" .
+    ((priority . 3.0)
+     (capabilities . (architecture repl operating-system runtime))
+     (depends-on . (WSM-OS-CONFORMANCE-LADDER-M5))
+     (origin . wsm-os)
+     (description . "Evolve the system from a single AOT frozen expression toward a live Lisp environment. Implement a symbol/function binding table (where name identity remains separated from the symbol ID). Allow replacing function bindings at runtime and evaluating multiple forms sequentially, laying the groundwork for a persistent image."))))))
