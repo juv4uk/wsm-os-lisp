@@ -133,10 +133,12 @@
 
    ("WSM-OS-DEFINITION-CAPSULE-M5D" .
     ((priority . 7.8)
+     (done . t)
      (capabilities . (cml compiler metadata reproducibility debugging proof))
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4 WSM-OS-M4-COMPILER-ARTIFACT-BUNDLE))
      (origin . wsm-os)
-     (description . "Turn the deterministic M4 artifact manifest into one versioned definition capsule: stable definition ID, source digest and source map, contract revisions, generator/toolchain identity, code range/entry, literal and symbol table digests, callers/dependencies, exact imports and object/assembly digests with explicit algorithms. Regenerate twice and require byte-identical output; compare committed fixture.s, fixture.o and manifest/capsule sections fail-closed; prove the hosted-generated assembly and kernel-linked object identify the same definition. This is inspectable metadata only: do not implement hot replacement, a loader or a world image in the same task.")))
+     (description . "Turn the deterministic M4 artifact manifest into one versioned definition capsule: stable definition ID, source digest and source map, contract revisions, generator/toolchain identity, code range/entry, literal and symbol table digests, callers/dependencies, exact imports and object/assembly digests with explicit algorithms. Regenerate twice and require byte-identical output; compare committed fixture.s, fixture.o and manifest/capsule sections fail-closed; prove the hosted-generated assembly and kernel-linked object identify the same definition. This is inspectable metadata only: do not implement hot replacement, a loader or a world image in the same task.")
+     (context . "verified 2026-08-30: definition capsule v1 implemented in 0435cb9; cross-Binutils non-semantic ELF note drift exposed by CI run 33280964422 and fixed fail-closed by object canonicalization 5a9dc7e. GitHub Actions run 33281082120 GREEN: double regeneration, byte-identical committed source/assembly/object/manifest/capsule, recomputed section validation, deliberate mismatch rejection, QEMU parity and workspace tests. Stable definition ID sha256:0a998b9cc9975d82acea6919a93715e21e4ec13ff0d9ee6ae320c6458594ed21. Metadata only; no loader/hot replacement/world-image claim.")))
 
    ("WSM-OS-SEMANTIC-TRACE-M5E" .
     ((priority . 7.6)

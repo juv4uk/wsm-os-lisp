@@ -216,6 +216,14 @@ small `wsm_fail(context, code)` boot ABI while allowing a later condition
 record containing operation, values, definition/source identity and explicit
 restart capabilities. A condition record alone does not imply resumability.
 
+### Verified definition capsule evidence (2026-08-30)
+
+Commits `0435cb9` and `5a9dc7e` establish definition capsule v1 and a
+cross-toolchain deterministic ELF bundle. GitHub Actions run `33281082120`
+proved double regeneration, byte identity with committed artifacts, recomputed
+section validation, deliberate mismatch rejection, hosted parity and QEMU
+parity. The capsule remains inspectable metadata only.
+
 ## M6 — decide full interpreter portability
 
 Only after M4 is green, inventory a possible `my-lisp` core reuse:
