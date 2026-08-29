@@ -32,6 +32,7 @@
 
    ("WSM-OS-BOOT-SUBSTRATE-DECISION-M3A" .
     ((priority . 8.0)
+     (done . t)
      (capabilities . (research rust x86_64 uefi licensing architecture))
      (depends-on . (WSM-OS-TARGET-ABI-M0))
      (origin . wsm-os)
