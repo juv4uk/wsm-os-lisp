@@ -24,6 +24,7 @@ trap 'rm -rf "$run_dir"' EXIT
 serial_log="$run_dir/serial.log"
 vars_copy="$run_dir/ovmf-vars.fd"
 cp "$OVMF_VARS" "$vars_copy"
+chmod u+w "$vars_copy"
 
 set +e
 timeout "$WSM_OS_QEMU_TIMEOUT" "$QEMU_SYSTEM_X86_64" \
@@ -35,22 +36,21 @@ timeout "$WSM_OS_QEMU_TIMEOUT" "$QEMU_SYSTEM_X86_64" \
   -device isa-debug-exit,iobase=0xf4,iosize=0x04 \
   -serial "file:$serial_log" \
   -display none \
-  -no-reboot \
-  -no-shutdown
+  -no-reboot
 status=$?
 set -e
 
 case "$status" in
   33)
-    expected='WSM-OS BOOT schema=1 arch=x86_64 status=ok'
-    observed=$(tr -d '\r' < "$serial_log" | tail -n 1)
+    expected=$(cat artifacts/qemu-serial-transcript.txt)
+    observed=$(tr -d '\r' < "$serial_log" | grep '^WSM-OS ')
     if [[ "$observed" != "$expected" ]]; then
       echo "SERIAL-MISMATCH" >&2
-      printf 'last line: %q\n' "$observed" >&2
+      printf 'observed: %q\n' "$observed" >&2
       cat "$serial_log" >&2
       exit 1
     fi
-    printf '%s\n' "$expected"
+    printf '%s\n' "$observed"
     ;;
   35)
     echo "PANIC: guest reported the structured panic exit" >&2
@@ -59,6 +59,11 @@ case "$status" in
     ;;
   124)
     echo "TIMEOUT: guest did not reach a structured exit" >&2
+    cat "$serial_log" >&2
+    exit 1
+    ;;
+  37)
+    echo "RESULT-ERROR: guest rejected the generated fixture or runtime result" >&2
     cat "$serial_log" >&2
     exit 1
     ;;

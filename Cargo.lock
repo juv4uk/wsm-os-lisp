@@ -538,6 +538,7 @@ version = "0.1.0"
 dependencies = [
  "bootloader_api",
  "wsm-os-runtime",
+ "wsm-os-target 0.1.0",
 ]
 
 [[package]]

@@ -12,3 +12,4 @@ bench = false
 [dependencies]
 bootloader_api = "=0.11.17"
 wsm-os-runtime = { path = "../wsm-os-runtime" }
+wsm-os-target = { path = "../wsm-os-target" }
