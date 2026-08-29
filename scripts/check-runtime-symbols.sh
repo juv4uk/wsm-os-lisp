@@ -5,16 +5,66 @@ echo "Checking wsm-os-runtime for host imports..."
 cargo build -p wsm-os-runtime --lib --target x86_64-unknown-none
 
 # Extract all undefined symbols from the rlib
-UNDEF=$(nm -u target/x86_64-unknown-none/debug/libwsm_os_runtime.rlib || true)
+# nm -u outputs lines like:
+#                  U symbol_name
+UNDEF=$(nm -u target/x86_64-unknown-none/debug/libwsm_os_runtime.rlib 2>/dev/null | awk '/ U / {print $NF}' | sort | uniq || true)
 
-# Look for banned host symbols (e.g. malloc, free, libc stuff)
-# Since it's no_std, we just want to make sure no OS-level stuff slipped in.
-# A simple heuristic: no symbols starting with 'std::' or common libc names.
-if echo "$UNDEF" | grep -Eq 'malloc|free|printf|fopen|std::'; then
-    echo "ERROR: Found forbidden host imports in runtime!"
-    echo "$UNDEF" | grep -E 'malloc|free|printf|fopen|std::'
+if [ -z "$UNDEF" ]; then
+    echo "Runtime is clean (no undefined symbols)."
+    exit 0
+fi
+
+# Define exact allowlist
+ALLOWLIST="
+_RNvCslBcGc5rE6hA_14wsm_os_runtime13panic_context
+_RNvMs_CslBcGc5rE6hA_14wsm_os_runtimeNtB4_14RuntimeContext4fail
+_RNCNvCslBcGc5rE6hA_14wsm_os_runtime6wsm_eq0B3_
+_RNCNvCslBcGc5rE6hA_14wsm_os_runtime7wsm_car0B3_
+_RNCNvCslBcGc5rE6hA_14wsm_os_runtime7wsm_cdr0B3_
+_RNCNvCslBcGc5rE6hA_14wsm_os_runtime8wsm_atom0B3_
+_RNCNvCslBcGc5rE6hA_14wsm_os_runtime8wsm_cons0B3_
+_RNCNvMs_CslBcGc5rE6hA_14wsm_os_runtimeNtB6_14RuntimeContext4cell0B6_
+_RNvNtNtCs4IbXEgWLMPS_4core9panicking11panic_const23panic_const_rem_by_zero
+_RINvMNtCs4IbXEgWLMPS_4core6optionINtB3_6OptionQNtCslBcGc5rE6hA_14wsm_os_runtime14RuntimeContextE14unwrap_or_elseNCNvBL_11context_mut0EBL_
+_RINvMNtCs4IbXEgWLMPS_4core6optionINtB3_6OptionjE5ok_orNtCslBcGc5rE6hA_14wsm_os_runtime12RuntimeErrorEBS_
+_RINvMNtCs4IbXEgWLMPS_4core6resultINtB3_6ResultjNtNtNtB5_3num5error15TryFromIntErrorE7map_errNtCslBcGc5rE6hA_14wsm_os_runtime12RuntimeErrorNCNvMs_B1u_NtB1u_14RuntimeContext4cell0EB1u_
+_RINvMNtCs4IbXEgWLMPS_4core6resultINtB3_6ResultyNtCslBcGc5rE6hA_14wsm_os_runtime12RuntimeErrorE14unwrap_or_elseNCNvBL_6wsm_eq0EBL_
+_RINvMNtCs4IbXEgWLMPS_4core6resultINtB3_6ResultyNtCslBcGc5rE6hA_14wsm_os_runtime12RuntimeErrorE14unwrap_or_elseNCNvBL_7wsm_car0EBL_
+_RINvMNtCs4IbXEgWLMPS_4core6resultINtB3_6ResultyNtCslBcGc5rE6hA_14wsm_os_runtime12RuntimeErrorE14unwrap_or_elseNCNvBL_7wsm_cdr0EBL_
+_RINvMNtCs4IbXEgWLMPS_4core6resultINtB3_6ResultyNtCslBcGc5rE6hA_14wsm_os_runtime12RuntimeErrorE14unwrap_or_elseNCNvBL_8wsm_atom0EBL_
+_RINvMNtCs4IbXEgWLMPS_4core6resultINtB3_6ResultyNtCslBcGc5rE6hA_14wsm_os_runtime12RuntimeErrorE14unwrap_or_elseNCNvBL_8wsm_cons0EBL_
+_RNvCsk0n1LHYqj18_13wsm_os_target13decode_fixnum
+_RNvCsk0n1LHYqj18_13wsm_os_target13decode_symbol
+_RNvCsk0n1LHYqj18_13wsm_os_target23is_aligned_cons_pointer
+_RNvMNtCs4IbXEgWLMPS_4core6optionINtB2_6OptionxE7is_someCslBcGc5rE6hA_14wsm_os_runtime
+_RNvMNtCs4IbXEgWLMPS_4core6optionINtB2_6OptionyE7is_someCslBcGc5rE6hA_14wsm_os_runtime
+_RNvMNtNtCs4IbXEgWLMPS_4core3ptr7mut_ptrOINtNtNtB6_3mem12maybe_uninit11MaybeUninitNtCslBcGc5rE6hA_14wsm_os_runtime8ConsCellE7is_nullB1j_
+_RNvMNtNtCs4IbXEgWLMPS_4core3ptr7mut_ptrONtCslBcGc5rE6hA_14wsm_os_runtime14RuntimeContext6as_mutBE_
+_RNvMs9_NtCs4IbXEgWLMPS_4core3numj11checked_subCslBcGc5rE6hA_14wsm_os_runtime
+_RNvMs9_NtCs4IbXEgWLMPS_4core3numj14is_multiple_ofCslBcGc5rE6hA_14wsm_os_runtime
+_RNvNtNtCs4IbXEgWLMPS_4core9panicking11panic_const23panic_const_div_by_zero
+_RNvNtNtCs4IbXEgWLMPS_4core9panicking11panic_const24panic_const_add_overflow
+_RNvXsj_NtNtNtCs4IbXEgWLMPS_4core7convert3num18ptr_try_from_implsjINtB9_7TryFromyE8try_fromCslBcGc5rE6hA_14wsm_os_runtime
+_RNvXsp_NtCs4IbXEgWLMPS_4core6resultINtB5_6ResultNtCslBcGc5rE6hA_14wsm_os_runtime10ValueClassNtBM_12RuntimeErrorENtNtNtB7_3ops9try_trait3Try6branchBM_
+_RNvXsp_NtCs4IbXEgWLMPS_4core6resultINtB5_6ResultRNtCslBcGc5rE6hA_14wsm_os_runtime8ConsCellNtBN_12RuntimeErrorENtNtNtB7_3ops9try_trait3Try6branchBN_
+_RNvXsp_NtCs4IbXEgWLMPS_4core6resultINtB5_6ResultjNtCslBcGc5rE6hA_14wsm_os_runtime12RuntimeErrorENtNtNtB7_3ops9try_trait3Try6branchBN_
+_RNvXsq_NtCs4IbXEgWLMPS_4core6resultINtB5_6ResultNtCslBcGc5rE6hA_14wsm_os_runtime10ValueClassNtBM_12RuntimeErrorEINtNtNtB7_3ops9try_trait12FromResidualIBy_NtNtB7_7convert10InfallibleB1s_EE13from_residualBM_
+_RNvXsq_NtCs4IbXEgWLMPS_4core6resultINtB5_6ResultRNtCslBcGc5rE6hA_14wsm_os_runtime8ConsCellNtBN_12RuntimeErrorEINtNtNtB7_3ops9try_trait12FromResidualIBy_NtNtB7_7convert10InfallibleB1q_EE13from_residualBN_
+_RNvXsq_NtCs4IbXEgWLMPS_4core6resultINtB5_6ResultyNtCslBcGc5rE6hA_14wsm_os_runtime12RuntimeErrorEINtNtNtB7_3ops9try_trait12FromResidualIBy_NtNtB7_7convert10InfallibleBL_EE13from_residualBN_
+_RNCNvCslBcGc5rE6hA_14wsm_os_runtime11context_mut0B3_
+"
+
+VIOLATIONS=0
+for SYM in $UNDEF; do
+    if ! echo "$ALLOWLIST" | grep -q "^${SYM}$"; then
+        echo "ERROR: Forbidden host import detected: $SYM"
+        VIOLATIONS=1
+    fi
+done
+
+if [ $VIOLATIONS -ne 0 ]; then
     exit 1
 fi
 
-echo "Runtime is clean."
+echo "Runtime is clean. All undefined symbols match the allowlist."
 exit 0
