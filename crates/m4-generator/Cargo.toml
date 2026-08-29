@@ -1,0 +1,11 @@
+[package]
+name = "m4-generator"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cml = { path = "../../../cml" }
+wsm-os-target = { path = "../wsm-os-target" }
+sha2 = "0.10.8"
+hex = "0.4.3"
+serde_json = "1.0.122"
