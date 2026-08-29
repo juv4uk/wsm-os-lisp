@@ -66,6 +66,7 @@
      (capabilities . (my-lisp cml rust runtime testing provenance proof))
      (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2))
      (origin . wsm-os)
+     (done . t)
      (description . "Replace the self-referential M2 expected-string witness with independent pinned oracle evidence. Run the frozen fixture through the declared my-lisp revision, store or reproducibly generate the canonical value/error transcript and digest, and compare hosted runtime output to that artifact. Reconcile target-contract CML_SHA with the actual CML revision used to generate/link the object. A hardcoded shared expected constant alone is contract conformance, not oracle parity.")))
 
    ("WSM-OS-M2-RUNTIME-IMPORT-ALLOWLIST" .
