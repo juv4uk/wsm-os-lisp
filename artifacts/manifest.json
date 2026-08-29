@@ -1,14 +1,13 @@
 {
-  "assembly_digest": "eac236186600eda691e561e8cfde1c8ffccddefeb045126c69799bb0487cd4dd",
-  "cml_sha": "58a76ce2a2a02fa766761c9eb1fed6afd7efd87d",
+  "assembly_digest": "ffea045edd597c2ed253222d0e8459e5e825789dfd0bdb5166c0c88d346772b3",
+  "cml_sha": "dd5382f2be6924be6b170092ba0989e68381b045",
   "exported": [
     "wsm_entry"
   ],
   "imports": [
-    "wsm_eq",
-    "wsm_fail"
+    "wsm_cons"
   ],
-  "object_digest": "4fad8fec1bd17916ff55af2190dd9214ad56d9119b9113f228d7a6b42faa1d64",
-  "source_digest": "b52e78683bc9f0daa663f46a937a9f744d27794f4df811c7154948d316c18d8d",
+  "object_digest": "c116f6d8b42c91ad176239642ccd0b8965a276d13e86a09767058c4b2fde8293",
+  "source_digest": "ebabf9c9b1da76d36604ad6d3b668a64fb11eb831ede7484fb192393b2782ba9",
   "target_contract_sha": "2dd51245b3a36f37ebf454663eee402f89dfe87f"
 }
