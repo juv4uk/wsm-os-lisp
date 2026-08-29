@@ -80,7 +80,7 @@ checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 [[package]]
 name = "cml"
 version = "0.1.0"
-source = "git+https://github.com/juv4uk/cml.git?rev=dd5382f2be6924be6b170092ba0989e68381b045#dd5382f2be6924be6b170092ba0989e68381b045"
+source = "git+https://github.com/juv4uk/cml.git?rev=74246905b833aa884ee869a2a2219f4ce3d94f25#74246905b833aa884ee869a2a2219f4ce3d94f25"
 dependencies = [
  "wsm-os-target 0.1.0 (git+https://github.com/juv4uk/wsm-os.git?rev=fe168ebc572c82c237faa4a952eec63e531dcc47)",
 ]
