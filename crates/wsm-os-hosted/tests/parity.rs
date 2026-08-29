@@ -1,6 +1,6 @@
-use std::process::Command;
 use std::fs;
 use std::path::Path;
+use std::process::Command;
 
 #[test]
 fn frozen_fixture_matches_pinned_oracle_value() {
@@ -12,12 +12,12 @@ fn frozen_fixture_matches_pinned_oracle_value() {
         "hosted harness failed: {}",
         String::from_utf8_lossy(&output.stderr)
     );
-    
+
     // Check against independent pinned oracle evidence instead of target-contract constant
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     let workspace_dir = Path::new(manifest_dir).parent().unwrap().parent().unwrap();
     let oracle_path = workspace_dir.join("artifacts/oracle-transcript.txt");
-    
+
     let oracle_expected = fs::read_to_string(&oracle_path)
         .expect("failed to read oracle transcript")
         .trim()
