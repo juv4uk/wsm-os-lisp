@@ -26,6 +26,6 @@ jobs:
       - name: Install bootimage
         run: cargo install bootimage
       - name: Build bare-metal boot image
-        run: cargo bootimage -p wsm-os-kernel
+        run: cargo bootimage -p wsm-os-kernel --target x86_64-unknown-none
       - name: Run ABI and projection tests
         run: cargo test --workspace

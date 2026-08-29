@@ -3,6 +3,12 @@ name = "wsm-os-kernel"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "wsm-os-kernel"
+path = "src/main.rs"
+test = false
+bench = false
+
 [dependencies]
 bootloader = "0.9.23"
 wsm-os-runtime = { path = "../wsm-os-runtime" }
