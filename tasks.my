@@ -77,6 +77,7 @@
      (capabilities . (rust x86_64 assembly runtime testing proof))
      (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2))
      (origin . wsm-os)
+     (done . t)
      (description . "Replace the hosted-runtime blacklist grep with an exact undefined-symbol allowlist at the freestanding link boundary. Inspect the final bare runtime object/archive with nm or llvm-nm; permit only explicitly documented compiler/runtime support symbols and versioned wsm_* ABI imports as appropriate, and fail on every other undefined symbol. Prove that calloc/realloc/write/open/socket/pthread/__libc-style leaks cannot pass merely because they were absent from the old blacklist.")))
 
    ("WSM-OS-SERIAL-BOOT-WITNESS-M3C" .
