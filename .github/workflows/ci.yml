@@ -37,8 +37,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qemu-system-x86 ovmf
       - name: Prove bounded UEFI serial boot
         env:
-          OVMF_CODE: /usr/share/OVMF/OVMF_CODE.fd
-          OVMF_VARS: /usr/share/OVMF/OVMF_VARS.fd
+          OVMF_CODE: /usr/share/OVMF/OVMF_CODE_4M.fd
+          OVMF_VARS: /usr/share/OVMF/OVMF_VARS_4M.fd
           WSM_OS_QEMU_TIMEOUT: 20
         run: scripts/run-qemu-uefi.sh target/wsm-os-uefi.img
       - name: Run ABI and projection tests
