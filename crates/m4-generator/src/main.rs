@@ -9,6 +9,7 @@ use std::process::Command;
 const CAPSULE_SCHEMA: &str = "wsm-definition-capsule";
 const CAPSULE_VERSION: u64 = 1;
 const ASSEMBLER_FAMILY: &str = "gnu-as";
+const OBJECT_CANONICALIZER: &str = "gnu-objcopy-remove-note-gnu-property";
 const TARGET_TRIPLE: &str = "x86_64-unknown-none";
 const OBJECT_FORMAT: &str = "elf64-x86-64";
 
@@ -201,6 +202,7 @@ fn build_metadata(
             "name": env!("CARGO_PKG_NAME"),
             "version": env!("CARGO_PKG_VERSION"),
             "assembler_family": ASSEMBLER_FAMILY,
+            "object_canonicalizer": OBJECT_CANONICALIZER,
             "target_triple": TARGET_TRIPLE,
             "object_format": OBJECT_FORMAT
         },
@@ -269,6 +271,12 @@ fn generate(output_dir: &Path) {
         .status()
         .expect("GNU assembler must be available");
     assert!(status.success(), "assembler failed");
+    let status = Command::new("objcopy")
+        .arg("--remove-section=.note.gnu.property")
+        .arg(&object)
+        .status()
+        .expect("GNU objcopy must be available");
+    assert!(status.success(), "object canonicalization failed");
 
     let (manifest, capsule) = build_metadata(&source_bytes, &semantic_source, &assembly, &object);
     write_json(&output_dir.join("manifest.json"), &manifest);

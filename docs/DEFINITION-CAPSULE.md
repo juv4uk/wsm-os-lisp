@@ -48,3 +48,9 @@ committed entries.
 The hosted harness copies the committed assembly while the kernel links the
 committed object. The regeneration gate proves both belong to the same
 definition bundle.
+
+GNU assembler versions may add different non-semantic
+`.note.gnu.property` metadata. The generator removes that section with GNU
+`objcopy` before hashing or linking, so the committed ELF object remains
+byte-identical across the pinned Guix and GitHub environments rather than
+weakening comparison to instruction-only equivalence.

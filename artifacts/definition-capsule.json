@@ -5,7 +5,7 @@
       "path": "artifacts/fixture.s"
     },
     "object": {
-      "digest": "c116f6d8b42c91ad176239642ccd0b8965a276d13e86a09767058c4b2fde8293",
+      "digest": "17fff544b027b97d451ac8ee90ee5fa6f7d80b63cc8bca67dabf1dbdb41e6cf9",
       "path": "artifacts/fixture.o"
     }
   },
@@ -47,6 +47,7 @@
   "generator": {
     "assembler_family": "gnu-as",
     "name": "m4-generator",
+    "object_canonicalizer": "gnu-objcopy-remove-note-gnu-property",
     "object_format": "elf64-x86-64",
     "target_triple": "x86_64-unknown-none",
     "version": "0.1.0"

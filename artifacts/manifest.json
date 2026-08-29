@@ -8,7 +8,7 @@
   "imports": [
     "wsm_cons"
   ],
-  "object_digest": "c116f6d8b42c91ad176239642ccd0b8965a276d13e86a09767058c4b2fde8293",
+  "object_digest": "17fff544b027b97d451ac8ee90ee5fa6f7d80b63cc8bca67dabf1dbdb41e6cf9",
   "schema": "wsm-m4-artifact-manifest",
   "schema_version": 2,
   "source_file_digest": "1d76c4c5fb09cffedadee89fd96e3e8c47208a06993a906f0ba8084326111a46",
