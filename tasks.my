@@ -14,10 +14,12 @@
 
    ("WSM-OS-CML-X86-FREESTANDING-M1" .
     ((priority . 10.0)
+     (done . t)
      (capabilities . (cml compiler rust x86_64 assembly lowering testing proof))
      (depends-on . (WSM-OS-TARGET-ABI-M0))
      (origin . wsm-os)
-     (description . "Add the x86_64-freestanding GNU assembly backend to cml as a consumer of admitted shared Ir. Consume the wsm-os target contract, emit deterministic .s, and fail closed before partial output for unsupported nodes. First slice: the minimum Ir needed for the frozen cons/quoted-symbol fixture, then bounded Car/Cdr/Eq/Atom only with tests. Assemble the output and prove undefined symbols are restricted to the versioned wsm_* runtime ABI. No libc, OS, filesystem or silent C-backend fallback; do not claim full my-lisp 3.0.")))
+     (description . "Add the x86_64-freestanding GNU assembly backend to cml as a consumer of admitted shared Ir. Consume the wsm-os target contract, emit deterministic .s, and fail closed before partial output for unsupported nodes. First slice: the minimum Ir needed for the frozen cons/quoted-symbol fixture, then bounded Car/Cdr/Eq/Atom only with tests. Assemble the output and prove undefined symbols are restricted to the versioned wsm_* runtime ABI. No libc, OS, filesystem or silent C-backend fallback; do not claim full my-lisp 3.0.")
+     (context . "completed 2026-08-29 by wsl-viveka-1 under direct owner assignment: CML commit 1f7142a pushed. Backend consumes pinned wsm-os-target fe168eb, preflights all IR before emission, supports literals/quote plus cons/car/cdr/eq/atom, and emits deterministic SysV AMD64 GNU assembly without libc or fallback. Real assembler/nm tests 5/5 pass, library tests 5/5 pass, GitHub Actions run 33244954299 SUCCESS.")))
 
    ("WSM-OS-HOST-RUNTIME-PARITY-M2" .
     ((priority . 9.0)
