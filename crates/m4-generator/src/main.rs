@@ -4,17 +4,6 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-fn git_sha(dir: &str) -> String {
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(dir)
-        .arg("rev-parse")
-        .arg("HEAD")
-        .output()
-        .expect("git rev-parse failed");
-    String::from_utf8_lossy(&output.stdout).trim().to_string()
-}
-
 fn file_sha(path: &Path) -> String {
     let data = fs::read(path).unwrap();
     let mut hasher = Sha256::new();
@@ -44,7 +33,10 @@ fn main() {
     let asm_path = artifacts_dir.join("fixture.s");
     fs::write(&asm_path, &assembly_str).unwrap();
 
-    let cml_sha = git_sha("../cml");
+    // CML revision comes from the target contract constant, which is always
+    // equal to the Cargo dependency pin in Cargo.toml. This makes the
+    // generator self-contained: no dependency on a sibling ../cml checkout.
+    let cml_sha = wsm_os_target::CML_SHA.to_string();
 
     let target_contract_sha = {
         let output = Command::new("git")
@@ -93,8 +85,18 @@ fn main() {
     }
 
     assert_eq!(exports, vec!["wsm_entry"]);
+
+    // Enforce exact membership in the ratified runtime import allowlist.
+    // A prefix-only check (starts_with "wsm_") would admit stray symbols
+    // like `wsm_destroy_os` without failing the gate. The allowlist is the
+    // canonical source of truth from wsm_os_target::RUNTIME_IMPORTS.
+    let allowlist = wsm_os_target::RUNTIME_IMPORTS;
     for imp in &imports {
-        assert!(imp.starts_with("wsm_"), "invalid import: {}", imp);
+        assert!(
+            allowlist.contains(&imp.as_str()),
+            "import `{imp}` is not in the ratified RUNTIME_IMPORTS allowlist; \
+             add it to wsm_os_target if this is intentional"
+        );
     }
 
     // Sort imports for determinism

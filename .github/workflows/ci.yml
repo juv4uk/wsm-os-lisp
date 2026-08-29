@@ -41,5 +41,7 @@ jobs:
           OVMF_VARS: /usr/share/OVMF/OVMF_VARS_4M.fd
           WSM_OS_QEMU_TIMEOUT: 20
         run: scripts/run-qemu-uefi.sh target/wsm-os-uefi.img
+      - name: Verify CML SHA provenance chain
+        run: scripts/check-cml-sha.sh
       - name: Run ABI and projection tests
         run: cargo test --workspace

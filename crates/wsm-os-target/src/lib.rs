@@ -62,7 +62,7 @@ pub enum ErrorCode {
 pub const MY_LISP_CONTRACT: &str = "3.0";
 pub const MY_LISP_SHA: &str = "667b587394dc8d3fc8dadff7c925e5bce68ed887";
 pub const CML_CLAIMED_CONTRACT: &str = "2.0";
-pub const CML_SHA: &str = "bfb0cac3ab3938924a58e749d99eec6ca06a8a88";
+pub const CML_SHA: &str = "58a76ce2a2a02fa766761c9eb1fed6afd7efd87d";
 pub const FIRST_FIXTURE_SOURCE: &str = "(cons (quote A) (quote B))";
 pub const FIRST_FIXTURE_EXPECTED: &str = "(A . B)";
 

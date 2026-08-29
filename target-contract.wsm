@@ -14,5 +14,5 @@
 (runtime-imports . (wsm_cons wsm_car wsm_cdr wsm_eq wsm_atom wsm_fail))
 (errors . ((out-of-memory . 1) (type . 2) (invalid-symbol . 3) (abi-violation . 4)))
 (truth . ((false-value . nil) (fixnum-zero . true)))
-(authority . ((my-lisp-contract . "3.0") (my-lisp-sha . "667b587394dc8d3fc8dadff7c925e5bce68ed887") (cml-claimed-contract . "2.0") (cml-sha . "bfb0cac3ab3938924a58e749d99eec6ca06a8a88")))
+(authority . ((my-lisp-contract . "3.0") (my-lisp-sha . "667b587394dc8d3fc8dadff7c925e5bce68ed887") (cml-claimed-contract . "2.0") (cml-sha . "58a76ce2a2a02fa766761c9eb1fed6afd7efd87d")))
 (first-fixture . ((source . "(cons (quote A) (quote B))") (expected . "(A . B)"))))
