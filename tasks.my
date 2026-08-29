@@ -62,6 +62,7 @@
 
    ("WSM-OS-M4-COMPILER-ARTIFACT-BUNDLE" .
     ((priority . 9.5)
+     (done . t)
      (capabilities . (cml compiler x86_64 assembly reproducibility testing proof))
      (depends-on . (WSM-OS-CML-X86-FREESTANDING-M1 WSM-OS-HOST-RUNTIME-PARITY-M2))
      (origin . wsm-os)
