@@ -46,17 +46,45 @@
      (origin . wsm-os)
      (description . "Provision the minimum reproducible toolchain selected by M3A: pinned Rust bare-metal target/components, QEMU and required linker/image tools through the repo manifest/CI. Prove clean tool discovery and a bounded no-op image build. Do not install broad toolchains or write physical devices.")))
 
+   ("WSM-OS-BOOT-SUBSTRATE-REALIGN-M3A1" .
+    ((priority . 10.0)
+     (capabilities . (research rust x86_64 uefi qemu architecture testing proof))
+     (depends-on . (WSM-OS-BOOT-SUBSTRATE-DECISION-M3A))
+     (origin . wsm-os)
+     (description . "Reconcile ADR-002 with the executable boot path. The ADR selects maintained bootloader v0.11 and UEFI, while the current code resolves bootloader 0.9.x and cargo bootimage. Choose and implement one honest path; if the ratified UEFI decision remains, migrate to the v0.11 bootloader_api/builder flow and remove legacy bootimage assumptions. Exact dependency, lockfile, image format, build command, QEMU firmware and CI evidence must agree. Do not call a legacy BIOS bootimage UEFI evidence.")))
+
+   ("WSM-OS-BOOT-TOOLCHAIN-PIN-M3B1" .
+    ((priority . 9.5)
+     (capabilities . (guix rust qemu x86_64 build ci testing proof))
+     (depends-on . (WSM-OS-BOOT-SUBSTRATE-REALIGN-M3A1))
+     (origin . wsm-os)
+     (description . "Make the selected boot toolchain reproducible rather than merely working on latest nightly. Pin the exact Rust nightly/components and every image-builder or bootimage tool actually used; record QEMU/firmware discovery and bounded build commands in repo configuration and CI. Completion requires a clean build from the declared pins and a pushed CI run; moving nightly or an undeclared global cargo tool is not pinned evidence.")))
+
+   ("WSM-OS-M2-ORACLE-EVIDENCE-REALIGN" .
+    ((priority . 9.5)
+     (capabilities . (my-lisp cml rust runtime testing provenance proof))
+     (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2))
+     (origin . wsm-os)
+     (description . "Replace the self-referential M2 expected-string witness with independent pinned oracle evidence. Run the frozen fixture through the declared my-lisp revision, store or reproducibly generate the canonical value/error transcript and digest, and compare hosted runtime output to that artifact. Reconcile target-contract CML_SHA with the actual CML revision used to generate/link the object. A hardcoded shared expected constant alone is contract conformance, not oracle parity.")))
+
+   ("WSM-OS-M2-RUNTIME-IMPORT-ALLOWLIST" .
+    ((priority . 9.0)
+     (capabilities . (rust x86_64 assembly runtime testing proof))
+     (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2))
+     (origin . wsm-os)
+     (description . "Replace the hosted-runtime blacklist grep with an exact undefined-symbol allowlist at the freestanding link boundary. Inspect the final bare runtime object/archive with nm or llvm-nm; permit only explicitly documented compiler/runtime support symbols and versioned wsm_* ABI imports as appropriate, and fail on every other undefined symbol. Prove that calloc/realloc/write/open/socket/pthread/__libc-style leaks cannot pass merely because they were absent from the old blacklist.")))
+
    ("WSM-OS-SERIAL-BOOT-WITNESS-M3C" .
     ((priority . 9.0)
      (capabilities . (rust x86_64 uefi qemu serial testing ci proof))
-     (depends-on . (WSM-OS-BOOT-TOOLCHAIN-M3B))
+     (depends-on . (WSM-OS-BOOT-TOOLCHAIN-PIN-M3B1))
      (origin . wsm-os)
      (description . "Create the minimal freestanding boot image with entry point, panic path and serial writer. Under a bounded QEMU run emit exactly WSM-OS BOOT schema=1 arch=x86_64 status=ok and exit through the selected test mechanism. CI must distinguish success, panic and timeout. QEMU evidence only; no physical-disk or hardware write.")))
 
    ("WSM-OS-FIRST-QEMU-PARITY-M4" .
     ((priority . 10.0)
      (capabilities . (cml my-lisp x86_64 assembly rust qemu integration testing proof))
-     (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2 WSM-OS-SERIAL-BOOT-WITNESS-M3C))
+     (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2 WSM-OS-M2-ORACLE-EVIDENCE-REALIGN WSM-OS-SERIAL-BOOT-WITNESS-M3C))
      (origin . wsm-os)
      (description . "Link the exact CML-generated M1 object and M2 runtime into the M3 image, boot in QEMU, and emit WSM-OS RESULT schema=1 value=(A . B) status=ok. Commit source fixture, oracle output, contract SHAs, generated-artifact digest and serial transcript together. Compare canonical value and failure class, not only exit status. Mark QEMU-BOOT-PARITY, never physical-hardware parity.")))
 
