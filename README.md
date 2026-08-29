@@ -36,3 +36,6 @@ The executable milestone sequence and evidence gates are in
 
 The privacy-scrubbed physical and WSL target inventory is in
 [docs/OWNER-HARDWARE-PROFILE.md](docs/OWNER-HARDWARE-PROFILE.md).
+
+The compiler-first ownership decision is recorded in
+[docs/ADR-001-COMPILER-FIRST.md](docs/ADR-001-COMPILER-FIRST.md).

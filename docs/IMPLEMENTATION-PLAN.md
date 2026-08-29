@@ -23,7 +23,9 @@ The concrete target and build constraints are pinned in
 
 ```text
 DESIGNED
-  -> HOST-BUILD-PASS
+  -> TARGET-CONTRACT-PASS
+  -> ASM-CODEGEN-PASS
+  -> HOST-LINK-PARITY
   -> QEMU-BOOT-PASS
   -> WSM-EVAL-PASS
   -> ORACLE-PARITY
@@ -33,41 +35,81 @@ DESIGNED
 No state implies the next. In particular, `QEMU-BOOT-PASS` is not physical
 hardware evidence.
 
-## M0 — pin authority and choose the boot substrate
+## M0 — pin authority and define the target ABI
 
 ### Work
 
 - record exact `my-lisp`, CML and `fpga-lisp` contract commits;
 - add a machine-readable target manifest with architecture, byte order,
   pointer width and contract versions;
-- compare the smallest viable x86_64 boot substrates;
-- check license and NOTICE obligations before adding any dependency;
-- choose one QEMU invocation and one serial success marker.
+- specify tags, ownership, alignment, calling convention and runtime symbols;
+- pin the first admitted CML IR subset;
+- pin one oracle expression and expected canonical result;
+- shortlist boot substrates without adding one yet.
 
 ### Decision criteria
 
-- UEFI/QEMU support on the existing WSL host and GitHub runner;
-- maintained Rust target support;
-- no hidden network or host filesystem dependency at runtime;
-- license compatible with this repository;
-- deterministic non-interactive test path.
+- target constants have one machine-readable source;
+- generated code contains no Rust-layout assumptions;
+- unsupported IR has a named fail-closed path;
+- ABI works in both a hosted harness and the later freestanding image.
 
 ### Done when
 
-The chosen boot dependency/version, license, target triple and QEMU command are
-committed. No boot framework is added before this gate.
+Target contract, first IR subset and oracle fixture are committed. No emitter
+uses numeric tag/ABI constants before this gate.
 
-## M1 — minimal boot and serial witness
+## M1 — CML x86_64-freestanding assembly backend
 
 ### Work
 
-- create a freestanding Rust kernel crate;
-- provide `_start`/UEFI entry, panic handler and serial writer;
-- boot under QEMU and print exactly one versioned line;
-- terminate QEMU through a test-only exit device or bounded timeout;
-- add a lightweight CI job.
+- add the backend to CML, not `wsm-os`;
+- consume existing admitted CML IR;
+- emit deterministic GNU x86_64 assembly;
+- use the target contract rather than duplicated numeric constants;
+- reject unsupported IR before partial assembly is returned;
+- assemble emitted `.s` and inspect undefined symbols;
+- add golden fixtures and exact my-lisp oracle expectations.
 
 ### Required evidence
+
+```text
+IR admission -> deterministic .s -> object file
+```
+
+- repeated emission is byte-identical;
+- object code has only versioned `wsm_*` runtime imports;
+- no libc, process or filesystem symbols enter generated program code.
+
+## M2 — shared freestanding runtime and hosted parity harness
+
+### Work
+
+- implement only `nil`, true, signed integer, symbol and cons;
+- add a deterministic bump allocator with explicit heap bounds;
+- return a structured out-of-memory error rather than corrupting memory;
+- implement the versioned `wsm_*` runtime calls used by M1;
+- link the same emitted object into a small hosted test harness;
+- compare result/error against canonical my-lisp;
+- keep all host startup/I/O outside the emitted object and runtime core.
+
+### Required evidence
+
+- encode/decode round trips for every admitted value;
+- exact heap-boundary and OOM fixtures;
+- `()` remains the empty-list spelling at the WSM boundary;
+- only `()`/nil is false, matching the pinned language contract.
+
+## M3 — minimal boot and serial witness
+
+### Work
+
+- complete the boot-substrate license/NOTICE decision;
+- create a freestanding kernel crate;
+- provide UEFI entry, panic handler and serial writer;
+- boot under QEMU and print exactly one versioned line;
+- terminate through a test-only exit device or bounded timeout;
+- add a lightweight CI job.
 
 ```text
 WSM-OS BOOT schema=1 arch=x86_64 status=ok
@@ -77,50 +119,6 @@ WSM-OS BOOT schema=1 arch=x86_64 status=ok
 - QEMU process exits as expected;
 - transcript matches exactly;
 - malformed/panic path is distinguishable from success.
-
-## M2 — target contract, values and bounded memory
-
-### Work
-
-- define a machine-readable `wsm-os` target contract;
-- start with only `nil`, true, signed integer, symbol and cons;
-- define tag bits, alignment, endianness and canonical output;
-- add a deterministic bump allocator with explicit heap bounds;
-- return a structured out-of-memory error rather than corrupting memory;
-- keep target layout independent from Rust's internal `Value` layout.
-
-### Required evidence
-
-- encode/decode round trips for every admitted value;
-- exact heap-boundary and OOM fixtures;
-- `()` remains the empty-list spelling at the WSM boundary;
-- only `()`/nil is false, matching the pinned language contract.
-
-## M3 — CML freestanding x86_64 seam
-
-### Work
-
-- select the smallest CML IR subset needed by the first expression;
-- keep WSM parsing and semantic admission in CML on the build host;
-- emit deterministic freestanding assembly or object code for the target ABI;
-- reject unsupported IR nodes with named errors;
-- do not route through hosted libc or silently fall back to the C backend;
-- preserve CML ownership of lowering and `wsm-os` ownership of target ABI.
-
-### First admitted subset
-
-```text
-Int | Nil | True | Quote(Symbol) | Cons | Car | Cdr | Eq | Atom
-```
-
-This is a ceiling, not a promise that every node enters the first patch.
-
-### Required evidence
-
-- same input produces byte-identical generated artifact;
-- unsupported input fails before image construction;
-- generated code has no unresolved libc/OS symbols;
-- host-side unit tests cover emitted control and data layout.
 
 ## M4 — first WSM execution witness
 
@@ -140,7 +138,7 @@ Expected canonical result:
 
 - evaluate the fixture with pinned canonical `my-lisp`;
 - lower it through CML;
-- link it with the M1/M2 runtime;
+- link the exact M1 object and M2 runtime into the M3 image;
 - boot the image and print a versioned result record;
 - compare value and error class, not merely process exit code.
 
@@ -205,13 +203,14 @@ green.
 ## Immediate execution order
 
 ```text
-1. BOOT-SUBSTRATE-DECISION
-2. SERIAL-BOOT-WITNESS
-3. TARGET-VALUE-CONTRACT
-4. BOUNDED-ALLOCATOR
-5. CML-FREESTANDING-X86-SEAM
+1. TARGET-VALUE-AND-RUNTIME-ABI
+2. CML-FREESTANDING-X86-SEAM
+3. HOST-LINK-ORACLE-PARITY
+4. BOOT-SUBSTRATE-DECISION
+5. SERIAL-BOOT-WITNESS
 6. FIRST-WSM-ORACLE-PARITY
 ```
 
-The next implementation action is `BOOT-SUBSTRATE-DECISION`; it is the only
-item allowed to introduce a third-party boot dependency.
+The next implementation action is `TARGET-VALUE-AND-RUNTIME-ABI`. The later
+`BOOT-SUBSTRATE-DECISION` is the only item allowed to introduce a third-party
+boot dependency.
