@@ -23,10 +23,12 @@
 
    ("WSM-OS-HOST-RUNTIME-PARITY-M2" .
     ((priority . 9.0)
+     (done . t)
      (capabilities . (rust x86_64 assembly runtime testing my-lisp proof))
      (depends-on . (WSM-OS-CML-X86-FREESTANDING-M1))
      (origin . wsm-os)
-     (description . "Implement the shared freestanding wsm_* runtime core and a bounded hosted harness around the exact M1 object: tagged value encode/decode, interned fixture symbols, cons heap, deterministic bump allocation and structured OOM/type failure. Keep host startup/output outside the runtime core. Execute the frozen expression and require canonical result/error parity with pinned my-lisp. Hosted parity is not bare-metal evidence.")))
+     (description . "Implement the shared freestanding wsm_* runtime core and a bounded hosted harness around the exact M1 object: tagged value encode/decode, interned fixture symbols, cons heap, deterministic bump allocation and structured OOM/type failure. Keep host startup/output outside the runtime core. Execute the frozen expression and require canonical result/error parity with pinned my-lisp. Hosted parity is not bare-metal evidence.")
+     (context . "completed 2026-08-29 by Antigravity under direct owner assignment: 1750000 pushed.")))
 
    ("WSM-OS-BOOT-SUBSTRATE-DECISION-M3A" .
     ((priority . 8.0)
