@@ -82,10 +82,12 @@
 
    ("WSM-OS-SERIAL-BOOT-WITNESS-M3C" .
     ((priority . 9.0)
+     (done . t)
      (capabilities . (rust x86_64 uefi qemu serial testing ci proof))
      (depends-on . (WSM-OS-BOOT-TOOLCHAIN-PIN-M3B1))
      (origin . wsm-os)
-     (description . "Create the minimal freestanding boot image with entry point, panic path and serial writer. Under a bounded QEMU run emit exactly WSM-OS BOOT schema=1 arch=x86_64 status=ok and exit through the selected test mechanism. CI must distinguish success, panic and timeout. QEMU evidence only; no physical-disk or hardware write.")))
+     (description . "Create the minimal freestanding boot image with entry point, panic path and serial writer. Under a bounded QEMU run emit exactly WSM-OS BOOT schema=1 arch=x86_64 status=ok and exit through the selected test mechanism. CI must distinguish success, panic and timeout. QEMU evidence only; no physical-disk or hardware write.")
+     (context . "completed 2026-08-29: COM1 serial writer, structured BOOT/PANIC protocol, isa-debug-exit, run-qemu-uefi.sh, and CI step. Commit da3be30.")))
 
    ("WSM-OS-FIRST-QEMU-PARITY-M4" .
     ((priority . 10.0)
