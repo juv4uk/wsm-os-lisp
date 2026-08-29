@@ -27,3 +27,6 @@ QEMU x86_64 boot
 ```
 
 See [docs/BOOTSTRAP-PLAN.md](docs/BOOTSTRAP-PLAN.md).
+
+The inspected, commit-pinned reuse decisions are recorded in
+[docs/ECOSYSTEM-REUSE-MAP.md](docs/ECOSYSTEM-REUSE-MAP.md).
