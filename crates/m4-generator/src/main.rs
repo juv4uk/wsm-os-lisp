@@ -1,123 +1,310 @@
 use cml::x86_freestanding::X86FreestandingBackend;
+use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
+use std::env;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
-fn file_sha(path: &Path) -> String {
-    let data = fs::read(path).unwrap();
-    let mut hasher = Sha256::new();
-    hasher.update(&data);
-    hex::encode(hasher.finalize())
-}
+const CAPSULE_SCHEMA: &str = "wsm-definition-capsule";
+const CAPSULE_VERSION: u64 = 1;
+const ASSEMBLER_FAMILY: &str = "gnu-as";
+const TARGET_TRIPLE: &str = "x86_64-unknown-none";
+const OBJECT_FORMAT: &str = "elf64-x86-64";
 
-fn data_sha(data: &[u8]) -> String {
+fn sha256(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(data);
     hex::encode(hasher.finalize())
 }
 
-fn main() {
-    let artifacts_dir = Path::new("artifacts");
-    fs::create_dir_all(artifacts_dir).unwrap();
+fn file_sha256(path: &Path) -> String {
+    sha256(
+        &fs::read(path)
+            .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display())),
+    )
+}
 
-    let source = wsm_os_target::FIRST_FIXTURE_SOURCE;
-    let source_digest = data_sha(source.as_bytes());
+fn compact_digest(value: &Value) -> String {
+    sha256(&serde_json::to_vec(value).expect("JSON value must serialize"))
+}
 
-    let exprs = cml::parser::parse(source).unwrap();
-    let program = cml::lower::lower_program_with_tail_calls(&exprs).unwrap();
-    let assembly_str = X86FreestandingBackend::new()
-        .compile_program(&program)
-        .unwrap();
+fn repository_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
 
-    let asm_path = artifacts_dir.join("fixture.s");
-    fs::write(&asm_path, &assembly_str).unwrap();
+fn canonical_source(root: &Path) -> (PathBuf, Vec<u8>, String) {
+    let path = root.join("artifacts/fixture.wsm");
+    let bytes = fs::read(&path).expect("committed fixture.wsm must exist");
+    let text = std::str::from_utf8(&bytes).expect("fixture.wsm must be UTF-8");
+    let semantic = text.strip_suffix('\n').unwrap_or(text);
+    assert_eq!(
+        semantic,
+        wsm_os_target::FIRST_FIXTURE_SOURCE,
+        "committed fixture.wsm must equal the target-contract fixture"
+    );
+    let semantic = semantic.to_owned();
+    (path, bytes, semantic)
+}
 
-    // CML revision comes from the target contract constant, which is always
-    // equal to the Cargo dependency pin in Cargo.toml. This makes the
-    // generator self-contained: no dependency on a sibling ../cml checkout.
-    let cml_sha = wsm_os_target::CML_SHA.to_string();
-
-    let target_contract_sha = {
-        let output = Command::new("git")
-            .arg("hash-object")
-            .arg("target-contract.wsm")
-            .output()
-            .unwrap();
-        String::from_utf8_lossy(&output.stdout).trim().to_string()
-    };
-
-    let obj_path = artifacts_dir.join("fixture.o");
-
-    let status = Command::new("as")
-        .arg("-o")
-        .arg(&obj_path)
-        .arg(&asm_path)
-        .status()
-        .unwrap();
-    assert!(status.success(), "assembler failed");
-
-    let obj_digest = file_sha(&obj_path);
-    let asm_digest = file_sha(&asm_path);
-
-    let nm_output = Command::new("nm").arg(&obj_path).output().unwrap();
-    assert!(nm_output.status.success());
-    let nm_str = String::from_utf8_lossy(&nm_output.stdout);
+fn inspect_symbols(object: &Path) -> (Vec<String>, Vec<String>, u64, u64) {
+    let output = Command::new("nm")
+        .args(["-S", "--defined-only"])
+        .arg(object)
+        .output()
+        .expect("nm must be available");
+    assert!(output.status.success(), "nm --defined-only failed");
+    let defined = String::from_utf8(output.stdout).expect("nm output must be UTF-8");
 
     let mut exports = Vec::new();
-    let mut imports = Vec::new();
-
-    for line in nm_str.lines() {
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() == 3 {
-            let symbol_type = parts[1];
-            let name = parts[2];
-            if symbol_type == "T" {
-                exports.push(name.to_string());
-            }
-        } else if parts.len() == 2 {
-            let symbol_type = parts[0];
-            let name = parts[1];
-            if symbol_type == "U" {
-                imports.push(name.to_string());
-            }
+    let mut entry_start = None;
+    let mut entry_size = None;
+    for line in defined.lines() {
+        let parts: Vec<_> = line.split_whitespace().collect();
+        if parts.len() != 4 || parts[2] != "T" {
+            continue;
+        }
+        exports.push(parts[3].to_owned());
+        if parts[3] == wsm_os_target::ENTRY_SYMBOL {
+            entry_start = Some(u64::from_str_radix(parts[0], 16).expect("entry address is hex"));
+            entry_size = Some(u64::from_str_radix(parts[1], 16).expect("entry size is hex"));
         }
     }
+    exports.sort();
 
-    assert_eq!(exports, vec!["wsm_entry"]);
+    let output = Command::new("nm")
+        .arg(object)
+        .output()
+        .expect("nm must be available");
+    assert!(output.status.success(), "nm failed");
+    let symbols = String::from_utf8(output.stdout).expect("nm output must be UTF-8");
+    let mut imports = Vec::new();
+    for line in symbols.lines() {
+        let parts: Vec<_> = line.split_whitespace().collect();
+        if parts.len() == 2 && parts[0] == "U" {
+            imports.push(parts[1].to_owned());
+        }
+    }
+    imports.sort();
 
-    // Enforce exact membership in the ratified runtime import allowlist.
-    // A prefix-only check (starts_with "wsm_") would admit stray symbols
-    // like `wsm_destroy_os` without failing the gate. The allowlist is the
-    // canonical source of truth from wsm_os_target::RUNTIME_IMPORTS.
-    let allowlist = wsm_os_target::RUNTIME_IMPORTS;
-    for imp in &imports {
+    assert_eq!(exports, [wsm_os_target::ENTRY_SYMBOL]);
+    for import in &imports {
         assert!(
-            allowlist.contains(&imp.as_str()),
-            "import `{imp}` is not in the ratified RUNTIME_IMPORTS allowlist; \
-             add it to wsm_os_target if this is intentional"
+            wsm_os_target::RUNTIME_IMPORTS.contains(&import.as_str()),
+            "import `{import}` is outside the ratified runtime allowlist"
         );
     }
 
-    // Sort imports for determinism
-    imports.sort();
+    (
+        exports,
+        imports,
+        entry_start.expect("wsm_entry must have an object-relative address"),
+        entry_size.expect("wsm_entry must have a symbol size"),
+    )
+}
 
-    let manifest = serde_json::json!({
-        "source_digest": source_digest,
-        "cml_sha": cml_sha,
-        "target_contract_sha": target_contract_sha,
-        "assembly_digest": asm_digest,
-        "object_digest": obj_digest,
+fn symbol_table() -> Value {
+    json!([
+        {"id": 1, "name": "A", "encoded_word": wsm_os_target::encode_symbol(1).unwrap()},
+        {"id": 2, "name": "B", "encoded_word": wsm_os_target::encode_symbol(2).unwrap()}
+    ])
+}
+
+fn literal_table() -> Value {
+    json!([
+        {"kind": "symbol", "symbol_id": 1, "encoded_word": wsm_os_target::encode_symbol(1).unwrap()},
+        {"kind": "symbol", "symbol_id": 2, "encoded_word": wsm_os_target::encode_symbol(2).unwrap()}
+    ])
+}
+
+fn build_metadata(
+    source_bytes: &[u8],
+    semantic_source: &str,
+    assembly: &Path,
+    object: &Path,
+) -> (Value, Value) {
+    let root = repository_root();
+    let contract_path = root.join("target-contract.wsm");
+    let (exports, imports, entry_start, entry_size) = inspect_symbols(object);
+    let source_file_digest = sha256(source_bytes);
+    let semantic_source_digest = sha256(semantic_source.as_bytes());
+    let assembly_digest = file_sha256(assembly);
+    let object_digest = file_sha256(object);
+    let target_contract_digest = file_sha256(&contract_path);
+    let symbols = symbol_table();
+    let literals = literal_table();
+    let symbol_table_digest = compact_digest(&symbols);
+    let literal_table_digest = compact_digest(&literals);
+
+    let identity_material = json!({
+        "schema": CAPSULE_SCHEMA,
+        "schema_version": CAPSULE_VERSION,
+        "source_semantic_sha256": semantic_source_digest,
+        "entry": wsm_os_target::ENTRY_SYMBOL,
+        "target_abi_schema": wsm_os_target::CONTRACT_SCHEMA,
+        "target_abi_version": wsm_os_target::CONTRACT_VERSION,
+        "my_lisp_contract": wsm_os_target::MY_LISP_CONTRACT,
+        "my_lisp_revision": wsm_os_target::MY_LISP_SHA,
+        "cml_supported_contract": wsm_os_target::CML_CLAIMED_CONTRACT,
+        "cml_revision": wsm_os_target::CML_SHA
+    });
+    let definition_id = format!("sha256:{}", compact_digest(&identity_material));
+
+    let manifest = json!({
+        "schema": "wsm-m4-artifact-manifest",
+        "schema_version": 2,
+        "digest_algorithm": "sha256",
+        "source_semantic_digest": semantic_source_digest,
+        "source_file_digest": source_file_digest,
+        "cml_sha": wsm_os_target::CML_SHA,
+        "target_contract_digest": target_contract_digest,
+        "assembly_digest": assembly_digest,
+        "object_digest": object_digest,
         "exported": exports,
         "imports": imports
     });
 
-    let manifest_path = artifacts_dir.join("manifest.json");
-    fs::write(
-        &manifest_path,
-        serde_json::to_string_pretty(&manifest).unwrap(),
-    )
-    .unwrap();
+    let capsule = json!({
+        "schema": CAPSULE_SCHEMA,
+        "schema_version": CAPSULE_VERSION,
+        "definition_id": definition_id,
+        "digest_algorithm": "sha256",
+        "source": {
+            "path": "artifacts/fixture.wsm",
+            "file_digest": source_file_digest,
+            "semantic_digest": semantic_source_digest,
+            "map": [{
+                "granularity": "definition",
+                "source_start_byte": 0,
+                "source_end_byte": semantic_source.len(),
+                "generated_entry": wsm_os_target::ENTRY_SYMBOL,
+                "object_start": entry_start,
+                "object_end": entry_start + entry_size
+            }]
+        },
+        "contracts": {
+            "my_lisp": {
+                "contract": wsm_os_target::MY_LISP_CONTRACT,
+                "revision": wsm_os_target::MY_LISP_SHA
+            },
+            "cml": {
+                "supported_contract": wsm_os_target::CML_CLAIMED_CONTRACT,
+                "revision": wsm_os_target::CML_SHA
+            },
+            "target_abi": {
+                "schema": wsm_os_target::CONTRACT_SCHEMA,
+                "version": wsm_os_target::CONTRACT_VERSION,
+                "digest": target_contract_digest
+            }
+        },
+        "generator": {
+            "name": env!("CARGO_PKG_NAME"),
+            "version": env!("CARGO_PKG_VERSION"),
+            "assembler_family": ASSEMBLER_FAMILY,
+            "target_triple": TARGET_TRIPLE,
+            "object_format": OBJECT_FORMAT
+        },
+        "code": {
+            "section": ".text",
+            "range_kind": "object-relative",
+            "start": entry_start,
+            "end": entry_start + entry_size,
+            "entry": wsm_os_target::ENTRY_SYMBOL,
+            "exports": exports
+        },
+        "literal_table": {
+            "digest": literal_table_digest,
+            "entries": literals
+        },
+        "symbol_table": {
+            "digest": symbol_table_digest,
+            "entries": symbols
+        },
+        "callers": [],
+        "dependencies": [],
+        "imports": imports,
+        "artifacts": {
+            "assembly": {"path": "artifacts/fixture.s", "digest": assembly_digest},
+            "object": {"path": "artifacts/fixture.o", "digest": object_digest}
+        },
+        "capabilities": {
+            "inspectable_metadata": true,
+            "hot_replacement": false,
+            "loader": false,
+            "world_image": false
+        }
+    });
+    (manifest, capsule)
+}
 
-    println!("Artifact bundle generated at artifacts/");
+fn write_json(path: &Path, value: &Value) {
+    let mut bytes = serde_json::to_vec_pretty(value).expect("JSON must serialize");
+    bytes.push(b'\n');
+    fs::write(path, bytes)
+        .unwrap_or_else(|error| panic!("failed to write {}: {error}", path.display()));
+}
+
+fn generate(output_dir: &Path) {
+    fs::create_dir_all(output_dir).expect("output directory must be creatable");
+    let root = repository_root();
+    let (source_path, source_bytes, semantic_source) = canonical_source(&root);
+    let output_source = output_dir.join("fixture.wsm");
+    if source_path != output_source {
+        fs::write(&output_source, &source_bytes).expect("fixture source copy must succeed");
+    }
+
+    let exprs = cml::parser::parse(&semantic_source).expect("fixture must parse");
+    let program = cml::lower::lower_program_with_tail_calls(&exprs).expect("fixture must lower");
+    let assembly_text = X86FreestandingBackend::new()
+        .compile_program(&program)
+        .expect("fixture must compile for x86_64-freestanding");
+    let assembly = output_dir.join("fixture.s");
+    fs::write(&assembly, assembly_text).expect("assembly write must succeed");
+
+    let object = output_dir.join("fixture.o");
+    let status = Command::new("as")
+        .arg("-o")
+        .arg(&object)
+        .arg(&assembly)
+        .status()
+        .expect("GNU assembler must be available");
+    assert!(status.success(), "assembler failed");
+
+    let (manifest, capsule) = build_metadata(&source_bytes, &semantic_source, &assembly, &object);
+    write_json(&output_dir.join("manifest.json"), &manifest);
+    write_json(&output_dir.join("definition-capsule.json"), &capsule);
+}
+
+fn verify(dir: &Path) {
+    let source_bytes = fs::read(dir.join("fixture.wsm")).expect("fixture.wsm must exist");
+    let source_text = std::str::from_utf8(&source_bytes).expect("fixture source must be UTF-8");
+    let semantic_source = source_text.strip_suffix('\n').unwrap_or(source_text);
+    assert_eq!(semantic_source, wsm_os_target::FIRST_FIXTURE_SOURCE);
+    let (manifest, capsule) = build_metadata(
+        &source_bytes,
+        semantic_source,
+        &dir.join("fixture.s"),
+        &dir.join("fixture.o"),
+    );
+    let committed_manifest: Value = serde_json::from_slice(
+        &fs::read(dir.join("manifest.json")).expect("manifest.json must exist"),
+    )
+    .expect("manifest.json must be valid JSON");
+    let committed_capsule: Value = serde_json::from_slice(
+        &fs::read(dir.join("definition-capsule.json")).expect("definition-capsule.json must exist"),
+    )
+    .expect("definition-capsule.json must be valid JSON");
+    assert_eq!(committed_manifest, manifest, "artifact manifest mismatch");
+    assert_eq!(committed_capsule, capsule, "definition capsule mismatch");
+    println!("verified {}", dir.display());
+}
+
+fn main() {
+    let args: Vec<_> = env::args_os().skip(1).collect();
+    match args.as_slice() {
+        [] => generate(&repository_root().join("artifacts")),
+        [flag, directory] if flag == "--output-dir" => generate(Path::new(directory)),
+        [flag, directory] if flag == "--verify" => verify(Path::new(directory)),
+        _ => panic!("usage: m4-generator [--output-dir DIR | --verify DIR]"),
+    }
 }

@@ -1,0 +1,104 @@
+{
+  "artifacts": {
+    "assembly": {
+      "digest": "ffea045edd597c2ed253222d0e8459e5e825789dfd0bdb5166c0c88d346772b3",
+      "path": "artifacts/fixture.s"
+    },
+    "object": {
+      "digest": "c116f6d8b42c91ad176239642ccd0b8965a276d13e86a09767058c4b2fde8293",
+      "path": "artifacts/fixture.o"
+    }
+  },
+  "callers": [],
+  "capabilities": {
+    "hot_replacement": false,
+    "inspectable_metadata": true,
+    "loader": false,
+    "world_image": false
+  },
+  "code": {
+    "end": 62,
+    "entry": "wsm_entry",
+    "exports": [
+      "wsm_entry"
+    ],
+    "range_kind": "object-relative",
+    "section": ".text",
+    "start": 0
+  },
+  "contracts": {
+    "cml": {
+      "revision": "74246905b833aa884ee869a2a2219f4ce3d94f25",
+      "supported_contract": "2.0"
+    },
+    "my_lisp": {
+      "contract": "3.0",
+      "revision": "667b587394dc8d3fc8dadff7c925e5bce68ed887"
+    },
+    "target_abi": {
+      "digest": "8ffea0f316dad255e43020dcf315a546908d179e29ed0206519bd98acf07dfbf",
+      "schema": "wsm-os-target-v1",
+      "version": 1
+    }
+  },
+  "definition_id": "sha256:0a998b9cc9975d82acea6919a93715e21e4ec13ff0d9ee6ae320c6458594ed21",
+  "dependencies": [],
+  "digest_algorithm": "sha256",
+  "generator": {
+    "assembler_family": "gnu-as",
+    "name": "m4-generator",
+    "object_format": "elf64-x86-64",
+    "target_triple": "x86_64-unknown-none",
+    "version": "0.1.0"
+  },
+  "imports": [
+    "wsm_cons"
+  ],
+  "literal_table": {
+    "digest": "cf1111c59cdf0bfe59e92402308e1a7de85798998f5661635075c0fcaf5bcbd3",
+    "entries": [
+      {
+        "encoded_word": 12,
+        "kind": "symbol",
+        "symbol_id": 1
+      },
+      {
+        "encoded_word": 20,
+        "kind": "symbol",
+        "symbol_id": 2
+      }
+    ]
+  },
+  "schema": "wsm-definition-capsule",
+  "schema_version": 1,
+  "source": {
+    "file_digest": "1d76c4c5fb09cffedadee89fd96e3e8c47208a06993a906f0ba8084326111a46",
+    "map": [
+      {
+        "generated_entry": "wsm_entry",
+        "granularity": "definition",
+        "object_end": 62,
+        "object_start": 0,
+        "source_end_byte": 26,
+        "source_start_byte": 0
+      }
+    ],
+    "path": "artifacts/fixture.wsm",
+    "semantic_digest": "ebabf9c9b1da76d36604ad6d3b668a64fb11eb831ede7484fb192393b2782ba9"
+  },
+  "symbol_table": {
+    "digest": "709075550658fba7a27743fa8615f155473610852e116273d54f946827b2591e",
+    "entries": [
+      {
+        "encoded_word": 12,
+        "id": 1,
+        "name": "A"
+      },
+      {
+        "encoded_word": 20,
+        "id": 2,
+        "name": "B"
+      }
+    ]
+  }
+}

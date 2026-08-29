@@ -3,8 +3,8 @@
 #
 #   wsm-os-target::CML_SHA
 #     == Cargo rev in m4-generator/Cargo.toml
-#     == Cargo rev in wsm-os-hosted/Cargo.toml
 #     == cml-sha in target-contract.wsm
+#     == cml_sha in artifacts/manifest.json
 #
 # Any mismatch is a provenance break: the artifact manifest would record a
 # different CML than the binary that was actually compiled.
@@ -32,15 +32,6 @@ if [[ "$M4_SHA" != "$CONTRACT_SHA" ]]; then
     fail=1
 fi
 
-# wsm-os-hosted Cargo.toml
-HOSTED_SHA=$(grep -oP '(?<=rev = ")[0-9a-f]{40}(?=")' \
-    crates/wsm-os-hosted/Cargo.toml | head -1)
-echo "wsm-os-hosted rev: $HOSTED_SHA"
-if [[ "$HOSTED_SHA" != "$CONTRACT_SHA" ]]; then
-    echo "MISMATCH: wsm-os-hosted Cargo rev != CML_SHA" >&2
-    fail=1
-fi
-
 # target-contract.wsm
 CONTRACT_WSM_SHA=$(grep -oP '(?<=cml-sha \. ")[0-9a-f]{40}(?=")' \
     target-contract.wsm | head -1)
@@ -50,13 +41,22 @@ if [[ "$CONTRACT_WSM_SHA" != "$CONTRACT_SHA" ]]; then
     fail=1
 fi
 
+# committed artifact manifest
+MANIFEST_SHA=$(grep -oP '(?<="cml_sha": ")[0-9a-f]{40}(?=")' \
+    artifacts/manifest.json | head -1)
+echo "artifact manifest: $MANIFEST_SHA"
+if [[ "$MANIFEST_SHA" != "$CONTRACT_SHA" ]]; then
+    echo "MISMATCH: artifacts/manifest.json cml_sha != CML_SHA" >&2
+    fail=1
+fi
+
 if [[ $fail -eq 0 ]]; then
     echo "OK: CML SHA provenance chain is consistent ($CONTRACT_SHA)"
 else
     echo "FAIL: CML SHA provenance chain is broken — update all four locations together." >&2
     echo "  wsm-os-target/src/lib.rs  pub const CML_SHA" >&2
     echo "  crates/m4-generator/Cargo.toml  rev = ..." >&2
-    echo "  crates/wsm-os-hosted/Cargo.toml  rev = ..." >&2
     echo "  target-contract.wsm  cml-sha . ..." >&2
+    echo "  artifacts/manifest.json  cml_sha" >&2
     exit 1
 fi

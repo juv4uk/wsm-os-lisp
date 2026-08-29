@@ -43,5 +43,7 @@ jobs:
         run: scripts/run-qemu-uefi.sh target/wsm-os-uefi.img
       - name: Verify CML SHA provenance chain
         run: scripts/check-cml-sha.sh
+      - name: Verify deterministic definition capsule
+        run: scripts/check-definition-capsule.sh
       - name: Run ABI and projection tests
         run: cargo test --workspace

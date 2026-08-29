@@ -520,7 +520,6 @@ dependencies = [
 name = "wsm-os-hosted"
 version = "0.1.0"
 dependencies = [
- "cml",
  "wsm-os-runtime",
  "wsm-os-target 0.1.0",
 ]

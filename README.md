@@ -45,6 +45,9 @@ Executable swarm work is tracked in [`tasks.my`](tasks.my).
 The first machine-readable ABI and its generated WSM projection are documented
 in [`docs/TARGET-ABI.md`](docs/TARGET-ABI.md).
 
+The versioned identity and reproducibility boundary for compiled definitions
+is documented in [`docs/DEFINITION-CAPSULE.md`](docs/DEFINITION-CAPSULE.md).
+
 ## Current evidence
 
 The frozen `(cons (quote A) (quote B))` fixture now passes the complete first
