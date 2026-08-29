@@ -5,10 +5,12 @@
  (tasks .
   (("WSM-OS-TARGET-ABI-M0" .
     ((priority . 10.0)
+     (done . t)
      (capabilities . (architecture x86_64 assembly compiler contract proof))
      (depends-on . ())
      (origin . wsm-os)
-     (description . "Define the machine-readable wsm-os x86_64 target ABI before any emitter uses numeric constants: little-endian 64-bit values; nil/true/fixnum/symbol/cons tags; ownership, alignment and heap pointer rules; System V AMD64 integer calling convention; versioned wsm_cons/wsm_car/wsm_cdr/wsm_eq/wsm_atom/wsm_fail imports; canonical result and structured failure records. Pin my-lisp/CML SHAs and the first (cons (quote A) (quote B)) oracle fixture. Add parser/validation tests for the contract. Do not import Rust Value/NanBox layout as authority.")))
+     (description . "Define the machine-readable wsm-os x86_64 target ABI before any emitter uses numeric constants: little-endian 64-bit values; nil/true/fixnum/symbol/cons tags; ownership, alignment and heap pointer rules; System V AMD64 integer calling convention; versioned wsm_cons/wsm_car/wsm_cdr/wsm_eq/wsm_atom/wsm_fail imports; canonical result and structured failure records. Pin my-lisp/CML SHAs and the first (cons (quote A) (quote B)) oracle fixture. Add parser/validation tests for the contract. Do not import Rust Value/NanBox layout as authority.")
+     (context . "completed 2026-08-29 by wsl-viveka-1 under direct owner assignment after swarm claim quorum was unavailable: fe168eb pushed. Dependency-free no_std wsm-os-target crate is the numeric source of truth; generated target-contract.wsm is byte-exact tested; 5/5 ABI tests, cargo check --lib, cargo fmt and my-lisp lint pass. CI added.")))
 
    ("WSM-OS-CML-X86-FREESTANDING-M1" .
     ((priority . 10.0)
