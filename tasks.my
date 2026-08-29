@@ -112,28 +112,31 @@
      (capabilities . (cml compiler x86_64 assembly conformance testing proof))
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
      (origin . wsm-os)
-     (description . "Extend the x86_64 freestanding backend by exactly one conformance slice: ABI-range fixnum literals, atomic eq, and cond branching on canonical NIL only. Add target preflight, host-link parity and QEMU parity fixtures against the pinned my-lisp oracle. Unsupported arithmetic and closures must remain named compile errors; no silent fallback.")))
+     (description . "Extend the x86_64 freestanding backend by exactly one conformance slice: ABI-range fixnum literals, atomic eq, and cond branching on canonical NIL only. Add target preflight, host-link parity and QEMU parity fixtures against the pinned my-lisp oracle. Unsupported arithmetic and closures must remain named compile errors; no silent fallback.")
+     (context . "compiler implementation a52b690 is contained in pinned CML 7424690, but this task remains open until its own hosted+QEMU oracle fixtures satisfy the full acceptance criteria.")))
 
    ("WSM-OS-CML-X86-ARITHMETIC-M5B" .
     ((priority . 7.0)
      (capabilities . (cml compiler x86_64 assembly arithmetic conformance testing proof))
      (depends-on . (WSM-OS-CML-X86-FIXNUM-BRANCH-M5A))
      (origin . wsm-os)
-     (description . "Add the next isolated x86_64 conformance slice: checked fixnum addition and subtraction with exact overflow mapped to the ratified runtime error boundary. Differentially verify boundary values against pinned my-lisp in hosted and QEMU paths. Do not add multiplication, closures, GC, or widen the numeric model in the same change.")))
+     (description . "Add the next isolated x86_64 conformance slice: checked fixnum addition and subtraction with exact overflow mapped to the ratified runtime error boundary. Differentially verify boundary values against pinned my-lisp in hosted and QEMU paths. Do not add multiplication, closures, GC, or widen the numeric model in the same change.")
+     (context . "compiler implementation b526cd6 is contained in pinned CML 7424690, but this task remains open until boundary/error behavior has independent hosted+QEMU oracle evidence.")))
 
    ("WSM-OS-CML-TAIL-CALL-PROOF-M5C" .
     ((priority . 8.5)
      (capabilities . (cml compiler x86_64 assembly tail-calls conformance testing proof))
      (depends-on . (WSM-OS-CML-X86-FIXNUM-BRANCH-M5A))
      (origin . wsm-os)
-     (description . "Preserve tail position as explicit admitted CML metadata and prove target-level stack safety before general closures. Implement exactly one first-order self-tail-call path whose x86 lowering restores/reuses the current frame and jumps rather than accumulating native calls. Differentially run the pinned 100,000-deep tail-recursion obligation through my-lisp, hosted generated x86 and QEMU; record bounded stack evidence. Non-tail calls, mutual recursion, closures and continuations remain separately unsupported unless explicitly added.")))
+     (description . "Preserve tail position as explicit admitted CML metadata and prove target-level stack safety before general closures. Implement exactly one first-order self-tail-call path whose x86 lowering restores/reuses the current frame and jumps rather than accumulating native calls. Differentially run the pinned 100,000-deep tail-recursion obligation through my-lisp, hosted generated x86 and QEMU; record bounded stack evidence. Non-tail calls, mutual recursion, closures and continuations remain separately unsupported unless explicitly added.")
+     (context . "compiler implementation dd5382f is contained in pinned CML 7424690. A prior wsm-os tail fixture was reverted to restore the frozen M4 witness, so the task remains open until a separate 100,000-deep hosted+QEMU evidence fixture is committed without replacing M4.")))
 
    ("WSM-OS-DEFINITION-CAPSULE-M5D" .
     ((priority . 7.8)
      (capabilities . (cml compiler metadata reproducibility debugging proof))
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4 WSM-OS-M4-COMPILER-ARTIFACT-BUNDLE))
      (origin . wsm-os)
-     (description . "Turn the deterministic M4 artifact manifest into one versioned definition capsule: stable definition ID, source digest and source map, contract revisions, code range/entry, literal and symbol table digests, callers/dependencies, imports and object digest. Validate deterministic regeneration and reject mismatched sections. This is inspectable metadata only: do not implement hot replacement, a loader or a world image in the same task.")))
+     (description . "Turn the deterministic M4 artifact manifest into one versioned definition capsule: stable definition ID, source digest and source map, contract revisions, generator/toolchain identity, code range/entry, literal and symbol table digests, callers/dependencies, exact imports and object/assembly digests with explicit algorithms. Regenerate twice and require byte-identical output; compare committed fixture.s, fixture.o and manifest/capsule sections fail-closed; prove the hosted-generated assembly and kernel-linked object identify the same definition. This is inspectable metadata only: do not implement hot replacement, a loader or a world image in the same task.")))
 
    ("WSM-OS-SEMANTIC-TRACE-M5E" .
     ((priority . 7.6)

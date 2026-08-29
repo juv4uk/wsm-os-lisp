@@ -21,7 +21,7 @@ bare-metal CUDA runtime.
 QEMU x86_64 boot
   -> serial output
   -> bounded allocator
-  -> minimal WSM evaluator boundary
+  -> minimal WSM execution/runtime boundary
   -> evaluate a frozen expression
   -> compare result with canonical my-lisp
 ```

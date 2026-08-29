@@ -195,9 +195,14 @@ After first QEMU parity, add three bounded architectural seams without turning
 them into a live environment prematurely:
 
 1. **Definition capsule:** extend the deterministic compiler artifact with a
-   stable definition ID, source digest/map, contract versions, code range,
-   literal/symbol table and dependency/import list. This is metadata only; it
-   does not authorize hot replacement.
+   stable definition ID, source digest/map, contract versions and revisions,
+   generator/toolchain identity, code range/entry, literal/symbol table,
+   dependency/import list and explicitly named digest algorithms. CI must
+   regenerate the bundle twice, require byte-identical outputs, compare every
+   committed artifact with its capsule digest and reject a mismatched section.
+   The hosted-generated assembly and kernel-linked committed object must be
+   proven to describe the same definition. This is metadata only; it does not
+   authorize hot replacement.
 2. **Semantic trace:** define a small versioned event vocabulary shared by the
    oracle, hosted x86, QEMU and later FPGA paths. Compare logical operations
    and stable object IDs, never raw addresses or target instruction traces.
@@ -235,6 +240,10 @@ This is a measured decision. The project may retain both:
 - AVX2/BMI2 optimization;
 - CUDA integration;
 - direct boot on the owner's physical machine.
+
+Before physical serial evidence, the COM1 writer must use bounded transmitter-
+ready polling and distinguish UART timeout from semantic failure. This does not
+change the validity of the existing QEMU witness.
 
 Each becomes a separate milestone only after the previous semantic evidence is
 green.
