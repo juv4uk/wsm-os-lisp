@@ -150,9 +150,7 @@ impl RuntimeContext {
                 Ok(ValueClass::Cons)
             }
             tag if tag == wsm_os_target::Tag::Nil as Word && value == NIL => Ok(ValueClass::Atom),
-            tag if tag == wsm_os_target::Tag::True as Word && value == TRUE => {
-                Ok(ValueClass::Atom)
-            }
+            tag if tag == wsm_os_target::Tag::True as Word && value == TRUE => Ok(ValueClass::Atom),
             tag if tag == wsm_os_target::Tag::Fixnum as Word
                 && wsm_os_target::decode_fixnum(value).is_some() =>
             {

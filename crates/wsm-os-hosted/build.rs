@@ -5,8 +5,8 @@ use std::path::PathBuf;
 use cml::x86_freestanding::X86FreestandingBackend;
 
 fn main() {
-    let expressions = cml::parser::parse(wsm_os_target::FIRST_FIXTURE_SOURCE)
-        .expect("frozen fixture must parse");
+    let expressions =
+        cml::parser::parse(wsm_os_target::FIRST_FIXTURE_SOURCE).expect("frozen fixture must parse");
     let program = cml::lower::lower_program(&expressions).expect("frozen fixture must be admitted");
     let assembly = X86FreestandingBackend::new()
         .compile_program(&program)
