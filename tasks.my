@@ -1,0 +1,67 @@
+; tasks.my — durable compiler-first implementation plan for wsm-os.
+; `done . t` is added only after pushed implementation and evidence exist.
+
+((kind . tasks-my)
+ (tasks .
+  (("WSM-OS-TARGET-ABI-M0" .
+    ((priority . 10.0)
+     (capabilities . (architecture x86_64 assembly compiler contract proof))
+     (depends-on . ())
+     (origin . wsm-os)
+     (description . "Define the machine-readable wsm-os x86_64 target ABI before any emitter uses numeric constants: little-endian 64-bit values; nil/true/fixnum/symbol/cons tags; ownership, alignment and heap pointer rules; System V AMD64 integer calling convention; versioned wsm_cons/wsm_car/wsm_cdr/wsm_eq/wsm_atom/wsm_fail imports; canonical result and structured failure records. Pin my-lisp/CML SHAs and the first (cons (quote A) (quote B)) oracle fixture. Add parser/validation tests for the contract. Do not import Rust Value/NanBox layout as authority.")))
+
+   ("WSM-OS-CML-X86-FREESTANDING-M1" .
+    ((priority . 10.0)
+     (capabilities . (cml compiler rust x86_64 assembly lowering testing proof))
+     (depends-on . (WSM-OS-TARGET-ABI-M0))
+     (origin . wsm-os)
+     (description . "Add the x86_64-freestanding GNU assembly backend to cml as a consumer of admitted shared Ir. Consume the wsm-os target contract, emit deterministic .s, and fail closed before partial output for unsupported nodes. First slice: the minimum Ir needed for the frozen cons/quoted-symbol fixture, then bounded Car/Cdr/Eq/Atom only with tests. Assemble the output and prove undefined symbols are restricted to the versioned wsm_* runtime ABI. No libc, OS, filesystem or silent C-backend fallback; do not claim full my-lisp 3.0.")))
+
+   ("WSM-OS-HOST-RUNTIME-PARITY-M2" .
+    ((priority . 9.0)
+     (capabilities . (rust x86_64 assembly runtime testing my-lisp proof))
+     (depends-on . (WSM-OS-CML-X86-FREESTANDING-M1))
+     (origin . wsm-os)
+     (description . "Implement the shared freestanding wsm_* runtime core and a bounded hosted harness around the exact M1 object: tagged value encode/decode, interned fixture symbols, cons heap, deterministic bump allocation and structured OOM/type failure. Keep host startup/output outside the runtime core. Execute the frozen expression and require canonical result/error parity with pinned my-lisp. Hosted parity is not bare-metal evidence.")))
+
+   ("WSM-OS-BOOT-SUBSTRATE-DECISION-M3A" .
+    ((priority . 8.0)
+     (capabilities . (research rust x86_64 uefi licensing architecture))
+     (depends-on . (WSM-OS-TARGET-ABI-M0))
+     (origin . wsm-os)
+     (description . "Choose the smallest maintained x86_64 UEFI/QEMU boot substrate for the observed Gigabyte H170-Gaming 3 target and WSL/GitHub build environments. Verify exact license/NOTICE obligations, Rust target/tool requirements, deterministic serial test path and test-only QEMU exit. Compare candidates from primary docs; do not add a dependency until the decision is recorded and license-cleared.")))
+
+   ("WSM-OS-BOOT-TOOLCHAIN-M3B" .
+    ((priority . 8.0)
+     (capabilities . (guix rust qemu x86_64 build ci testing))
+     (depends-on . (WSM-OS-BOOT-SUBSTRATE-DECISION-M3A))
+     (origin . wsm-os)
+     (description . "Provision the minimum reproducible toolchain selected by M3A: pinned Rust bare-metal target/components, QEMU and required linker/image tools through the repo manifest/CI. Prove clean tool discovery and a bounded no-op image build. Do not install broad toolchains or write physical devices.")))
+
+   ("WSM-OS-SERIAL-BOOT-WITNESS-M3C" .
+    ((priority . 9.0)
+     (capabilities . (rust x86_64 uefi qemu serial testing ci proof))
+     (depends-on . (WSM-OS-BOOT-TOOLCHAIN-M3B))
+     (origin . wsm-os)
+     (description . "Create the minimal freestanding boot image with entry point, panic path and serial writer. Under a bounded QEMU run emit exactly WSM-OS BOOT schema=1 arch=x86_64 status=ok and exit through the selected test mechanism. CI must distinguish success, panic and timeout. QEMU evidence only; no physical-disk or hardware write.")))
+
+   ("WSM-OS-FIRST-QEMU-PARITY-M4" .
+    ((priority . 10.0)
+     (capabilities . (cml my-lisp x86_64 assembly rust qemu integration testing proof))
+     (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2 WSM-OS-SERIAL-BOOT-WITNESS-M3C))
+     (origin . wsm-os)
+     (description . "Link the exact CML-generated M1 object and M2 runtime into the M3 image, boot in QEMU, and emit WSM-OS RESULT schema=1 value=(A . B) status=ok. Commit source fixture, oracle output, contract SHAs, generated-artifact digest and serial transcript together. Compare canonical value and failure class, not only exit status. Mark QEMU-BOOT-PARITY, never physical-hardware parity.")))
+
+   ("WSM-OS-CONFORMANCE-LADDER-M5" .
+    ((priority . 7.0)
+     (capabilities . (my-lisp cml x86_64 assembly conformance testing proof))
+     (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
+     (origin . wsm-os)
+     (description . "Expand conformance one obligation at a time: () truth/branch; fixnum and symbol identity; car/cdr/cons; nested canonical printing; named type/arity/OOM errors; one closure only after environment layout is ratified. Every fixture must match pinned my-lisp through CML admission, hosted runtime and QEMU. Do not broaden to keyboard/disk/network/GUI.")))
+
+   ("WSM-OS-MYLISP-NOSTD-DECISION-M6" .
+    ((priority . 6.0)
+     (capabilities . (rust no-std my-lisp architecture testing evidence))
+     (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
+     (origin . wsm-os)
+     (description . "After the AOT witness is green, run a bounded portability spike for my-lisp core: classify std imports, move eligible containers to alloc/core behind features, make time/stdin/global capability registry explicit platform services, and test no_std+alloc compilation separately. Decide with measured code size/complexity whether to retain AOT only or add an interactive interpreter. Do not rewrite the hosted core or claim Rc collects cycles."))))))

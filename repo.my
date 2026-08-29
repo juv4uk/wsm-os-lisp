@@ -1,0 +1,10 @@
+; repo.my — Swarm Contract v0.1 scope declaration for wsm-os.
+
+(repository
+  (id wsm-os)
+  (role bare-metal-wsm-target)
+  (exports x86_64-target-contract boot-runtime boot-image hardware-evidence)
+  (imports language-semantics compiler-middle-end cml-ir)
+  (capabilities x86_64 assembly rust compiler boot qemu testing proof)
+  (authorities target-abi boot-runtime boot-image platform-evidence)
+  (non-authorities language-semantics cml-ir fpga-isa cuda-runtime))

@@ -39,3 +39,5 @@ The privacy-scrubbed physical and WSL target inventory is in
 
 The compiler-first ownership decision is recorded in
 [docs/ADR-001-COMPILER-FIRST.md](docs/ADR-001-COMPILER-FIRST.md).
+
+Executable swarm work is tracked in [`tasks.my`](tasks.my).
