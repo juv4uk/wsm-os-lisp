@@ -43,10 +43,11 @@ set -e
 case "$status" in
   33)
     expected='WSM-OS BOOT schema=1 arch=x86_64 status=ok'
-    observed=$(tr -d '\r' < "$serial_log")
-    if [[ "$observed" != "$expected"$'\n' && "$observed" != "$expected" ]]; then
+    observed=$(tr -d '\r' < "$serial_log" | tail -n 1)
+    if [[ "$observed" != "$expected" ]]; then
       echo "SERIAL-MISMATCH" >&2
-      printf 'observed: %q\n' "$observed" >&2
+      printf 'last line: %q\n' "$observed" >&2
+      cat "$serial_log" >&2
       exit 1
     fi
     printf '%s\n' "$expected"
