@@ -33,3 +33,6 @@ The inspected, commit-pinned reuse decisions are recorded in
 
 The executable milestone sequence and evidence gates are in
 [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
+
+The privacy-scrubbed physical and WSL target inventory is in
+[docs/OWNER-HARDWARE-PROFILE.md](docs/OWNER-HARDWARE-PROFILE.md).

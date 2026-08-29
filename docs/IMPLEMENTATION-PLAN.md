@@ -5,6 +5,9 @@
 **First proof:** one CML-admitted WSM expression boots and produces the same
 canonical result as `my-lisp`.
 
+The concrete target and build constraints are pinned in
+[`OWNER-HARDWARE-PROFILE.md`](OWNER-HARDWARE-PROFILE.md).
+
 ## Definition of the first release
 
 `v0.1` is not a general operating system. It is a reproducible boot image that:
