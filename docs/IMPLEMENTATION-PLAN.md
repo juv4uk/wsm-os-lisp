@@ -151,6 +151,15 @@ WSM-OS RESULT schema=1 value=(A . B) status=ok
 The committed test stores the expression, oracle result, contract SHAs and
 serial transcript together.
 
+### Verified evidence (2026-08-30)
+
+`84ccad4` links the exact committed compiler object (SHA-256
+`c116f6d8b42c91ad176239642ccd0b8965a276d13e86a09767058c4b2fde8293`)
+into the freestanding kernel with the M2 runtime. Local Guix QEMU 10.2.1 and
+GitHub Actions run `33280152276` both emitted the committed two-record
+transcript and reached the structured success exit. This establishes
+`QEMU-BOOT-PARITY`; it is not physical-hardware evidence.
+
 ## M5 — small conformance ladder
 
 Expand one semantic obligation at a time:

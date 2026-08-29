@@ -92,10 +92,12 @@
 
    ("WSM-OS-FIRST-QEMU-PARITY-M4" .
     ((priority . 10.0)
+     (done . t)
      (capabilities . (cml my-lisp x86_64 assembly rust qemu integration testing proof))
      (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2 WSM-OS-M2-ORACLE-EVIDENCE-REALIGN WSM-OS-SERIAL-BOOT-WITNESS-M3C))
      (origin . wsm-os)
-     (description . "Link the exact CML-generated M1 object and M2 runtime into the M3 image, boot in QEMU, and emit WSM-OS RESULT schema=1 value=(A . B) status=ok. Commit source fixture, oracle output, contract SHAs, generated-artifact digest and serial transcript together. Compare canonical value and failure class, not only exit status. Mark QEMU-BOOT-PARITY, never physical-hardware parity.")))
+     (description . "Link the exact CML-generated M1 object and M2 runtime into the M3 image, boot in QEMU, and emit WSM-OS RESULT schema=1 value=(A . B) status=ok. Commit source fixture, oracle output, contract SHAs, generated-artifact digest and serial transcript together. Compare canonical value and failure class, not only exit status. Mark QEMU-BOOT-PARITY, never physical-hardware parity.")
+     (context . "verified 2026-08-30: exact committed fixture.o (sha256 c116f6d8b42c91ad176239642ccd0b8965a276d13e86a09767058c4b2fde8293) linked into the freestanding kernel with the M2 runtime. Local Guix QEMU 10.2.1 and GitHub Actions run 33280152276 emitted the committed BOOT+RESULT transcript and exited through the structured success path. Implementation 84ccad4. Evidence class QEMU-BOOT-PARITY only; no physical-hardware claim.")))
 
    ("WSM-OS-M4-COMPILER-ARTIFACT-BUNDLE" .
     ((priority . 9.5)

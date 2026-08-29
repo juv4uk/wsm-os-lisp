@@ -44,3 +44,10 @@ Executable swarm work is tracked in [`tasks.my`](tasks.my).
 
 The first machine-readable ABI and its generated WSM projection are documented
 in [`docs/TARGET-ABI.md`](docs/TARGET-ABI.md).
+
+## Current evidence
+
+The frozen `(cons (quote A) (quote B))` fixture now passes the complete first
+execution chain: pinned my-lisp oracle, CML-generated object, hosted runtime,
+freestanding UEFI image, and bounded QEMU execution all agree on `(A . B)`.
+This is `QEMU-BOOT-PARITY`, not a physical-hardware claim.
