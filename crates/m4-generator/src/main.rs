@@ -281,13 +281,26 @@ fn generate(output_dir: &Path, fixture_name: &str) {
         .expect("GNU objcopy must be available");
     assert!(status.success(), "object canonicalization failed");
 
-    let (manifest, capsule) = build_metadata(fixture_name, &source_bytes, &semantic_source, &assembly, &object);
-    write_json(&output_dir.join(format!("{}-manifest.json", fixture_name)), &manifest);
-    write_json(&output_dir.join(format!("{}-definition-capsule.json", fixture_name)), &capsule);
+    let (manifest, capsule) = build_metadata(
+        fixture_name,
+        &source_bytes,
+        &semantic_source,
+        &assembly,
+        &object,
+    );
+    write_json(
+        &output_dir.join(format!("{}-manifest.json", fixture_name)),
+        &manifest,
+    );
+    write_json(
+        &output_dir.join(format!("{}-definition-capsule.json", fixture_name)),
+        &capsule,
+    );
 }
 
 fn verify(dir: &Path, fixture_name: &str) {
-    let source_bytes = fs::read(dir.join(format!("{}.wsm", fixture_name))).expect("fixture source must exist");
+    let source_bytes =
+        fs::read(dir.join(format!("{}.wsm", fixture_name))).expect("fixture source must exist");
     let source_text = std::str::from_utf8(&source_bytes).expect("fixture source must be UTF-8");
     let semantic_source = source_text.strip_suffix('\n').unwrap_or(source_text);
     if fixture_name == "fixture" {
@@ -301,11 +314,13 @@ fn verify(dir: &Path, fixture_name: &str) {
         &dir.join(format!("{}.o", fixture_name)),
     );
     let committed_manifest: Value = serde_json::from_slice(
-        &fs::read(dir.join(format!("{}-manifest.json", fixture_name))).expect("manifest must exist"),
+        &fs::read(dir.join(format!("{}-manifest.json", fixture_name)))
+            .expect("manifest must exist"),
     )
     .expect("manifest must be valid JSON");
     let committed_capsule: Value = serde_json::from_slice(
-        &fs::read(dir.join(format!("{}-definition-capsule.json", fixture_name))).expect("capsule must exist"),
+        &fs::read(dir.join(format!("{}-definition-capsule.json", fixture_name)))
+            .expect("capsule must exist"),
     )
     .expect("capsule must be valid JSON");
     assert_eq!(committed_manifest, manifest, "artifact manifest mismatch");
@@ -318,7 +333,9 @@ fn main() {
     let args: Vec<_> = env::args_os().skip(1).collect();
     match args.as_slice() {
         [] => generate(&repository_root().join("artifacts"), &fixture_name),
-        [flag, directory] if flag == "--output-dir" => generate(Path::new(directory), &fixture_name),
+        [flag, directory] if flag == "--output-dir" => {
+            generate(Path::new(directory), &fixture_name)
+        }
         [flag, directory] if flag == "--verify" => verify(Path::new(directory), &fixture_name),
         _ => panic!("usage: WSM_FIXTURE=name m4-generator [--output-dir DIR | --verify DIR]"),
     }
