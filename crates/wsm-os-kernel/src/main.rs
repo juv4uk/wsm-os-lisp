@@ -22,12 +22,23 @@ fn kernel_main(_boot_info: &'static mut BootInfo) -> ! {
     // manifest exports exactly wsm_entry and admits only the wsm_* ABI imports.
     let result = unsafe { wsm_entry(&mut context) };
 
-    if is_first_fixture_result(result, &context) {
-        serial_write(b"WSM-OS RESULT schema=1 value=(A . B) status=ok\n");
-        qemu_exit(0x10)
+    let fixture_name = option_env!("WSM_FIXTURE").unwrap_or("fixture");
+    if fixture_name == "m5a-fixture" {
+        if is_m5a_fixture_result(result, &context) {
+            serial_write(b"WSM-OS RESULT schema=1 value=(40 . t) status=ok\n");
+            qemu_exit(0x10)
+        } else {
+            serial_write(b"WSM-OS RESULT schema=1 error=abi-violation status=error\n");
+            qemu_exit(0x12)
+        }
     } else {
-        serial_write(b"WSM-OS RESULT schema=1 error=abi-violation status=error\n");
-        qemu_exit(0x12)
+        if is_first_fixture_result(result, &context) {
+            serial_write(b"WSM-OS RESULT schema=1 value=(A . B) status=ok\n");
+            qemu_exit(0x10)
+        } else {
+            serial_write(b"WSM-OS RESULT schema=1 error=abi-violation status=error\n");
+            qemu_exit(0x12)
+        }
     }
 }
 
@@ -50,6 +61,13 @@ fn is_first_fixture_result(value: Word, context: &RuntimeContext) -> bool {
         return false;
     };
     decode_symbol(cell.car) == Some(1) && decode_symbol(cell.cdr) == Some(2)
+}
+
+fn is_m5a_fixture_result(value: Word, context: &RuntimeContext) -> bool {
+    let Ok(cell) = context.cell(value) else {
+        return false;
+    };
+    wsm_os_target::decode_fixnum(cell.car) == Some(40) && cell.cdr == wsm_os_target::TRUE
 }
 
 #[panic_handler]

@@ -108,8 +108,9 @@
      (description . "Prepare the compiler-owned half of M4 without touching boot/runtime: one deterministic command must compile the frozen WSM fixture through pinned CML into GNU assembly and an object, then emit a manifest containing source digest, CML SHA, target-contract SHA, object digest, exported entry symbol and exact undefined wsm_* imports. Run twice and require byte-identical assembly/object/manifest; fail closed on any extra import. Commit the small fixture bundle or a reproducible generator as decided by existing artifact policy. Do not add language features or claim QEMU parity.")))
 
    ("WSM-OS-CML-X86-FIXNUM-BRANCH-M5A" .
-    ((priority . 7.5)
-     (capabilities . (cml compiler x86_64 assembly conformance testing proof))
+    ((priority . 7.9)
+     (done . t)
+     (capabilities . (my-lisp cml x86_64 arithmetic cond qemu testing proof))
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
      (origin . wsm-os)
      (description . "Extend the x86_64 freestanding backend by exactly one conformance slice: ABI-range fixnum literals, atomic eq, and cond branching on canonical NIL only. Add target preflight, host-link parity and QEMU parity fixtures against the pinned my-lisp oracle. Unsupported arithmetic and closures must remain named compile errors; no silent fallback.")

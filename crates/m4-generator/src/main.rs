@@ -34,16 +34,18 @@ fn repository_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-fn canonical_source(root: &Path) -> (PathBuf, Vec<u8>, String) {
-    let path = root.join("artifacts/fixture.wsm");
+fn canonical_source(root: &Path, fixture_name: &str) -> (PathBuf, Vec<u8>, String) {
+    let path = root.join(format!("artifacts/{}.wsm", fixture_name));
     let bytes = fs::read(&path).expect("committed fixture.wsm must exist");
     let text = std::str::from_utf8(&bytes).expect("fixture.wsm must be UTF-8");
     let semantic = text.strip_suffix('\n').unwrap_or(text);
-    assert_eq!(
-        semantic,
-        wsm_os_target::FIRST_FIXTURE_SOURCE,
-        "committed fixture.wsm must equal the target-contract fixture"
-    );
+    if fixture_name == "fixture" {
+        assert_eq!(
+            semantic,
+            wsm_os_target::FIRST_FIXTURE_SOURCE,
+            "committed fixture.wsm must equal the target-contract fixture"
+        );
+    }
     let semantic = semantic.to_owned();
     (path, bytes, semantic)
 }
@@ -119,6 +121,7 @@ fn literal_table() -> Value {
 }
 
 fn build_metadata(
+    fixture_name: &str,
     source_bytes: &[u8],
     semantic_source: &str,
     assembly: &Path,
@@ -152,7 +155,7 @@ fn build_metadata(
     let definition_id = format!("sha256:{}", compact_digest(&identity_material));
 
     let manifest = json!({
-        "schema": "wsm-m4-artifact-manifest",
+        "schema": format!("wsm-{}-artifact-manifest", fixture_name),
         "schema_version": 2,
         "digest_algorithm": "sha256",
         "source_semantic_digest": semantic_source_digest,
@@ -171,7 +174,7 @@ fn build_metadata(
         "definition_id": definition_id,
         "digest_algorithm": "sha256",
         "source": {
-            "path": "artifacts/fixture.wsm",
+            "path": format!("artifacts/{}.wsm", fixture_name),
             "file_digest": source_file_digest,
             "semantic_digest": semantic_source_digest,
             "map": [{
@@ -226,8 +229,8 @@ fn build_metadata(
         "dependencies": [],
         "imports": imports,
         "artifacts": {
-            "assembly": {"path": "artifacts/fixture.s", "digest": assembly_digest},
-            "object": {"path": "artifacts/fixture.o", "digest": object_digest}
+            "assembly": {"path": format!("artifacts/{}.s", fixture_name), "digest": assembly_digest},
+            "object": {"path": format!("artifacts/{}.o", fixture_name), "digest": object_digest}
         },
         "capabilities": {
             "inspectable_metadata": true,
@@ -246,11 +249,11 @@ fn write_json(path: &Path, value: &Value) {
         .unwrap_or_else(|error| panic!("failed to write {}: {error}", path.display()));
 }
 
-fn generate(output_dir: &Path) {
+fn generate(output_dir: &Path, fixture_name: &str) {
     fs::create_dir_all(output_dir).expect("output directory must be creatable");
     let root = repository_root();
-    let (source_path, source_bytes, semantic_source) = canonical_source(&root);
-    let output_source = output_dir.join("fixture.wsm");
+    let (source_path, source_bytes, semantic_source) = canonical_source(&root, fixture_name);
+    let output_source = output_dir.join(format!("{}.wsm", fixture_name));
     if source_path != output_source {
         fs::write(&output_source, &source_bytes).expect("fixture source copy must succeed");
     }
@@ -260,10 +263,10 @@ fn generate(output_dir: &Path) {
     let assembly_text = X86FreestandingBackend::new()
         .compile_program(&program)
         .expect("fixture must compile for x86_64-freestanding");
-    let assembly = output_dir.join("fixture.s");
+    let assembly = output_dir.join(format!("{}.s", fixture_name));
     fs::write(&assembly, assembly_text).expect("assembly write must succeed");
 
-    let object = output_dir.join("fixture.o");
+    let object = output_dir.join(format!("{}.o", fixture_name));
     let status = Command::new("as")
         .arg("-o")
         .arg(&object)
@@ -278,41 +281,45 @@ fn generate(output_dir: &Path) {
         .expect("GNU objcopy must be available");
     assert!(status.success(), "object canonicalization failed");
 
-    let (manifest, capsule) = build_metadata(&source_bytes, &semantic_source, &assembly, &object);
-    write_json(&output_dir.join("manifest.json"), &manifest);
-    write_json(&output_dir.join("definition-capsule.json"), &capsule);
+    let (manifest, capsule) = build_metadata(fixture_name, &source_bytes, &semantic_source, &assembly, &object);
+    write_json(&output_dir.join(format!("{}-manifest.json", fixture_name)), &manifest);
+    write_json(&output_dir.join(format!("{}-definition-capsule.json", fixture_name)), &capsule);
 }
 
-fn verify(dir: &Path) {
-    let source_bytes = fs::read(dir.join("fixture.wsm")).expect("fixture.wsm must exist");
+fn verify(dir: &Path, fixture_name: &str) {
+    let source_bytes = fs::read(dir.join(format!("{}.wsm", fixture_name))).expect("fixture source must exist");
     let source_text = std::str::from_utf8(&source_bytes).expect("fixture source must be UTF-8");
     let semantic_source = source_text.strip_suffix('\n').unwrap_or(source_text);
-    assert_eq!(semantic_source, wsm_os_target::FIRST_FIXTURE_SOURCE);
+    if fixture_name == "fixture" {
+        assert_eq!(semantic_source, wsm_os_target::FIRST_FIXTURE_SOURCE);
+    }
     let (manifest, capsule) = build_metadata(
+        fixture_name,
         &source_bytes,
         semantic_source,
-        &dir.join("fixture.s"),
-        &dir.join("fixture.o"),
+        &dir.join(format!("{}.s", fixture_name)),
+        &dir.join(format!("{}.o", fixture_name)),
     );
     let committed_manifest: Value = serde_json::from_slice(
-        &fs::read(dir.join("manifest.json")).expect("manifest.json must exist"),
+        &fs::read(dir.join(format!("{}-manifest.json", fixture_name))).expect("manifest must exist"),
     )
-    .expect("manifest.json must be valid JSON");
+    .expect("manifest must be valid JSON");
     let committed_capsule: Value = serde_json::from_slice(
-        &fs::read(dir.join("definition-capsule.json")).expect("definition-capsule.json must exist"),
+        &fs::read(dir.join(format!("{}-definition-capsule.json", fixture_name))).expect("capsule must exist"),
     )
-    .expect("definition-capsule.json must be valid JSON");
+    .expect("capsule must be valid JSON");
     assert_eq!(committed_manifest, manifest, "artifact manifest mismatch");
     assert_eq!(committed_capsule, capsule, "definition capsule mismatch");
     println!("verified {}", dir.display());
 }
 
 fn main() {
+    let fixture_name = env::var("WSM_FIXTURE").unwrap_or_else(|_| "fixture".to_string());
     let args: Vec<_> = env::args_os().skip(1).collect();
     match args.as_slice() {
-        [] => generate(&repository_root().join("artifacts")),
-        [flag, directory] if flag == "--output-dir" => generate(Path::new(directory)),
-        [flag, directory] if flag == "--verify" => verify(Path::new(directory)),
-        _ => panic!("usage: m4-generator [--output-dir DIR | --verify DIR]"),
+        [] => generate(&repository_root().join("artifacts"), &fixture_name),
+        [flag, directory] if flag == "--output-dir" => generate(Path::new(directory), &fixture_name),
+        [flag, directory] if flag == "--verify" => verify(Path::new(directory), &fixture_name),
+        _ => panic!("usage: WSM_FIXTURE=name m4-generator [--output-dir DIR | --verify DIR]"),
     }
 }

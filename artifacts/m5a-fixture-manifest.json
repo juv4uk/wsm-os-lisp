@@ -1,0 +1,19 @@
+{
+  "assembly_digest": "c08cfa17208354cf5eb8f9600c85cf2bfa2a2acc00a713d0b358bb874eeef898",
+  "cml_sha": "74246905b833aa884ee869a2a2219f4ce3d94f25",
+  "digest_algorithm": "sha256",
+  "exported": [
+    "wsm_entry"
+  ],
+  "imports": [
+    "wsm_cons",
+    "wsm_eq",
+    "wsm_fail"
+  ],
+  "object_digest": "16e246fc7c3d9ca0f78f9ca883933d3150a343d51da2badc01e183c4f4f1b527",
+  "schema": "wsm-m5a-fixture-artifact-manifest",
+  "schema_version": 2,
+  "source_file_digest": "e53688e356cc574e88c698003a12d856f10b3a642399212663cf3095351060ff",
+  "source_semantic_digest": "99a8fb455bd6fdf989a54c89a548b2148732cc7ac21d746b84ae4c31d18f1e54",
+  "target_contract_digest": "8ffea0f316dad255e43020dcf315a546908d179e29ed0206519bd98acf07dfbf"
+}

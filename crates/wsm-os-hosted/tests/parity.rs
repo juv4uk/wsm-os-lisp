@@ -13,10 +13,11 @@ fn frozen_fixture_matches_pinned_oracle_value() {
         String::from_utf8_lossy(&output.stderr)
     );
 
-    // Check against independent pinned oracle evidence instead of target-contract constant
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     let workspace_dir = Path::new(manifest_dir).parent().unwrap().parent().unwrap();
-    let oracle_path = workspace_dir.join("artifacts/oracle-transcript.txt");
+    let transcript_path = std::env::var("WSM_ORACLE_TRANSCRIPT")
+        .unwrap_or_else(|_| "artifacts/oracle-transcript.txt".to_string());
+    let oracle_path = workspace_dir.join(transcript_path);
 
     let oracle_expected = fs::read_to_string(&oracle_path)
         .expect("failed to read oracle transcript")

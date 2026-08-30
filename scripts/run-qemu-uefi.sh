@@ -42,10 +42,11 @@ set -e
 
 case "$status" in
   33)
-    expected=$(cat artifacts/qemu-serial-transcript.txt)
+    transcript_file=${WSM_QEMU_TRANSCRIPT:-artifacts/qemu-serial-transcript.txt}
+    expected=$(cat "$transcript_file")
     observed=$(tr -d '\r' < "$serial_log" | grep '^WSM-OS ')
     if [[ "$observed" != "$expected" ]]; then
-      echo "SERIAL-MISMATCH" >&2
+      echo "SERIAL-MISMATCH against $transcript_file" >&2
       printf 'observed: %q\n' "$observed" >&2
       cat "$serial_log" >&2
       exit 1
