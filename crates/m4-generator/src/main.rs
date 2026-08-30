@@ -155,7 +155,7 @@ fn build_metadata(
     let definition_id = format!("sha256:{}", compact_digest(&identity_material));
 
     let manifest = json!({
-        "schema": format!("wsm-{}-artifact-manifest", fixture_name),
+        "schema": if fixture_name == "fixture" { "wsm-m4-artifact-manifest".to_string() } else { format!("wsm-{}-artifact-manifest", fixture_name) },
         "schema_version": 2,
         "digest_algorithm": "sha256",
         "source_semantic_digest": semantic_source_digest,

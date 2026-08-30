@@ -43,10 +43,10 @@ fi
 
 # committed artifact manifest
 MANIFEST_SHA=$(grep -oP '(?<="cml_sha": ")[0-9a-f]{40}(?=")' \
-    artifacts/manifest.json | head -1)
+    artifacts/fixture-manifest.json | head -1)
 echo "artifact manifest: $MANIFEST_SHA"
 if [[ "$MANIFEST_SHA" != "$CONTRACT_SHA" ]]; then
-    echo "MISMATCH: artifacts/manifest.json cml_sha != CML_SHA" >&2
+    echo "MISMATCH: artifacts/fixture-manifest.json cml_sha != CML_SHA" >&2
     fail=1
 fi
 
@@ -57,6 +57,6 @@ else
     echo "  wsm-os-target/src/lib.rs  pub const CML_SHA" >&2
     echo "  crates/m4-generator/Cargo.toml  rev = ..." >&2
     echo "  target-contract.wsm  cml-sha . ..." >&2
-    echo "  artifacts/manifest.json  cml_sha" >&2
+    echo "  artifacts/fixture-manifest.json  cml_sha" >&2
     exit 1
 fi
