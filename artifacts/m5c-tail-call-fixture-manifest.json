@@ -1,0 +1,18 @@
+{
+  "assembly_digest": "174cd884502dd70cc588f6a036715d8eb2f78e645085f169ffaee2752c42bc6d",
+  "cml_sha": "74246905b833aa884ee869a2a2219f4ce3d94f25",
+  "digest_algorithm": "sha256",
+  "exported": [
+    "wsm_entry"
+  ],
+  "imports": [
+    "wsm_eq",
+    "wsm_fail"
+  ],
+  "object_digest": "d782be4c3f8a46b8d742623d1c0e3dfb8405f9a3b3dc9ba9093d86a5d65578fc",
+  "schema": "wsm-m5c-tail-call-fixture-artifact-manifest",
+  "schema_version": 2,
+  "source_file_digest": "9288b4cb2324199ab419e3f5c08a01399476aff024b2e140ff2494699b3be787",
+  "source_semantic_digest": "8b3af55c9f85dbf4d7d9839dc6b7e4d75f7e761707292787a6adde06a1977f96",
+  "target_contract_digest": "8ffea0f316dad255e43020dcf315a546908d179e29ed0206519bd98acf07dfbf"
+}

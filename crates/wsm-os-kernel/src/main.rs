@@ -43,6 +43,14 @@ fn kernel_main(_boot_info: &'static mut BootInfo) -> ! {
         // We shouldn't reach here because wsm_fail triggers a kernel_failure trap.
         serial_write(b"WSM-OS RESULT schema=1 error=abi-violation status=error\n");
         qemu_exit(0x12)
+    } else if fixture_name == "m5c-tail-call-fixture" {
+        if result == wsm_os_target::TRUE {
+            serial_write(b"WSM-OS RESULT schema=1 value=t status=ok\n");
+            qemu_exit(0x10)
+        } else {
+            serial_write(b"WSM-OS RESULT schema=1 error=abi-violation status=error\n");
+            qemu_exit(0x12)
+        }
     } else {
         if is_first_fixture_result(result, &context) {
             serial_write(b"WSM-OS RESULT schema=1 value=(A . B) status=ok\n");

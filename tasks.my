@@ -127,6 +127,7 @@
 
    ("WSM-OS-CML-TAIL-CALL-PROOF-M5C" .
     ((priority . 8.5)
+     (done . t)
      (capabilities . (cml compiler x86_64 assembly tail-calls conformance testing proof))
      (depends-on . (WSM-OS-CML-X86-FIXNUM-BRANCH-M5A))
      (origin . wsm-os)
