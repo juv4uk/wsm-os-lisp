@@ -1,0 +1,106 @@
+{
+  "artifacts": {
+    "assembly": {
+      "digest": "a609e8e4cee43e3b09dc8f89c6cf7cdc880f5638ad1f3cc57e20b602894e4b98",
+      "path": "artifacts/m5b-success-fixture.s"
+    },
+    "object": {
+      "digest": "6ac342769721d901898b1e40cbfec842830d12adf11bb9d6210038524935df3c",
+      "path": "artifacts/m5b-success-fixture.o"
+    }
+  },
+  "callers": [],
+  "capabilities": {
+    "hot_replacement": false,
+    "inspectable_metadata": true,
+    "loader": false,
+    "world_image": false
+  },
+  "code": {
+    "end": 260,
+    "entry": "wsm_entry",
+    "exports": [
+      "wsm_entry"
+    ],
+    "range_kind": "object-relative",
+    "section": ".text",
+    "start": 0
+  },
+  "contracts": {
+    "cml": {
+      "revision": "74246905b833aa884ee869a2a2219f4ce3d94f25",
+      "supported_contract": "2.0"
+    },
+    "my_lisp": {
+      "contract": "3.0",
+      "revision": "667b587394dc8d3fc8dadff7c925e5bce68ed887"
+    },
+    "target_abi": {
+      "digest": "8ffea0f316dad255e43020dcf315a546908d179e29ed0206519bd98acf07dfbf",
+      "schema": "wsm-os-target-v1",
+      "version": 1
+    }
+  },
+  "definition_id": "sha256:b6f4358a4ff51f6198756ffce73818513b80d2a418a3163711d9a06bb12c2b24",
+  "dependencies": [],
+  "digest_algorithm": "sha256",
+  "generator": {
+    "assembler_family": "gnu-as",
+    "name": "m4-generator",
+    "object_canonicalizer": "gnu-objcopy-remove-note-gnu-property",
+    "object_format": "elf64-x86-64",
+    "target_triple": "x86_64-unknown-none",
+    "version": "0.1.0"
+  },
+  "imports": [
+    "wsm_cons",
+    "wsm_fail"
+  ],
+  "literal_table": {
+    "digest": "cf1111c59cdf0bfe59e92402308e1a7de85798998f5661635075c0fcaf5bcbd3",
+    "entries": [
+      {
+        "encoded_word": 12,
+        "kind": "symbol",
+        "symbol_id": 1
+      },
+      {
+        "encoded_word": 20,
+        "kind": "symbol",
+        "symbol_id": 2
+      }
+    ]
+  },
+  "schema": "wsm-definition-capsule",
+  "schema_version": 1,
+  "source": {
+    "file_digest": "004ce827a2218ccba426d7524dbe38f46ebb8a187928b20c30536bb0f29951c3",
+    "map": [
+      {
+        "generated_entry": "wsm_entry",
+        "granularity": "definition",
+        "object_end": 260,
+        "object_start": 0,
+        "source_end_byte": 59,
+        "source_start_byte": 0
+      }
+    ],
+    "path": "artifacts/m5b-success-fixture.wsm",
+    "semantic_digest": "2bf0b0b914ccdc20e4e0da11bf341592f484294eed15c19050e3e7dfd72c6a83"
+  },
+  "symbol_table": {
+    "digest": "709075550658fba7a27743fa8615f155473610852e116273d54f946827b2591e",
+    "entries": [
+      {
+        "encoded_word": 12,
+        "id": 1,
+        "name": "A"
+      },
+      {
+        "encoded_word": 20,
+        "id": 2,
+        "name": "B"
+      }
+    ]
+  }
+}

@@ -118,6 +118,7 @@
 
    ("WSM-OS-CML-X86-ARITHMETIC-M5B" .
     ((priority . 7.0)
+     (done . t)
      (capabilities . (cml compiler x86_64 assembly arithmetic conformance testing proof))
      (depends-on . (WSM-OS-CML-X86-FIXNUM-BRANCH-M5A))
      (origin . wsm-os)

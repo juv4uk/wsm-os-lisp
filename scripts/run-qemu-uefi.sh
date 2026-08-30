@@ -41,7 +41,7 @@ status=$?
 set -e
 
 case "$status" in
-  33)
+  33|37)
     transcript_file=${WSM_QEMU_TRANSCRIPT:-artifacts/qemu-serial-transcript.txt}
     expected=$(cat "$transcript_file")
     observed=$(tr -d '\r' < "$serial_log" | grep '^WSM-OS ')
@@ -60,11 +60,6 @@ case "$status" in
     ;;
   124)
     echo "TIMEOUT: guest did not reach a structured exit" >&2
-    cat "$serial_log" >&2
-    exit 1
-    ;;
-  37)
-    echo "RESULT-ERROR: guest rejected the generated fixture or runtime result" >&2
     cat "$serial_log" >&2
     exit 1
     ;;

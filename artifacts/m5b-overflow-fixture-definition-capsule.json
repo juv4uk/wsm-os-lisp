@@ -1,0 +1,105 @@
+{
+  "artifacts": {
+    "assembly": {
+      "digest": "4d28da1a26d2ec984f83ec459df2745c065d9b5e2842c63ba7a0b94c7247cac2",
+      "path": "artifacts/m5b-overflow-fixture.s"
+    },
+    "object": {
+      "digest": "9c43684911dc41c388b2d554f5e833e853d342efd9693348b0e5d0befc8bda9a",
+      "path": "artifacts/m5b-overflow-fixture.o"
+    }
+  },
+  "callers": [],
+  "capabilities": {
+    "hot_replacement": false,
+    "inspectable_metadata": true,
+    "loader": false,
+    "world_image": false
+  },
+  "code": {
+    "end": 123,
+    "entry": "wsm_entry",
+    "exports": [
+      "wsm_entry"
+    ],
+    "range_kind": "object-relative",
+    "section": ".text",
+    "start": 0
+  },
+  "contracts": {
+    "cml": {
+      "revision": "74246905b833aa884ee869a2a2219f4ce3d94f25",
+      "supported_contract": "2.0"
+    },
+    "my_lisp": {
+      "contract": "3.0",
+      "revision": "667b587394dc8d3fc8dadff7c925e5bce68ed887"
+    },
+    "target_abi": {
+      "digest": "8ffea0f316dad255e43020dcf315a546908d179e29ed0206519bd98acf07dfbf",
+      "schema": "wsm-os-target-v1",
+      "version": 1
+    }
+  },
+  "definition_id": "sha256:9adb5a22543dc93c197b9cb7efa0499fa8883ea26df261a680c5b0698a3062bf",
+  "dependencies": [],
+  "digest_algorithm": "sha256",
+  "generator": {
+    "assembler_family": "gnu-as",
+    "name": "m4-generator",
+    "object_canonicalizer": "gnu-objcopy-remove-note-gnu-property",
+    "object_format": "elf64-x86-64",
+    "target_triple": "x86_64-unknown-none",
+    "version": "0.1.0"
+  },
+  "imports": [
+    "wsm_fail"
+  ],
+  "literal_table": {
+    "digest": "cf1111c59cdf0bfe59e92402308e1a7de85798998f5661635075c0fcaf5bcbd3",
+    "entries": [
+      {
+        "encoded_word": 12,
+        "kind": "symbol",
+        "symbol_id": 1
+      },
+      {
+        "encoded_word": 20,
+        "kind": "symbol",
+        "symbol_id": 2
+      }
+    ]
+  },
+  "schema": "wsm-definition-capsule",
+  "schema_version": 1,
+  "source": {
+    "file_digest": "eb412e4a0424604040de2d3257853fb84ef7aeae2c0acbd8009d1f0d34fd0c69",
+    "map": [
+      {
+        "generated_entry": "wsm_entry",
+        "granularity": "definition",
+        "object_end": 123,
+        "object_start": 0,
+        "source_end_byte": 25,
+        "source_start_byte": 0
+      }
+    ],
+    "path": "artifacts/m5b-overflow-fixture.wsm",
+    "semantic_digest": "a03818bc30fe1efd9f094cd12453c35e708c9847382b2eb14baa659344ce8c0b"
+  },
+  "symbol_table": {
+    "digest": "709075550658fba7a27743fa8615f155473610852e116273d54f946827b2591e",
+    "entries": [
+      {
+        "encoded_word": 12,
+        "id": 1,
+        "name": "A"
+      },
+      {
+        "encoded_word": 20,
+        "id": 2,
+        "name": "B"
+      }
+    ]
+  }
+}

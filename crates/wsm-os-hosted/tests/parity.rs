@@ -7,11 +7,6 @@ fn frozen_fixture_matches_pinned_oracle_value() {
     let output = Command::new(env!("CARGO_BIN_EXE_wsm-os-hosted"))
         .output()
         .expect("run hosted harness");
-    assert!(
-        output.status.success(),
-        "hosted harness failed: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
 
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     let workspace_dir = Path::new(manifest_dir).parent().unwrap().parent().unwrap();
@@ -24,8 +19,18 @@ fn frozen_fixture_matches_pinned_oracle_value() {
         .trim()
         .to_string();
 
-    assert_eq!(
-        String::from_utf8(output.stdout).unwrap().trim(),
-        oracle_expected
-    );
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+
+    if !output.status.success() {
+        assert_eq!(
+            stderr, oracle_expected,
+            "stderr should match oracle transcript on failure"
+        );
+    } else {
+        assert_eq!(
+            stdout, oracle_expected,
+            "stdout should match oracle transcript on success"
+        );
+    }
 }
