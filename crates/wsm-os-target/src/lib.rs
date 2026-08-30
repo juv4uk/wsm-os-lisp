@@ -57,6 +57,7 @@ pub enum ErrorCode {
     Type = 2,
     InvalidSymbol = 3,
     AbiViolation = 4,
+    NumericOverflow = 5,
 }
 
 pub const MY_LISP_CONTRACT: &str = "3.0";
