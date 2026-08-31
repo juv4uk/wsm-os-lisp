@@ -60,7 +60,7 @@ pub trait BlockMedium {
 
 /// Deterministic fixed-geometry file-backed medium for hosted evidence.
 pub struct FileBlockMedium {
-    file: File,
+    file: Option<File>,
     path: PathBuf,
     block_size: usize,
     block_count: u64,
@@ -82,7 +82,7 @@ impl FileBlockMedium {
             .open(&path)?;
         file.set_len(total_bytes(block_size, block_count)?)?;
         Ok(Self {
-            file,
+            file: Some(file),
             path,
             block_size,
             block_count,
@@ -101,7 +101,7 @@ impl FileBlockMedium {
             return Err(BlockError::InvalidGeometry);
         }
         Ok(Self {
-            file,
+            file: Some(file),
             path,
             block_size,
             block_count,
@@ -114,9 +114,20 @@ impl FileBlockMedium {
 
     fn seek_block(&mut self, index: u64) -> Result<(), BlockError> {
         check_index(index, self.block_count)?;
-        self.file
-            .seek(SeekFrom::Start(block_offset(index, self.block_size)?))?;
+        let offset = block_offset(index, self.block_size)?;
+        self.file_mut()?.seek(SeekFrom::Start(offset))?;
         Ok(())
+    }
+
+    fn file_mut(&mut self) -> Result<&mut File, BlockError> {
+        self.file
+            .as_mut()
+            .ok_or_else(|| BlockError::Io("medium is closed".to_string()))
+    }
+
+    #[cfg(test)]
+    fn close_for_test(&mut self) {
+        self.file = None;
     }
 }
 
@@ -133,7 +144,7 @@ impl BlockMedium for FileBlockMedium {
         let mut raw = vec![0_u8; self.block_size];
         let mut read = 0;
         while read < raw.len() {
-            let n = self.file.read(&mut raw[read..])?;
+            let n = self.file_mut()?.read(&mut raw[read..])?;
             if n == 0 {
                 break;
             }
@@ -180,12 +191,12 @@ impl BlockMedium for FileBlockMedium {
         raw[8..12].copy_from_slice(&(bytes.len() as u32).to_le_bytes());
         raw[12..16].copy_from_slice(&checksum(bytes).to_le_bytes());
         raw[HEADER_BYTES..HEADER_BYTES + bytes.len()].copy_from_slice(bytes);
-        self.file.write_all(&raw)?;
+        self.file_mut()?.write_all(&raw)?;
         Ok(())
     }
 
     fn flush(&mut self) -> Result<(), BlockError> {
-        self.file.sync_data()?;
+        self.file_mut()?.sync_data()?;
         Ok(())
     }
 }
@@ -312,7 +323,7 @@ mod tests {
         let mut medium = FileBlockMedium::create(&path, 64, 1).unwrap();
         medium.write_block(0, b"value").unwrap();
         medium.flush().unwrap();
-        medium.file.set_len(8).unwrap();
+        medium.file_mut().unwrap().set_len(8).unwrap();
         assert!(matches!(
             medium.read_block(0),
             Err(BlockError::TruncatedBlock {
@@ -337,5 +348,18 @@ mod tests {
         assert_eq!(fs::read(&left).unwrap(), fs::read(&right).unwrap());
         fs::remove_file(left).unwrap();
         fs::remove_file(right).unwrap();
+    }
+
+    #[test]
+    fn flush_failure_is_explicit_and_not_silently_ignored() {
+        let path = temp_path("flush-failure");
+        let mut medium = FileBlockMedium::create(&path, 64, 1).unwrap();
+        medium.write_block(0, b"value").unwrap();
+        medium.close_for_test();
+        assert!(matches!(
+            medium.flush(),
+            Err(BlockError::Io(message)) if message == "medium is closed"
+        ));
+        fs::remove_file(path).unwrap();
     }
 }
