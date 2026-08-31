@@ -195,6 +195,14 @@
      (context . "Q6a guest-memory read/write/flush witness is committed as ad61201; Q6b design is docs/Q6B-VIRTUAL-DISK-DESIGN.md (commit 4fb107b). Implement a separate disposable QEMU raw disk and guest-visible bounded block ABI; clean-restart persistence is still OPEN." )
      (description . "Implement Q6b: attach a separate disposable virtual disk, perform bounded guest read/write/flush, cleanly restart with the same disk, and validate header/checksum/payload after reopen. Record exact kernel/image provenance and transcript. Do not claim power-loss durability until Q7 crash evidence.")))
 
+   ("WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B" .
+    ((priority . 9.0)
+     (capabilities . (rust no-std x86_64 qemu pci virtio block-device))
+     (depends-on . (WSM-OS-FS-VIRTUAL-DISK-PERSISTENCE-Q6B))
+     (origin . wsm-os)
+     (context . "QEMU launch can attach a separate virtio-blk disk (commit 7cbb2c9); guest currently ignores it. No PCI/virtio implementation exists yet. Keep the first driver bounded to one queue, one 512-byte sector, read/write/flush, and explicit error exits.")
+     (description . "Implement the minimal no_std virtio-blk guest driver: discover the QEMU PCI device, negotiate VERSION_1 and FLUSH where available, submit one bounded request, validate completion/status, and emit deterministic serial evidence. Do not add a general block scheduler or claim persistence until clean-restart Q6b witness passes.")))
+
    ("WSM-OS-CONFORMANCE-LADDER-M5" .
     ((priority . 7.0)
      (capabilities . (my-lisp cml x86_64 assembly conformance testing proof))
