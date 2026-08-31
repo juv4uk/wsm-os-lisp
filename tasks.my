@@ -185,7 +185,15 @@
      (origin . wsm-os)
      (status . partial)
      (context . "First bounded machine fixture implemented 2026-08-31: WSM_FIXTURE=fs-fixture embeds the canonical two-record F6 stream, validates exact bounded bytes, materializes (hello world) in the cons heap, and emits a QEMU serial witness. Commit pending. This is read-only machine evidence; semantic parser parity, disk I/O and durability remain open.")
-     (description . "After independent block evidence, add one read-only data-only FS witness to hosted/QEMU: materialize a bounded serialized value into the cons heap, print its canonical observation, and compare with pinned my-lisp FS oracle. Do not persist runtime pointers, execute stored bytes, or claim durable filesystem semantics.")))
+   (description . "After independent block evidence, add one read-only data-only FS witness to hosted/QEMU: materialize a bounded serialized value into the cons heap, print its canonical observation, and compare with pinned my-lisp FS oracle. Do not persist runtime pointers, execute stored bytes, or claim durable filesystem semantics.")))
+
+   ("WSM-OS-FS-VIRTUAL-DISK-PERSISTENCE-Q6B" .
+    ((priority . 8.8)
+     (capabilities . (wsm-os qemu block-device storage persistence evidence))
+     (depends-on . (WSM-OS-FS-MACHINE-WITNESS-F6 WSM-OS-BLOCK-MECHANISM-F5))
+     (origin . wsm-os)
+     (context . "Q6a guest-memory read/write/flush witness is committed as ad61201; Q6b design is docs/Q6B-VIRTUAL-DISK-DESIGN.md (commit 4fb107b). Implement a separate disposable QEMU raw disk and guest-visible bounded block ABI; clean-restart persistence is still OPEN." )
+     (description . "Implement Q6b: attach a separate disposable virtual disk, perform bounded guest read/write/flush, cleanly restart with the same disk, and validate header/checksum/payload after reopen. Record exact kernel/image provenance and transcript. Do not claim power-loss durability until Q7 crash evidence.")))
 
    ("WSM-OS-CONFORMANCE-LADDER-M5" .
     ((priority . 7.0)
