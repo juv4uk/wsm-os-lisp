@@ -18,8 +18,8 @@ pub const PAYLOAD_BITS: u8 = WORD_BITS - TAG_BITS;
 
 pub type Word = u64;
 
-/// Descriptor for the first closure ABI proposal. It is metadata only until a
-/// closure tag and runtime ownership rules are ratified.
+/// Bounded closure descriptor owned by the active runtime closure arena.
+/// `definition_id` is image-local; `environment_ref` is an owned WSM value.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ClosureDescriptor {
@@ -44,6 +44,7 @@ pub enum Tag {
     True = 2,
     Fixnum = 3,
     Symbol = 4,
+    Closure = 5,
 }
 
 pub const NIL: Word = Tag::Nil as Word;
@@ -56,6 +57,10 @@ pub const CONS_ALIGNMENT: usize = 16;
 pub const CONS_BYTES: usize = 16;
 pub const CONS_CAR_OFFSET: usize = 0;
 pub const CONS_CDR_OFFSET: usize = 8;
+pub const CLOSURE_ALIGNMENT: usize = 16;
+pub const CLOSURE_BYTES: usize = 16;
+pub const CLOSURE_DEFINITION_ID_OFFSET: usize = 0;
+pub const CLOSURE_ENVIRONMENT_REF_OFFSET: usize = 8;
 
 pub const CALLING_CONVENTION: &str = "sysv-amd64-integer";
 pub const ENTRY_SYMBOL: &str = "wsm_entry";
@@ -65,7 +70,15 @@ pub const STACK_ALIGNMENT_BEFORE_CALL: usize = 16;
 pub const RED_ZONE_ALLOWED: bool = false;
 
 pub const RUNTIME_IMPORTS: &[&str] = &[
-    "wsm_cons", "wsm_car", "wsm_cdr", "wsm_eq", "wsm_atom", "wsm_fail",
+    "wsm_cons",
+    "wsm_car",
+    "wsm_cdr",
+    "wsm_eq",
+    "wsm_atom",
+    "wsm_closure_new",
+    "wsm_closure_definition",
+    "wsm_closure_environment",
+    "wsm_fail",
 ];
 
 #[repr(u32)]
@@ -130,6 +143,24 @@ pub const fn is_aligned_cons_pointer(word: Word) -> bool {
     word != 0 && tag(word) == Tag::Cons as Word && word.is_multiple_of(CONS_ALIGNMENT as Word)
 }
 
+/// Tag an aligned runtime-owned descriptor pointer as a closure value.
+pub const fn encode_closure_pointer(pointer: Word) -> Option<Word> {
+    if pointer != 0 && pointer.is_multiple_of(CLOSURE_ALIGNMENT as Word) {
+        Some(pointer | Tag::Closure as Word)
+    } else {
+        None
+    }
+}
+
+/// Recover the untagged descriptor address. Arena ownership remains a runtime check.
+pub const fn decode_closure_pointer(word: Word) -> Option<Word> {
+    if tag(word) == Tag::Closure as Word {
+        Some(word & !TAG_MASK)
+    } else {
+        None
+    }
+}
+
 pub const fn is_false(word: Word) -> bool {
     word == NIL
 }
@@ -182,8 +213,25 @@ mod tests {
     }
 
     #[test]
+    fn closure_pointer_tag_round_trips_without_claiming_ownership() {
+        let encoded = encode_closure_pointer(0x1000).unwrap();
+        assert_eq!(tag(encoded), Tag::Closure as Word);
+        assert_eq!(decode_closure_pointer(encoded), Some(0x1000));
+        assert_eq!(encode_closure_pointer(0), None);
+        assert_eq!(encode_closure_pointer(0x1008), None);
+        assert_eq!(decode_closure_pointer(TRUE), None);
+    }
+
+    #[test]
     fn tag_values_are_unique_and_fit_mask() {
-        let tags = [Tag::Cons, Tag::Nil, Tag::True, Tag::Fixnum, Tag::Symbol];
+        let tags = [
+            Tag::Cons,
+            Tag::Nil,
+            Tag::True,
+            Tag::Fixnum,
+            Tag::Symbol,
+            Tag::Closure,
+        ];
         for (index, left) in tags.iter().enumerate() {
             assert!((*left as Word) <= TAG_MASK);
             for right in &tags[index + 1..] {
@@ -209,13 +257,14 @@ mod tests {
  (architecture . {ARCHITECTURE})\n\
  (endianness . {ENDIANNESS})\n\
  (word . ((bits . {WORD_BITS}) (pointer-bits . {POINTER_BITS}) (tag-bits . {TAG_BITS}) (tag-mask . {TAG_MASK}) (payload-bits . {PAYLOAD_BITS})))\n\
- (tags . ((cons . {}) (nil . {}) (true . {}) (fixnum . {}) (symbol . {})))\n\
+ (tags . ((cons . {}) (nil . {}) (true . {}) (fixnum . {}) (symbol . {}) (closure . {})))\n\
  (immediates . ((nil . {NIL}) (true . {TRUE})))\n\
  (fixnum . ((minimum . {FIXNUM_MIN}) (maximum . {FIXNUM_MAX}) (encoding . signed-shift-left-3-or-tag)))\n\
  (symbol . ((minimum-id . 1) (maximum-id . {SYMBOL_ID_MAX}) (scope . image-local-interned)))\n\
  (cons . ((bytes . {CONS_BYTES}) (alignment . {CONS_ALIGNMENT}) (car-offset . {CONS_CAR_OFFSET}) (cdr-offset . {CONS_CDR_OFFSET}) (zero-pointer . invalid) (ownership . bounded-runtime-heap)))\n\
+ (closure . ((bytes . {CLOSURE_BYTES}) (alignment . {CLOSURE_ALIGNMENT}) (definition-id-offset . {CLOSURE_DEFINITION_ID_OFFSET}) (environment-ref-offset . {CLOSURE_ENVIRONMENT_REF_OFFSET}) (definition-scope . image-local) (ownership . bounded-runtime-closure-arena)))\n\
  (calling-convention . ((name . {CALLING_CONVENTION}) (entry . {ENTRY_SYMBOL}) (context-register . {ENTRY_CONTEXT_REGISTER}) (result-register . {RESULT_REGISTER}) (stack-alignment-before-call . {STACK_ALIGNMENT_BEFORE_CALL}) (red-zone . forbidden)))\n\
- (runtime-imports . (wsm_cons wsm_car wsm_cdr wsm_eq wsm_atom wsm_fail))\n\
+ (runtime-imports . (wsm_cons wsm_car wsm_cdr wsm_eq wsm_atom wsm_closure_new wsm_closure_definition wsm_closure_environment wsm_fail))\n\
  (errors . ((out-of-memory . {}) (type . {}) (invalid-symbol . {}) (abi-violation . {})))\n\
  (truth . ((false-value . nil) (fixnum-zero . true)))\n\
  (authority . ((my-lisp-contract . \"{MY_LISP_CONTRACT}\") (my-lisp-sha . \"{MY_LISP_SHA}\") (cml-claimed-contract . \"{CML_CLAIMED_CONTRACT}\") (cml-sha . \"{CML_SHA}\")))\n\
@@ -225,6 +274,7 @@ mod tests {
             Tag::True as u8,
             Tag::Fixnum as u8,
             Tag::Symbol as u8,
+            Tag::Closure as u8,
             ErrorCode::OutOfMemory as u32,
             ErrorCode::Type as u32,
             ErrorCode::InvalidSymbol as u32,
