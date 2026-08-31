@@ -20,7 +20,7 @@ pub type Word = u64;
 
 /// Bounded closure descriptor owned by the active runtime closure arena.
 /// `definition_id` is image-local; `environment_ref` is an owned WSM value.
-#[repr(C)]
+#[repr(C, align(16))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ClosureDescriptor {
     pub definition_id: u32,
@@ -94,7 +94,7 @@ pub enum ErrorCode {
 pub const MY_LISP_CONTRACT: &str = "3.0";
 pub const MY_LISP_SHA: &str = "667b587394dc8d3fc8dadff7c925e5bce68ed887";
 pub const CML_CLAIMED_CONTRACT: &str = "2.0";
-pub const CML_SHA: &str = "5b3118904bbe9add16f9c762afb4d0d745455d7a";
+pub const CML_SHA: &str = "1266c83e26232d69d04ef71ce5bcf0bd8b745353";
 pub const FIRST_FIXTURE_SOURCE: &str = "(cons (quote A) (quote B))";
 pub const FIRST_FIXTURE_EXPECTED: &str = "(A . B)";
 

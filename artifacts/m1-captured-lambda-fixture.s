@@ -3,7 +3,7 @@
 .type wsm_entry, @function
 wsm_entry:
     pushq %r12
-    subq $96, %rsp
+    subq $112, %rsp
     movq %rdi, %r12
     movabsq $12, %rax
     movq %rax, %rsi
@@ -44,7 +44,7 @@ wsm_entry:
     addq $88, %rsp
     ret
 .Llambda_after_1:
-    addq $96, %rsp
+    addq $112, %rsp
     popq %r12
     ret
 .size wsm_entry, .-wsm_entry

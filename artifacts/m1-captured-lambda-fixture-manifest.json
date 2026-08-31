@@ -1,6 +1,6 @@
 {
-  "assembly_digest": "cf585ee2798d3a4f73071f220083f26816529c6ba32831733dc52824cef6f447",
-  "cml_sha": "5b3118904bbe9add16f9c762afb4d0d745455d7a",
+  "assembly_digest": "93827724867a76dd02e0c21c19072d8d654410f83aea374989c7f83c46c010ca",
+  "cml_sha": "1266c83e26232d69d04ef71ce5bcf0bd8b745353",
   "digest_algorithm": "sha256",
   "exported": [
     "wsm_entry"
@@ -8,10 +8,10 @@
   "imports": [
     "wsm_cons"
   ],
-  "object_digest": "b7b8d5f44c2c15d560960624ca18aa8907d17989b74c9f497c24e583ae04a393",
+  "object_digest": "f25363943b94f3183572afc02ef96b8ca80911f62d1f8aedc05a5681d791bd1f",
   "schema": "wsm-m1-captured-lambda-fixture-artifact-manifest",
   "schema_version": 2,
   "source_file_digest": "a28f0a955f7725f620d0c8de7449b7d7a2dc687483dba23f6d12094f8c5e9891",
   "source_semantic_digest": "fbbd033ce08992e52d2ce1ca3242e4460f9875d694c9affc0306fc238d4705bc",
-  "target_contract_digest": "2c7a161384e9ac566cc257238b6962bdc362860f8e2da0fa30c9a8965894d1cc"
+  "target_contract_digest": "0752434756206092dd5e417ceb9a9dab76c47dff734f9990fbe7a454cec3bb97"
 }

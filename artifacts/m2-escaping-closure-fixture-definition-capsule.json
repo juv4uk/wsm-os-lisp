@@ -1,12 +1,12 @@
 {
   "artifacts": {
     "assembly": {
-      "digest": "3fb10c4e940f1693366addd53644a61db88e168b6946b0e6b79821914d409ac7",
-      "path": "artifacts/m5c-tail-call-fixture.s"
+      "digest": "44729ba30bc28b1c486bb3d02a501e24a37f7f3ad64844154bbcfbf0429f207b",
+      "path": "artifacts/m2-escaping-closure-fixture.s"
     },
     "object": {
-      "digest": "109323605455f91137808888409be9efb9cfc76a00b1994ffea9a8c133cd0a34",
-      "path": "artifacts/m5c-tail-call-fixture.o"
+      "digest": "bc96787f2a1d32c496bd34f51e26ba76686180d106cba26877c436b41bc87d0f",
+      "path": "artifacts/m2-escaping-closure-fixture.o"
     }
   },
   "callers": [],
@@ -17,7 +17,7 @@
     "world_image": false
   },
   "code": {
-    "end": 269,
+    "end": 326,
     "entry": "wsm_entry",
     "exports": [
       "wsm_entry"
@@ -41,7 +41,7 @@
       "version": 1
     }
   },
-  "definition_id": "sha256:c354345c8f087f21e36eade62c5734ded0142757d4debc294edb926d065d7aa9",
+  "definition_id": "sha256:26581429771818f4d7ccb17182d509a896e9038beb5a5c6c92ee1232c9325a50",
   "dependencies": [],
   "digest_algorithm": "sha256",
   "generator": {
@@ -53,7 +53,12 @@
     "version": "0.1.0"
   },
   "imports": [
-    "wsm_eq",
+    "wsm_car",
+    "wsm_cdr",
+    "wsm_closure_definition",
+    "wsm_closure_environment",
+    "wsm_closure_new",
+    "wsm_cons",
     "wsm_fail"
   ],
   "literal_table": {
@@ -74,19 +79,19 @@
   "schema": "wsm-definition-capsule",
   "schema_version": 1,
   "source": {
-    "file_digest": "9288b4cb2324199ab419e3f5c08a01399476aff024b2e140ff2494699b3be787",
+    "file_digest": "2d9ade5aa5ce048400481eef71258858c20f4f82d296171f5743e8ba74034332",
     "map": [
       {
         "generated_entry": "wsm_entry",
         "granularity": "definition",
-        "object_end": 269,
+        "object_end": 326,
         "object_start": 0,
-        "source_end_byte": 101,
+        "source_end_byte": 78,
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/m5c-tail-call-fixture.wsm",
-    "semantic_digest": "8b3af55c9f85dbf4d7d9839dc6b7e4d75f7e761707292787a6adde06a1977f96"
+    "path": "artifacts/m2-escaping-closure-fixture.wsm",
+    "semantic_digest": "64dcf3ad8f087405fa56631586136851f1e94bbeaa576864a04528b5357216d8"
   },
   "symbol_table": {
     "digest": "709075550658fba7a27743fa8615f155473610852e116273d54f946827b2591e",

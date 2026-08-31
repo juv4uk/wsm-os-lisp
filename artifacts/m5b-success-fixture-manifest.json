@@ -1,6 +1,6 @@
 {
-  "assembly_digest": "a609e8e4cee43e3b09dc8f89c6cf7cdc880f5638ad1f3cc57e20b602894e4b98",
-  "cml_sha": "74246905b833aa884ee869a2a2219f4ce3d94f25",
+  "assembly_digest": "bca4c0f1fa8cb3e65d3d1d77dfe54bbfdb3034ae7b24eab82ecd370d9c649703",
+  "cml_sha": "1266c83e26232d69d04ef71ce5bcf0bd8b745353",
   "digest_algorithm": "sha256",
   "exported": [
     "wsm_entry"
@@ -9,10 +9,10 @@
     "wsm_cons",
     "wsm_fail"
   ],
-  "object_digest": "6ac342769721d901898b1e40cbfec842830d12adf11bb9d6210038524935df3c",
+  "object_digest": "bb6edcb3fdc62ec7a66298b0063ecd3cc6152d261fdbf886ef11cf5008feb920",
   "schema": "wsm-m5b-success-fixture-artifact-manifest",
   "schema_version": 2,
   "source_file_digest": "004ce827a2218ccba426d7524dbe38f46ebb8a187928b20c30536bb0f29951c3",
   "source_semantic_digest": "2bf0b0b914ccdc20e4e0da11bf341592f484294eed15c19050e3e7dfd72c6a83",
-  "target_contract_digest": "8ffea0f316dad255e43020dcf315a546908d179e29ed0206519bd98acf07dfbf"
+  "target_contract_digest": "0752434756206092dd5e417ceb9a9dab76c47dff734f9990fbe7a454cec3bb97"
 }

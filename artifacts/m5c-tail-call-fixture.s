@@ -50,6 +50,8 @@ wsm_entry:
 .Larith_overflow_6:
     movq %r12, %rdi
     movl $2, %esi
+    xorl %edx, %edx
+    xorl %ecx, %ecx
     call wsm_fail
 .Larith_ok_5:
     movq %rax, 40(%rsp)

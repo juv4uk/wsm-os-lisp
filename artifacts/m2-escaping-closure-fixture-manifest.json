@@ -1,0 +1,23 @@
+{
+  "assembly_digest": "44729ba30bc28b1c486bb3d02a501e24a37f7f3ad64844154bbcfbf0429f207b",
+  "cml_sha": "1266c83e26232d69d04ef71ce5bcf0bd8b745353",
+  "digest_algorithm": "sha256",
+  "exported": [
+    "wsm_entry"
+  ],
+  "imports": [
+    "wsm_car",
+    "wsm_cdr",
+    "wsm_closure_definition",
+    "wsm_closure_environment",
+    "wsm_closure_new",
+    "wsm_cons",
+    "wsm_fail"
+  ],
+  "object_digest": "bc96787f2a1d32c496bd34f51e26ba76686180d106cba26877c436b41bc87d0f",
+  "schema": "wsm-m2-escaping-closure-fixture-artifact-manifest",
+  "schema_version": 2,
+  "source_file_digest": "2d9ade5aa5ce048400481eef71258858c20f4f82d296171f5743e8ba74034332",
+  "source_semantic_digest": "64dcf3ad8f087405fa56631586136851f1e94bbeaa576864a04528b5357216d8",
+  "target_contract_digest": "0752434756206092dd5e417ceb9a9dab76c47dff734f9990fbe7a454cec3bb97"
+}

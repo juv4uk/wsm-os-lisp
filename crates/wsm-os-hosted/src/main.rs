@@ -1,7 +1,7 @@
 use std::mem::MaybeUninit;
 
 use wsm_os_runtime::{ConsCell, RuntimeContext};
-use wsm_os_target::{FIRST_FIXTURE_SOURCE, Word, decode_fixnum, decode_symbol};
+use wsm_os_target::{ClosureDescriptor, FIRST_FIXTURE_SOURCE, Word, decode_fixnum, decode_symbol};
 
 core::arch::global_asm!(
     include_str!(concat!(env!("OUT_DIR"), "/fixture.s")),
@@ -73,9 +73,18 @@ fn render_list_tail(value: Word, context: &RuntimeContext) -> Result<String, &'s
 fn main() {
     assert_eq!(FIRST_FIXTURE_SOURCE, "(cons (quote A) (quote B))");
     let mut heap = [MaybeUninit::<ConsCell>::uninit(); 8];
+    let mut closures = [MaybeUninit::<ClosureDescriptor>::uninit(); 4];
     // SAFETY: the aligned arena remains alive and exclusively owned until
     // after generated code and canonical rendering finish.
-    let mut context = unsafe { RuntimeContext::new(heap.as_mut_ptr(), heap.len(), hosted_failure) };
+    let mut context = unsafe {
+        RuntimeContext::new_with_closures(
+            heap.as_mut_ptr(),
+            heap.len(),
+            closures.as_mut_ptr(),
+            closures.len(),
+            hosted_failure,
+        )
+    };
     // SAFETY: `wsm_entry` is generated from pinned CML and follows target ABI v1.
     let result = unsafe { wsm_entry(&mut context) };
     println!(
