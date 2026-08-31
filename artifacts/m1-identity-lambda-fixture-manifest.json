@@ -1,0 +1,15 @@
+{
+  "assembly_digest": "9d5b0a3cda5f50f70e1603e83217efc7e141608701f33ea95afb1906e1f71f42",
+  "cml_sha": "9858299932f096e2ef0b6fa0c61ca75db044cdf1",
+  "digest_algorithm": "sha256",
+  "exported": [
+    "wsm_entry"
+  ],
+  "imports": [],
+  "object_digest": "1e0f5778cfcedcaebf46a949954b24285f79b051e29f12677e75b224f5ee927d",
+  "schema": "wsm-m1-identity-lambda-fixture-artifact-manifest",
+  "schema_version": 2,
+  "source_file_digest": "0e97d5037430b57cf50720b0aa12af4012045230738ec91771fb5b78c5bb2cdd",
+  "source_semantic_digest": "bca0e3856ad0063e1290c076c64a6803defdddaf55746fc2660ecd68c8eecfbf",
+  "target_contract_digest": "14743f9a36011ba29643c5588af4f80c890b874d9e31667887a9e4f27884af63"
+}

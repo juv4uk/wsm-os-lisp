@@ -1,12 +1,12 @@
 {
   "artifacts": {
     "assembly": {
-      "digest": "ffea045edd597c2ed253222d0e8459e5e825789dfd0bdb5166c0c88d346772b3",
-      "path": "artifacts/fixture.s"
+      "digest": "9d5b0a3cda5f50f70e1603e83217efc7e141608701f33ea95afb1906e1f71f42",
+      "path": "artifacts/m1-identity-lambda-fixture.s"
     },
     "object": {
-      "digest": "17fff544b027b97d451ac8ee90ee5fa6f7d80b63cc8bca67dabf1dbdb41e6cf9",
-      "path": "artifacts/fixture.o"
+      "digest": "1e0f5778cfcedcaebf46a949954b24285f79b051e29f12677e75b224f5ee927d",
+      "path": "artifacts/m1-identity-lambda-fixture.o"
     }
   },
   "callers": [],
@@ -17,7 +17,7 @@
     "world_image": false
   },
   "code": {
-    "end": 62,
+    "end": 40,
     "entry": "wsm_entry",
     "exports": [
       "wsm_entry"
@@ -41,7 +41,7 @@
       "version": 1
     }
   },
-  "definition_id": "sha256:5901cc1ac8a7acb8786d72e1734f4496a472dd12065d6a4b9ddb21a2cd5e64f4",
+  "definition_id": "sha256:47241799c7c8c5a4f715a925a48839ccfc16efdfa5ea79b02acb049d3fe0652c",
   "dependencies": [],
   "digest_algorithm": "sha256",
   "generator": {
@@ -52,9 +52,7 @@
     "target_triple": "x86_64-unknown-none",
     "version": "0.1.0"
   },
-  "imports": [
-    "wsm_cons"
-  ],
+  "imports": [],
   "literal_table": {
     "digest": "cf1111c59cdf0bfe59e92402308e1a7de85798998f5661635075c0fcaf5bcbd3",
     "entries": [
@@ -73,19 +71,19 @@
   "schema": "wsm-definition-capsule",
   "schema_version": 1,
   "source": {
-    "file_digest": "1d76c4c5fb09cffedadee89fd96e3e8c47208a06993a906f0ba8084326111a46",
+    "file_digest": "0e97d5037430b57cf50720b0aa12af4012045230738ec91771fb5b78c5bb2cdd",
     "map": [
       {
         "generated_entry": "wsm_entry",
         "granularity": "definition",
-        "object_end": 62,
+        "object_end": 40,
         "object_start": 0,
-        "source_end_byte": 26,
+        "source_end_byte": 18,
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/fixture.wsm",
-    "semantic_digest": "ebabf9c9b1da76d36604ad6d3b668a64fb11eb831ede7484fb192393b2782ba9"
+    "path": "artifacts/m1-identity-lambda-fixture.wsm",
+    "semantic_digest": "bca0e3856ad0063e1290c076c64a6803defdddaf55746fc2660ecd68c8eecfbf"
   },
   "symbol_table": {
     "digest": "709075550658fba7a27743fa8615f155473610852e116273d54f946827b2591e",
