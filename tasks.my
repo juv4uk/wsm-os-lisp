@@ -255,8 +255,10 @@
 
    ("WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME" .
     ((priority . 9.9)
+     (done . t)
      (capabilities . (wsm-os runtime x86_64 closures environments qemu conformance))
      (origin . wsm-os)
+     (context . "Completed 2026-09-01 in ba899a7 on runtime foundation 4f5f727 and CML 1266c83. Closure tag 5 points only into a bounded 16-byte-aligned closure arena; image-local definition ID and owned WSM environment are bounds-checked; foreign/malformed pointers and OOM fail closed. Target/runtime 12/12 PASS, oracle=(A B), hosted=(A B), QEMU boot transcript=(A B) execution=escaping-closure; all artifact manifests/capsules verify against the pinned SHA.")
      (description . "Represent an escaping closure as a bounded target value carrying code identity plus captured environment; apply it after its defining call returns. Prove the unchanged fixture through my-lisp oracle, hosted generated code and QEMU. Do not copy Rust Value layout or add constitutional special cases.")))
 
    ("WSM-OS-CONSTITUTION-GLOBAL-ENV-DEFS" .
