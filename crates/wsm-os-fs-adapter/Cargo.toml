@@ -1,0 +1,9 @@
+[package]
+name = "wsm-os-fs-adapter"
+version = "0.1.0"
+edition = "2024"
+description = "Read-only image adapter over the opaque WSM block mechanism"
+publish = false
+
+[dependencies]
+wsm-os-block = { path = "../wsm-os-block" }
