@@ -1,0 +1,2 @@
+WSM-OS BOOT schema=1 arch=x86_64 status=ok
+WSM-OS FS schema=1 format=wsm-fs-records value=(hello world) status=ok

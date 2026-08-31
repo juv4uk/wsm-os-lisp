@@ -1,0 +1,2 @@
+((format . wsm-fs-root) (version 0 1) (revision . 1) (bindings ("code" . "(hello world)")) (objects "(hello world)"))
+((format . wsm-fs-object) (version 0 1) (address . "(hello world)") (value hello world))

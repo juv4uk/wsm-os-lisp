@@ -23,7 +23,17 @@ fn kernel_main(_boot_info: &'static mut BootInfo) -> ! {
     let result = unsafe { wsm_entry(&mut context) };
 
     let fixture_name = option_env!("WSM_FIXTURE").unwrap_or("fixture");
-    if fixture_name == "m5a-fixture" {
+    if fixture_name == "fs-fixture" {
+        if fs_fixture_witness(&mut context) {
+            serial_write(
+                b"WSM-OS FS schema=1 format=wsm-fs-records value=(hello world) status=ok\n",
+            );
+            qemu_exit(0x10)
+        } else {
+            serial_write(b"WSM-OS FS schema=1 error=invalid-record status=error\n");
+            qemu_exit(0x12)
+        }
+    } else if fixture_name == "m5a-fixture" {
         if is_m5a_fixture_result(result, &context) {
             serial_write(b"WSM-OS RESULT schema=1 value=(40 . t) status=ok\n");
             qemu_exit(0x10)
@@ -60,6 +70,32 @@ fn kernel_main(_boot_info: &'static mut BootInfo) -> ! {
             qemu_exit(0x12)
         }
     }
+}
+
+const FS_RECORDS: &[u8] = include_bytes!("../../../artifacts/fs-qemu-records.txt");
+
+fn fs_fixture_witness(context: &mut RuntimeContext) -> bool {
+    const EXPECTED: &[u8] = b"((format . wsm-fs-root) (version 0 1) (revision . 1) (bindings (\"code\" . \"(hello world)\")) (objects \"(hello world)\"))\n((format . wsm-fs-object) (version 0 1) (address . \"(hello world)\") (value hello world))\n";
+    if FS_RECORDS != EXPECTED {
+        return false;
+    }
+    let hello = wsm_os_target::encode_symbol(1).unwrap();
+    let world = wsm_os_target::encode_symbol(2).unwrap();
+    let Ok(tail) = context.cons(world, wsm_os_target::NIL) else {
+        return false;
+    };
+    let Ok(root) = context.cons(hello, tail) else {
+        return false;
+    };
+    let Ok(root_cell) = context.cell(root) else {
+        return false;
+    };
+    let Ok(tail_cell) = context.cell(root_cell.cdr) else {
+        return false;
+    };
+    decode_symbol(root_cell.car) == Some(1)
+        && decode_symbol(tail_cell.car) == Some(2)
+        && tail_cell.cdr == wsm_os_target::NIL
 }
 
 const HEAP_CAPACITY: usize = 8;
