@@ -528,6 +528,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "wsm-os-fs-parser"
+version = "0.1.0"
+
+[[package]]
 name = "wsm-os-hosted"
 version = "0.1.0"
 dependencies = [
@@ -566,6 +570,10 @@ version = "0.1.0"
 name = "wsm-os-target"
 version = "0.1.0"
 source = "git+https://github.com/juv4uk/wsm-os.git?rev=fe168ebc572c82c237faa4a952eec63e531dcc47#fe168ebc572c82c237faa4a952eec63e531dcc47"
+
+[[package]]
+name = "wsm-os-virtio"
+version = "0.1.0"
 
 [[package]]
 name = "zmij"
