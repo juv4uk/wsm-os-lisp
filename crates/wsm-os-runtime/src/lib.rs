@@ -179,7 +179,7 @@ impl RuntimeContext {
         }
     }
 
-    fn fail_with(&mut self, error: RuntimeError, offending_value: Word, source_id: u32) -> ! {
+    fn fail(&mut self, error: RuntimeError, offending_value: Word, source_id: u32) -> ! {
         self.condition.kind = error.code() as u32;
         self.condition.offending_value = offending_value;
         self.condition.source_id = source_id;
@@ -189,13 +189,19 @@ impl RuntimeContext {
 
 unsafe fn context_mut<'a>(context: *mut RuntimeContext) -> &'a mut RuntimeContext {
     // SAFETY: every exported ABI function requires the target contract's
-    // non-null, exclusively borrowed context pointer.
+    // non-null, exclusively borrowed context pointer. A null pointer is an
+    // ABI violation; the freestanding runtime must not pull in panic_fmt.
     unsafe { context.as_mut() }.unwrap_or_else(|| panic_context())
 }
 
 #[cold]
 fn panic_context() -> ! {
-    panic!("invalid context pointer in wsm-os-runtime wrapper")
+    // There is no valid RuntimeContext from which to call the configured
+    // failure handler. Spin forever rather than importing host panic support;
+    // boot/kernel wrappers can validate their context before entering the ABI.
+    loop {
+        core::hint::spin_loop();
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -204,7 +210,7 @@ pub unsafe extern "C" fn wsm_cons(context: *mut RuntimeContext, car: Word, cdr: 
     let context = unsafe { context_mut(context) };
     context
         .cons(car, cdr)
-        .unwrap_or_else(|error| context.fail_with(error, 0, 0))
+        .unwrap_or_else(|error| context.fail(error, 0, 0))
 }
 
 #[unsafe(no_mangle)]
@@ -213,7 +219,7 @@ pub unsafe extern "C" fn wsm_car(context: *mut RuntimeContext, pair: Word) -> Wo
     let context = unsafe { context_mut(context) };
     context
         .car(pair)
-        .unwrap_or_else(|error| context.fail_with(error, pair, 0))
+        .unwrap_or_else(|error| context.fail(error, pair, 0))
 }
 
 #[unsafe(no_mangle)]
@@ -222,7 +228,7 @@ pub unsafe extern "C" fn wsm_cdr(context: *mut RuntimeContext, pair: Word) -> Wo
     let context = unsafe { context_mut(context) };
     context
         .cdr(pair)
-        .unwrap_or_else(|error| context.fail_with(error, pair, 0))
+        .unwrap_or_else(|error| context.fail(error, pair, 0))
 }
 
 #[unsafe(no_mangle)]
@@ -231,7 +237,7 @@ pub unsafe extern "C" fn wsm_eq(context: *mut RuntimeContext, left: Word, right:
     let context = unsafe { context_mut(context) };
     context
         .eq(left, right)
-        .unwrap_or_else(|error| context.fail_with(error, left, 0))
+        .unwrap_or_else(|error| context.fail(error, left, 0))
 }
 
 #[unsafe(no_mangle)]
@@ -240,7 +246,7 @@ pub unsafe extern "C" fn wsm_atom(context: *mut RuntimeContext, value: Word) -> 
     let context = unsafe { context_mut(context) };
     context
         .atom(value)
-        .unwrap_or_else(|error| context.fail_with(error, value, 0))
+        .unwrap_or_else(|error| context.fail(error, value, 0))
 }
 
 #[unsafe(no_mangle)]
