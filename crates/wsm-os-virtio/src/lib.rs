@@ -37,6 +37,23 @@ impl DeviceIdentity {
     }
 }
 
+/// Decode the only PCI fields needed by the first probe from a bounded config
+/// snapshot. No MMIO or unchecked pointer access belongs in this layer.
+pub fn probe_identity(config: &[u8]) -> Option<DeviceIdentity> {
+    let vendor = read_u16(config, PCI_VENDOR_ID_OFFSET as usize)?;
+    let device = read_u16(config, PCI_DEVICE_ID_OFFSET as usize)?;
+    Some(DeviceIdentity {
+        vendor_id: vendor,
+        device_id: device,
+    })
+}
+
+fn read_u16(bytes: &[u8], offset: usize) -> Option<u16> {
+    let low = *bytes.get(offset)? as u16;
+    let high = *bytes.get(offset + 1)? as u16;
+    Some(low | (high << 8))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -66,5 +83,21 @@ mod tests {
         assert_eq!(COMMON_CFG_STATUS, 0x14);
         assert!(MAX_QUEUE_SIZE.is_power_of_two());
         assert!(MAX_QUEUE_SIZE <= 256);
+    }
+
+    #[test]
+    fn probe_reads_little_endian_identity_and_rejects_short_config() {
+        let mut config = [0_u8; 64];
+        config[PCI_VENDOR_ID_OFFSET as usize..][..2].copy_from_slice(&VENDOR_ID.to_le_bytes());
+        config[PCI_DEVICE_ID_OFFSET as usize..][..2]
+            .copy_from_slice(&DEVICE_ID_BLOCK.to_le_bytes());
+        assert_eq!(
+            probe_identity(&config),
+            Some(DeviceIdentity {
+                vendor_id: VENDOR_ID,
+                device_id: DEVICE_ID_BLOCK
+            })
+        );
+        assert_eq!(probe_identity(&config[..1]), None);
     }
 }
