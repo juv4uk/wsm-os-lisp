@@ -178,6 +178,13 @@
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
      (description . "Prove a standalone bounded byte medium before WSM-OS FS integration: geometry/index bounds, payload limits, short/truncated I/O, header corruption, checksum mismatch, flush/error propagation and deterministic image. Keep persistent references separate from runtime pointers and defer target string/name ABI.")))
 
+   ("WSM-OS-FS-MACHINE-WITNESS-F6" .
+    ((priority . 7.2)
+     (capabilities . (wsm-os filesystem runtime cml qemu evidence))
+     (depends-on . (WSM-OS-BLOCK-MECHANISM-F5 WSM-OS-CONFORMANCE-LADDER-M5))
+     (origin . wsm-os)
+     (description . "After independent block evidence, add one read-only data-only FS witness to hosted/QEMU: materialize a bounded serialized value into the cons heap, print its canonical observation, and compare with pinned my-lisp FS oracle. Do not persist runtime pointers, execute stored bytes, or claim durable filesystem semantics.")))
+
    ("WSM-OS-CONFORMANCE-LADDER-M5" .
     ((priority . 7.0)
      (capabilities . (my-lisp cml x86_64 assembly conformance testing proof))
