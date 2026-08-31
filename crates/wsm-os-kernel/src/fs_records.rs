@@ -230,4 +230,13 @@ mod tests {
         assert_eq!(validate_references(&stream), Err(ParseError::InvalidRecord));
         assert_eq!(reconstruct_root(&stream), Err(ParseError::InvalidRecord));
     }
+
+    #[test]
+    fn rejects_corrupted_journal_transition() {
+        let text = core::str::from_utf8(VALID)
+            .unwrap()
+            .replace("(event publish-root)", "(event publish-unknown)");
+        let stream = parse(text.as_bytes()).unwrap();
+        assert_eq!(reconstruct_root(&stream), Err(ParseError::InvalidRecord));
+    }
 }
