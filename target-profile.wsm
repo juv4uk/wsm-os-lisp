@@ -1,0 +1,11 @@
+; WSM-X86-P0 baseline — generated/owned compatibility profile
+; Українською: поточна доведена підмножина freestanding x86_64.
+((kind . wsm-x86-profile)
+ (profile . "WSM-X86-P0")
+ (status . confirmed)
+ (values . (nil true fixnum symbol cons))
+ (forms . (quote cond primitive-call))
+ (runtime . (cons car cdr atom eq fail))
+ (errors . (out-of-memory type abi-violation))
+ (evidence . ((hosted . pass) (qemu . pass) (physical-hardware . unconfirmed)))
+ (excludes . (lambda application closure strings bytes bignum rational reader evaluator gc)))
