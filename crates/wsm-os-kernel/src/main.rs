@@ -8,6 +8,8 @@ use core::panic::PanicInfo;
 use wsm_os_runtime::{ConsCell, RuntimeContext};
 use wsm_os_target::{decode_symbol, Word};
 
+mod fs_records;
+
 entry_point!(kernel_main);
 
 fn kernel_main(_boot_info: &'static mut BootInfo) -> ! {
@@ -75,8 +77,13 @@ fn kernel_main(_boot_info: &'static mut BootInfo) -> ! {
 const FS_RECORDS: &[u8] = include_bytes!("../../../artifacts/fs-qemu-records.txt");
 
 fn fs_fixture_witness(context: &mut RuntimeContext) -> bool {
-    const EXPECTED: &[u8] = b"((format . wsm-fs-root) (version 0 1) (revision . 1) (bindings (\"code\" . \"(hello world)\")) (objects \"(hello world)\"))\n((format . wsm-fs-object) (version 0 1) (address . \"(hello world)\") (value hello world))\n";
-    if FS_RECORDS != EXPECTED {
+    let Ok(stream) = fs_records::parse(FS_RECORDS) else {
+        return false;
+    };
+    if stream.count != 2
+        || stream.records[0].map(|record| record.kind) != Some(fs_records::RecordKind::Root)
+        || stream.records[1].map(|record| record.kind) != Some(fs_records::RecordKind::Object)
+    {
         return false;
     }
     let hello = wsm_os_target::encode_symbol(1).unwrap();
