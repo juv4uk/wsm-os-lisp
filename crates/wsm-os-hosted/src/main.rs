@@ -12,8 +12,19 @@ unsafe extern "C" {
     fn wsm_entry(context: *mut RuntimeContext) -> Word;
 }
 
-extern "C" fn hosted_failure(code: u32) -> ! {
-    eprintln!("WSM-OS ERROR schema=1 code={code}");
+extern "C" fn hosted_failure(context_ptr: *const RuntimeContext, code: u32) -> ! {
+    let ctx = unsafe { &*context_ptr };
+    let kind_str = match ctx.condition.kind {
+        1 => "OOM",
+        2 => "TYPE",
+        3 => "SYMBOL",
+        4 => "ABI",
+        _ => "UNKNOWN",
+    };
+    eprintln!(
+        "WSM-OS CONDITION schema=1 kind={} source={} value={}",
+        kind_str, ctx.condition.source_id, ctx.condition.offending_value
+    );
     std::process::exit(i32::try_from(code).unwrap_or(255));
 }
 

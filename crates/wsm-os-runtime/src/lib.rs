@@ -12,7 +12,15 @@ use wsm_os_target::{ErrorCode, NIL, RESULT_REGISTER, RUNTIME_IMPORTS, TRUE, Word
 const _: () = assert!(RESULT_REGISTER.as_bytes()[0] == b'r');
 const _: () = assert!(RUNTIME_IMPORTS.len() == 6);
 
-pub type FailureHandler = extern "C" fn(u32) -> !;
+pub type FailureHandler = extern "C" fn(context: *const RuntimeContext, code: u32) -> !;
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct ConditionRecord {
+    pub kind: u32,
+    pub source_id: u32,
+    pub offending_value: Word,
+}
 
 #[repr(C, align(16))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -26,6 +34,7 @@ pub struct RuntimeContext {
     heap: *mut MaybeUninit<ConsCell>,
     capacity: usize,
     len: usize,
+    pub condition: ConditionRecord,
     failure_handler: FailureHandler,
 }
 
@@ -69,6 +78,11 @@ impl RuntimeContext {
             heap,
             capacity,
             len: 0,
+            condition: ConditionRecord {
+                kind: 0,
+                source_id: 0,
+                offending_value: 0,
+            },
             failure_handler,
         }
     }
@@ -165,8 +179,11 @@ impl RuntimeContext {
         }
     }
 
-    fn fail(&self, error: RuntimeError) -> ! {
-        (self.failure_handler)(error.code() as u32)
+    fn fail_with(&mut self, error: RuntimeError, offending_value: Word, source_id: u32) -> ! {
+        self.condition.kind = error.code() as u32;
+        self.condition.offending_value = offending_value;
+        self.condition.source_id = source_id;
+        (self.failure_handler)(self as *const RuntimeContext, error.code() as u32)
     }
 }
 
@@ -178,11 +195,7 @@ unsafe fn context_mut<'a>(context: *mut RuntimeContext) -> &'a mut RuntimeContex
 
 #[cold]
 fn panic_context() -> ! {
-    // A null context has no failure callback. Abort is supplied by the final
-    // boot/host wrapper; reaching this is an ABI violation by the caller.
-    loop {
-        core::hint::spin_loop();
-    }
+    panic!("invalid context pointer in wsm-os-runtime wrapper")
 }
 
 #[unsafe(no_mangle)]
@@ -191,7 +204,7 @@ pub unsafe extern "C" fn wsm_cons(context: *mut RuntimeContext, car: Word, cdr: 
     let context = unsafe { context_mut(context) };
     context
         .cons(car, cdr)
-        .unwrap_or_else(|error| context.fail(error))
+        .unwrap_or_else(|error| context.fail_with(error, 0, 0))
 }
 
 #[unsafe(no_mangle)]
@@ -200,7 +213,7 @@ pub unsafe extern "C" fn wsm_car(context: *mut RuntimeContext, pair: Word) -> Wo
     let context = unsafe { context_mut(context) };
     context
         .car(pair)
-        .unwrap_or_else(|error| context.fail(error))
+        .unwrap_or_else(|error| context.fail_with(error, pair, 0))
 }
 
 #[unsafe(no_mangle)]
@@ -209,7 +222,7 @@ pub unsafe extern "C" fn wsm_cdr(context: *mut RuntimeContext, pair: Word) -> Wo
     let context = unsafe { context_mut(context) };
     context
         .cdr(pair)
-        .unwrap_or_else(|error| context.fail(error))
+        .unwrap_or_else(|error| context.fail_with(error, pair, 0))
 }
 
 #[unsafe(no_mangle)]
@@ -218,7 +231,7 @@ pub unsafe extern "C" fn wsm_eq(context: *mut RuntimeContext, left: Word, right:
     let context = unsafe { context_mut(context) };
     context
         .eq(left, right)
-        .unwrap_or_else(|error| context.fail(error))
+        .unwrap_or_else(|error| context.fail_with(error, left, 0))
 }
 
 #[unsafe(no_mangle)]
@@ -227,14 +240,17 @@ pub unsafe extern "C" fn wsm_atom(context: *mut RuntimeContext, value: Word) -> 
     let context = unsafe { context_mut(context) };
     context
         .atom(value)
-        .unwrap_or_else(|error| context.fail(error))
+        .unwrap_or_else(|error| context.fail_with(error, value, 0))
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn wsm_fail(context: *mut RuntimeContext, error_code: u32) -> ! {
+pub unsafe extern "C" fn wsm_fail(context: *mut RuntimeContext, error_code: u32, offending_value: Word, source_id: u32) -> ! {
     // SAFETY: guaranteed by this exported function's ABI contract.
     let context = unsafe { context_mut(context) };
-    (context.failure_handler)(error_code)
+    context.condition.kind = error_code;
+    context.condition.offending_value = offending_value;
+    context.condition.source_id = source_id;
+    (context.failure_handler)(context as *const RuntimeContext, error_code)
 }
 
 #[cfg(test)]
@@ -244,7 +260,7 @@ extern crate std;
 mod tests {
     use super::*;
 
-    extern "C" fn unexpected_failure(_code: u32) -> ! {
+    extern "C" fn unexpected_failure(_context: *const RuntimeContext, _code: u32) -> ! {
         panic!("unexpected ABI failure")
     }
 

@@ -69,11 +69,40 @@ unsafe extern "C" {
     fn wsm_entry(context: *mut RuntimeContext) -> Word;
 }
 
-extern "C" fn kernel_failure(code: u32) -> ! {
-    serial_write(b"WSM-OS RESULT schema=1 error=runtime-failure code=");
-    serial_write_decimal(code);
-    serial_write(b" status=error\n");
+extern "C" fn kernel_failure(context_ptr: *const RuntimeContext, _code: u32) -> ! {
+    let ctx = unsafe { &*context_ptr };
+    let kind_bytes: &[u8] = match ctx.condition.kind {
+        1 => b"OOM",
+        2 => b"TYPE",
+        3 => b"SYMBOL",
+        4 => b"ABI",
+        _ => b"UNKNOWN",
+    };
+    serial_write(b"WSM-OS CONDITION schema=1 kind=");
+    serial_write(kind_bytes);
+    serial_write(b" source=");
+    serial_write_decimal(ctx.condition.source_id);
+    serial_write(b" value=");
+    serial_write_word(ctx.condition.offending_value);
+    serial_write(b"\n");
     qemu_exit(0x12)
+}
+
+fn serial_write_word(mut value: Word) {
+    let mut digits = [0_u8; 20];
+    let mut cursor = digits.len();
+    if value == 0 {
+        serial_write(b"0");
+        return;
+    }
+    while value != 0 && cursor > 0 {
+        cursor -= 1;
+        unsafe {
+            *digits.get_unchecked_mut(cursor) = b'0' + (value % 10) as u8;
+        }
+        value /= 10;
+    }
+    serial_write(unsafe { core::slice::from_raw_parts(digits.as_ptr().add(cursor), digits.len() - cursor) });
 }
 
 fn is_first_fixture_result(value: Word, context: &RuntimeContext) -> bool {
@@ -132,12 +161,14 @@ fn serial_write_decimal(mut value: u32) {
         serial_write(b"0");
         return;
     }
-    while value != 0 {
+    while value != 0 && cursor > 0 {
         cursor -= 1;
-        digits[cursor] = b'0' + (value % 10) as u8;
+        unsafe {
+            *digits.get_unchecked_mut(cursor) = b'0' + (value % 10) as u8;
+        }
         value /= 10;
     }
-    serial_write(&digits[cursor..]);
+    serial_write(unsafe { core::slice::from_raw_parts(digits.as_ptr().add(cursor), digits.len() - cursor) });
 }
 
 fn qemu_exit(code: u32) -> ! {
