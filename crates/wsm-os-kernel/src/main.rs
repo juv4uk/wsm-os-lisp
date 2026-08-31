@@ -227,6 +227,10 @@ fn repl_fixture() -> ! {
                 qemu_exit(0x10)
             } else if len == 1 && line[0] == b'h' {
                 serial_write(b"commands: h=help q=quit\n> ");
+            } else if bytes_eq(&line[..len], b"nil") {
+                serial_write(b"WSM-OS REPL value=nil\n> ");
+            } else if bytes_eq(&line[..len], b"t") {
+                serial_write(b"WSM-OS REPL value=t\n> ");
             } else {
                 serial_write(b"WSM-OS REPL error=unsupported-form\n> ");
             }
@@ -239,6 +243,10 @@ fn repl_fixture() -> ! {
             serial_write(&[byte]);
         }
     }
+}
+
+fn bytes_eq(left: &[u8], right: &[u8]) -> bool {
+    left.len() == right.len() && left.iter().zip(right).all(|(a, b)| a == b)
 }
 
 fn serial_has_input() -> bool {
