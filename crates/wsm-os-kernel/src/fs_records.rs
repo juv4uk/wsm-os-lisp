@@ -1,36 +1,35 @@
-//! Bounded parser for the data-only WSM FS record stream used by the guest.
-//! This deliberately validates structure, not execution semantics.
-
-#![allow(dead_code)]
+// Bounded parser for the data-only WSM FS record stream used by the guest.
+// This deliberately validates structure, not execution semantics.
 
 pub const MAX_RECORD_BYTES: usize = 16 * 1024;
 pub const MAX_RECORDS: usize = 64;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RecordKind {
     Root,
     Object,
     Journal,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Record<'a> {
     pub kind: RecordKind,
     pub bytes: &'a [u8],
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct Stream<'a> {
     pub records: [Option<Record<'a>>; MAX_RECORDS],
     pub count: usize,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RootView<'a> {
     pub revision: &'a [u8],
     pub object_address: &'a [u8],
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ParseError {
     Empty,
     TooLarge,
@@ -207,7 +206,7 @@ mod tests {
         assert_eq!(stream.records[2].unwrap().kind, RecordKind::Journal);
         validate_references(&stream).unwrap();
         let root = reconstruct_root(&stream).unwrap();
-        assert_eq!(root.revision, b" 1");
+        assert_eq!(root.revision, b"1");
     }
 
     #[test]
