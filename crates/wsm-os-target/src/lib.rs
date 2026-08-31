@@ -28,6 +28,7 @@ pub struct ClosureDescriptor {
 }
 
 impl ClosureDescriptor {
+    #[inline(always)]
     pub const fn new(definition_id: u32, environment_ref: Word) -> Self {
         Self {
             definition_id,
@@ -144,6 +145,7 @@ pub const fn is_aligned_cons_pointer(word: Word) -> bool {
 }
 
 /// Tag an aligned runtime-owned descriptor pointer as a closure value.
+#[inline(always)]
 pub const fn encode_closure_pointer(pointer: Word) -> Option<Word> {
     if pointer != 0 && pointer.is_multiple_of(CLOSURE_ALIGNMENT as Word) {
         Some(pointer | Tag::Closure as Word)
@@ -153,6 +155,7 @@ pub const fn encode_closure_pointer(pointer: Word) -> Option<Word> {
 }
 
 /// Recover the untagged descriptor address. Arena ownership remains a runtime check.
+#[inline(always)]
 pub const fn decode_closure_pointer(word: Word) -> Option<Word> {
     if tag(word) == Tag::Closure as Word {
         Some(word & !TAG_MASK)
