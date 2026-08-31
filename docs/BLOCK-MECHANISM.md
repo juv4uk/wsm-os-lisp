@@ -21,9 +21,15 @@ Each block is exactly `block_size` bytes. The first 16 bytes are:
 16..    payload, then zero padding
 ```
 
+`block_size` is bounded to `16..=1 MiB`; invalid geometry is rejected before
+the medium allocates a block buffer.
+
 Кожен блок має рівно `block_size` bytes. Перші 16 bytes — header із magic,
 версією, reserved-полем, довжиною payload і FNV-1a checksum. FNV-1a тут лише
 виявляє пошкодження; автентичність або криптографічна цілісність не заявляються.
+
+`block_size` обмежений діапазоном `16..=1 MiB`; неправильна геометрія
+відхиляється до виділення буфера.
 
 ## API boundary / Межа API
 

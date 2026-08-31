@@ -12,6 +12,7 @@ use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
 pub const HEADER_BYTES: usize = 16;
+pub const MAX_BLOCK_SIZE: usize = 1024 * 1024;
 pub const MAGIC: [u8; 4] = *b"WSMB";
 pub const FORMAT_VERSION: u8 = 1;
 
@@ -202,7 +203,11 @@ impl BlockMedium for FileBlockMedium {
 }
 
 fn validate_geometry(block_size: usize, block_count: u64) -> Result<(), BlockError> {
-    if block_size < HEADER_BYTES || block_count == 0 || block_count > usize::MAX as u64 {
+    if block_size < HEADER_BYTES
+        || block_size > MAX_BLOCK_SIZE
+        || block_count == 0
+        || block_count > usize::MAX as u64
+    {
         Err(BlockError::InvalidGeometry)
     } else {
         total_bytes(block_size, block_count).map(|_| ())
@@ -268,6 +273,16 @@ mod tests {
             Err(BlockError::PayloadTooLarge { .. })
         ));
         fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn oversized_geometry_is_rejected_before_allocation() {
+        let path = temp_path("oversized-geometry");
+        assert!(matches!(
+            FileBlockMedium::create(&path, MAX_BLOCK_SIZE + 1, 1),
+            Err(BlockError::InvalidGeometry)
+        ));
+        assert!(!path.exists());
     }
 
     #[test]
@@ -358,6 +373,18 @@ mod tests {
         medium.close_for_test();
         assert!(matches!(
             medium.flush(),
+            Err(BlockError::Io(message)) if message == "medium is closed"
+        ));
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn write_failure_is_explicit_and_not_silently_ignored() {
+        let path = temp_path("write-failure");
+        let mut medium = FileBlockMedium::create(&path, 64, 1).unwrap();
+        medium.close_for_test();
+        assert!(matches!(
+            medium.write_block(0, b"value"),
             Err(BlockError::Io(message)) if message == "medium is closed"
         ));
         fs::remove_file(path).unwrap();
