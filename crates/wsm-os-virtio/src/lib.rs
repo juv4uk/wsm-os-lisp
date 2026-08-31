@@ -89,6 +89,34 @@ pub trait PciConfigAccess {
     fn read_u16(&self, offset: u8) -> Option<u16>;
 }
 
+pub trait MmioAccess {
+    fn read_u32(&self, offset: u16) -> Option<u32>;
+    fn write_u32(&mut self, offset: u16, value: u32) -> bool;
+}
+
+pub fn negotiate_status<M: MmioAccess>(mmio: &mut M) -> bool {
+    let mut status = DeviceStatus::new();
+    status = match status.acknowledge() {
+        Some(next) => next,
+        None => return false,
+    };
+    if !mmio.write_u32(COMMON_CFG_STATUS, status.bits() as u32) {
+        return false;
+    }
+    status = match status.driver() {
+        Some(next) => next,
+        None => return false,
+    };
+    if !mmio.write_u32(COMMON_CFG_STATUS, status.bits() as u32) {
+        return false;
+    }
+    status = match status.driver_ok() {
+        Some(next) => next,
+        None => return false,
+    };
+    mmio.write_u32(COMMON_CFG_STATUS, status.bits() as u32)
+}
+
 pub fn probe_identity_from<A: PciConfigAccess>(access: &A) -> Option<DeviceIdentity> {
     Some(DeviceIdentity {
         vendor_id: access.read_u16(PCI_VENDOR_ID_OFFSET)?,
@@ -182,5 +210,29 @@ mod tests {
         assert!(initial.driver().is_none());
         assert!(ready.driver_ok().is_none());
         assert_eq!(ready.failed().bits(), 0x87);
+    }
+
+    struct MockMmio {
+        status: u32,
+    }
+    impl MmioAccess for MockMmio {
+        fn read_u32(&self, offset: u16) -> Option<u32> {
+            (offset == COMMON_CFG_STATUS).then_some(self.status)
+        }
+        fn write_u32(&mut self, offset: u16, value: u32) -> bool {
+            if offset == COMMON_CFG_STATUS {
+                self.status = value;
+                true
+            } else {
+                false
+            }
+        }
+    }
+
+    #[test]
+    fn status_negotiation_uses_only_declared_mmio_register() {
+        let mut mmio = MockMmio { status: 0 };
+        assert!(negotiate_status(&mut mmio));
+        assert_eq!(mmio.read_u32(COMMON_CFG_STATUS), Some(7));
     }
 }
