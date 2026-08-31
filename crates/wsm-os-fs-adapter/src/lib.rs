@@ -35,9 +35,8 @@ where
     for index in 0..medium.block_count() {
         match medium.read_block(index) {
             Ok(record) => {
-                validate_record(index, &record).map_err(|reason| {
-                    ImageError::InvalidRecord { index, reason }
-                })?;
+                validate_record(index, &record)
+                    .map_err(|reason| ImageError::InvalidRecord { index, reason })?;
                 records.push(record);
             }
             Err(BlockError::UnwrittenBlock { .. }) => continue,
@@ -55,7 +54,7 @@ mod tests {
     use super::*;
     use std::fs;
     use std::path::PathBuf;
-    use wsm_os_block::{FileBlockMedium, BlockMedium};
+    use wsm_os_block::{BlockMedium, FileBlockMedium};
 
     fn temp_path(name: &str) -> PathBuf {
         std::env::temp_dir().join(format!("wsm-os-fs-adapter-{name}-{}", std::process::id()))
@@ -72,9 +71,17 @@ mod tests {
         }
         let mut medium = FileBlockMedium::open(&path, 64, 2).unwrap();
         let records = read_validated_image(&mut medium, |_, bytes| {
-            if bytes.ends_with(b"-envelope") { Ok(()) } else { Err("not an envelope".into()) }
-        }).unwrap();
-        assert_eq!(records, vec![b"root-envelope".to_vec(), b"object-envelope".to_vec()]);
+            if bytes.ends_with(b"-envelope") {
+                Ok(())
+            } else {
+                Err("not an envelope".into())
+            }
+        })
+        .unwrap();
+        assert_eq!(
+            records,
+            vec![b"root-envelope".to_vec(), b"object-envelope".to_vec()]
+        );
         fs::remove_file(path).unwrap();
     }
 
@@ -85,9 +92,16 @@ mod tests {
         medium.write_block(0, b"valid-envelope").unwrap();
         medium.write_block(1, b"bad").unwrap();
         let result = read_validated_image(&mut medium, |_, bytes| {
-            if bytes.ends_with(b"-envelope") { Ok(()) } else { Err("invalid envelope".into()) }
+            if bytes.ends_with(b"-envelope") {
+                Ok(())
+            } else {
+                Err("invalid envelope".into())
+            }
         });
-        assert!(matches!(result, Err(ImageError::InvalidRecord { index: 1, .. })));
+        assert!(matches!(
+            result,
+            Err(ImageError::InvalidRecord { index: 1, .. })
+        ));
         fs::remove_file(path).unwrap();
     }
 }
