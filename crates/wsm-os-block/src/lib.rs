@@ -261,6 +261,19 @@ mod tests {
     }
 
     #[test]
+    fn flushed_block_survives_reopen() {
+        let path = temp_path("reopen");
+        {
+            let mut medium = FileBlockMedium::create(&path, 64, 1).unwrap();
+            medium.write_block(0, b"reopen-me").unwrap();
+            medium.flush().unwrap();
+        }
+        let mut reopened = FileBlockMedium::open(&path, 64, 1).unwrap();
+        assert_eq!(reopened.read_block(0).unwrap(), b"reopen-me");
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
     fn bounds_and_payload_limit_fail_closed() {
         let path = temp_path("bounds");
         let mut medium = FileBlockMedium::create(&path, 32, 1).unwrap();

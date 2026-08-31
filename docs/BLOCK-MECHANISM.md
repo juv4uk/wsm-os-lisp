@@ -50,17 +50,25 @@ payload, невикористані блоки, malformed headers, truncation і
 
 ## Evidence / Доказ
 
-The crate currently proves seven small properties: round-trip after flush,
+The crate currently proves nine small properties: round-trip after flush,
 bounds/payload rejection, distinction between unwritten and corrupt blocks,
 malformed-header rejection, truncated-block rejection, and byte-identical
-images for identical writes, and explicit flush-failure propagation. These are
+images for identical writes, explicit flush-failure propagation, and reopen
+after flush. These are
 F5 mechanism evidence;
 they do not prove WSM FS reconstruction, journal replay, root publication,
 QEMU integration, or real-device persistence.
 
-Крейт наразі доводить сім малих властивостей: round-trip після flush,
+Крейт наразі доводить дев’ять малих властивостей: round-trip після flush,
 відхилення bounds/payload, розрізнення unwritten і corrupt block, відхилення
 malformed header, відхилення truncated block і byte-identical image для
-однакових записів і явне поширення помилки flush. Це evidence механізму F5, а не
+однакових записів, явне поширення помилки flush і читання після reopen. Це
+evidence механізму F5, а не
 доказ реконструкції WSM FS, journal replay, root publication, QEMU чи реального
 пристрою.
+
+OS-level path capability restriction is not implemented or claimed: callers
+must provide a permitted path through a higher-level capability boundary.
+
+OS-level path capability restriction не реалізоване й не заявляється: дозволений
+шлях має надаватися зовнішньою capability boundary.
