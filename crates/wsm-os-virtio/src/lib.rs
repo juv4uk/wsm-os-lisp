@@ -10,6 +10,20 @@ pub const STATUS_DRIVER: u8 = 2;
 pub const STATUS_DRIVER_OK: u8 = 4;
 pub const STATUS_FAILED: u8 = 128;
 pub const SECTOR_BYTES: usize = 512;
+pub const PCI_VENDOR_ID_OFFSET: u8 = 0x00;
+pub const PCI_DEVICE_ID_OFFSET: u8 = 0x02;
+pub const PCI_BAR0_OFFSET: u8 = 0x10;
+pub const PCI_INTERRUPT_LINE_OFFSET: u8 = 0x3c;
+pub const COMMON_CFG_DEVICE_FEATURE_SELECT: u16 = 0x00;
+pub const COMMON_CFG_DEVICE_FEATURE: u16 = 0x04;
+pub const COMMON_CFG_DRIVER_FEATURE_SELECT: u16 = 0x08;
+pub const COMMON_CFG_DRIVER_FEATURE: u16 = 0x0c;
+pub const COMMON_CFG_STATUS: u16 = 0x14;
+pub const COMMON_CFG_QUEUE_SELECT: u16 = 0x16;
+pub const COMMON_CFG_QUEUE_SIZE: u16 = 0x18;
+pub const COMMON_CFG_QUEUE_ENABLE: u16 = 0x1c;
+pub const COMMON_CFG_QUEUE_NOTIFY_OFF: u16 = 0x1e;
+pub const MAX_QUEUE_SIZE: u16 = 8;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DeviceIdentity {
@@ -44,5 +58,13 @@ mod tests {
             device_id: DEVICE_ID_BLOCK
         }
         .is_virtio_block());
+    }
+
+    #[test]
+    fn probe_contract_is_bounded() {
+        assert_eq!(PCI_BAR0_OFFSET, 0x10);
+        assert_eq!(COMMON_CFG_STATUS, 0x14);
+        assert!(MAX_QUEUE_SIZE.is_power_of_two());
+        assert!(MAX_QUEUE_SIZE <= 256);
     }
 }
