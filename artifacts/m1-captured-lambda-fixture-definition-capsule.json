@@ -1,12 +1,12 @@
 {
   "artifacts": {
     "assembly": {
-      "digest": "b04b5a2f7a652743c42bc7dac3c2c76cbb3da3055df7462c9cb216ac7f8dd421",
-      "path": "artifacts/m1-lexical-lambda-fixture.s"
+      "digest": "cf585ee2798d3a4f73071f220083f26816529c6ba32831733dc52824cef6f447",
+      "path": "artifacts/m1-captured-lambda-fixture.s"
     },
     "object": {
-      "digest": "8cccb4f92d5234493a96ff139f3e8d1c80d28ecedb4252ac047a70ade736a407",
-      "path": "artifacts/m1-lexical-lambda-fixture.o"
+      "digest": "b7b8d5f44c2c15d560960624ca18aa8907d17989b74c9f497c24e583ae04a393",
+      "path": "artifacts/m1-captured-lambda-fixture.o"
     }
   },
   "callers": [],
@@ -17,7 +17,7 @@
     "world_image": false
   },
   "code": {
-    "end": 94,
+    "end": 174,
     "entry": "wsm_entry",
     "exports": [
       "wsm_entry"
@@ -41,7 +41,7 @@
       "version": 1
     }
   },
-  "definition_id": "sha256:e7ae273491b2b2da09e8b6167cfe4970547e9c75a0b9f8e4b50e80a80d37e72d",
+  "definition_id": "sha256:0e766d3b93b3bd3f0624859caf12ddaa406441c3ffecd9b4c299e4cd5c8bb438",
   "dependencies": [],
   "digest_algorithm": "sha256",
   "generator": {
@@ -73,19 +73,19 @@
   "schema": "wsm-definition-capsule",
   "schema_version": 1,
   "source": {
-    "file_digest": "940f4ab541b9bd34d728c5095a1d583fe8290cee39c72f72cfc428bb799d55af",
+    "file_digest": "a28f0a955f7725f620d0c8de7449b7d7a2dc687483dba23f6d12094f8c5e9891",
     "map": [
       {
         "generated_entry": "wsm_entry",
         "granularity": "definition",
-        "object_end": 94,
+        "object_end": 174,
         "object_start": 0,
-        "source_end_byte": 44,
+        "source_end_byte": 78,
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/m1-lexical-lambda-fixture.wsm",
-    "semantic_digest": "6789ab4a576282f7794195b8e24d48f9b1db7061e0bf9fe11772fd9dbd4cd12f"
+    "path": "artifacts/m1-captured-lambda-fixture.wsm",
+    "semantic_digest": "fbbd033ce08992e52d2ce1ca3242e4460f9875d694c9affc0306fc238d4705bc"
   },
   "symbol_table": {
     "digest": "709075550658fba7a27743fa8615f155473610852e116273d54f946827b2591e",

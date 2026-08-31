@@ -28,7 +28,7 @@
   },
   "contracts": {
     "cml": {
-      "revision": "7c3ef66020321f31afc60d8633c621e389857acc",
+      "revision": "5b3118904bbe9add16f9c762afb4d0d745455d7a",
       "supported_contract": "2.0"
     },
     "my_lisp": {
@@ -36,12 +36,12 @@
       "revision": "667b587394dc8d3fc8dadff7c925e5bce68ed887"
     },
     "target_abi": {
-      "digest": "a85b53e8b428325fe1d6369f357706523fff0fd2738ce2e0dda35e2b626b454e",
+      "digest": "2c7a161384e9ac566cc257238b6962bdc362860f8e2da0fa30c9a8965894d1cc",
       "schema": "wsm-os-target-v1",
       "version": 1
     }
   },
-  "definition_id": "sha256:ad1eae2cb580d6274471df76269c76374081c335e259e1b3fcb049f6f97e4c33",
+  "definition_id": "sha256:504342c81a199dd07070a0076f29044f346d434961369be6b13d9008ac908e00",
   "dependencies": [],
   "digest_algorithm": "sha256",
   "generator": {

@@ -1,15 +1,15 @@
 {
-  "assembly_digest": "4dc24f5fa961b8820c8d5b755779f33e790f847a1097f247548cb98833dff231",
-  "cml_sha": "7c3ef66020321f31afc60d8633c621e389857acc",
+  "assembly_digest": "161722ebf47f5c0bd82786465e0276a3ddae29dfd95f3b8d9bd17e1704a3c2d2",
+  "cml_sha": "5b3118904bbe9add16f9c762afb4d0d745455d7a",
   "digest_algorithm": "sha256",
   "exported": [
     "wsm_entry"
   ],
   "imports": [],
-  "object_digest": "7386a66874e3e9e27ca07701e77ba1646ff9c8666659d268f7cd725214b07ffb",
+  "object_digest": "fc978d66a6094f1965677852633268c1549a18a204142d78086d2c50f04a017a",
   "schema": "wsm-m1-identity-lambda-fixture-artifact-manifest",
   "schema_version": 2,
   "source_file_digest": "0e97d5037430b57cf50720b0aa12af4012045230738ec91771fb5b78c5bb2cdd",
   "source_semantic_digest": "bca0e3856ad0063e1290c076c64a6803defdddaf55746fc2660ecd68c8eecfbf",
-  "target_contract_digest": "a85b53e8b428325fe1d6369f357706523fff0fd2738ce2e0dda35e2b626b454e"
+  "target_contract_digest": "2c7a161384e9ac566cc257238b6962bdc362860f8e2da0fa30c9a8965894d1cc"
 }

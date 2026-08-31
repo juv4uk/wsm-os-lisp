@@ -1,0 +1,4 @@
+source=((lambda (x) ((lambda (y) (cons x (cons y (quote ())))) (quote B))) (quote A))
+result=(A B)
+execution=captured-frame
+status=ok

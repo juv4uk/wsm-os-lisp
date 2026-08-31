@@ -7,6 +7,7 @@ wsm_entry:
     movq %rdi, %r12
     movabsq $12, %rax
     movq %rax, %rsi
+    movq %rsp, %rdx
     call .Llambda_0
     jmp .Llambda_after_1
 .Llambda_0:

@@ -1,11 +1,11 @@
 {
   "artifacts": {
     "assembly": {
-      "digest": "4dc24f5fa961b8820c8d5b755779f33e790f847a1097f247548cb98833dff231",
+      "digest": "161722ebf47f5c0bd82786465e0276a3ddae29dfd95f3b8d9bd17e1704a3c2d2",
       "path": "artifacts/m1-identity-lambda-fixture.s"
     },
     "object": {
-      "digest": "7386a66874e3e9e27ca07701e77ba1646ff9c8666659d268f7cd725214b07ffb",
+      "digest": "fc978d66a6094f1965677852633268c1549a18a204142d78086d2c50f04a017a",
       "path": "artifacts/m1-identity-lambda-fixture.o"
     }
   },
@@ -17,7 +17,7 @@
     "world_image": false
   },
   "code": {
-    "end": 53,
+    "end": 56,
     "entry": "wsm_entry",
     "exports": [
       "wsm_entry"
@@ -28,7 +28,7 @@
   },
   "contracts": {
     "cml": {
-      "revision": "7c3ef66020321f31afc60d8633c621e389857acc",
+      "revision": "5b3118904bbe9add16f9c762afb4d0d745455d7a",
       "supported_contract": "2.0"
     },
     "my_lisp": {
@@ -36,12 +36,12 @@
       "revision": "667b587394dc8d3fc8dadff7c925e5bce68ed887"
     },
     "target_abi": {
-      "digest": "a85b53e8b428325fe1d6369f357706523fff0fd2738ce2e0dda35e2b626b454e",
+      "digest": "2c7a161384e9ac566cc257238b6962bdc362860f8e2da0fa30c9a8965894d1cc",
       "schema": "wsm-os-target-v1",
       "version": 1
     }
   },
-  "definition_id": "sha256:19fd3994dbcd4754520997267c5867b837a30d64150080528e7cfa083dba615a",
+  "definition_id": "sha256:aedb3a4e03f78624e193ae59e5dc8ebef4a649ff1b316a49bcb3a52b1ae783c1",
   "dependencies": [],
   "digest_algorithm": "sha256",
   "generator": {
@@ -76,7 +76,7 @@
       {
         "generated_entry": "wsm_entry",
         "granularity": "definition",
-        "object_end": 53,
+        "object_end": 56,
         "object_start": 0,
         "source_end_byte": 18,
         "source_start_byte": 0
