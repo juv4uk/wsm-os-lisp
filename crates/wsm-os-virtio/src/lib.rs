@@ -48,6 +48,17 @@ pub fn probe_identity(config: &[u8]) -> Option<DeviceIdentity> {
     })
 }
 
+pub trait PciConfigAccess {
+    fn read_u16(&self, offset: u8) -> Option<u16>;
+}
+
+pub fn probe_identity_from<A: PciConfigAccess>(access: &A) -> Option<DeviceIdentity> {
+    Some(DeviceIdentity {
+        vendor_id: access.read_u16(PCI_VENDOR_ID_OFFSET)?,
+        device_id: access.read_u16(PCI_DEVICE_ID_OFFSET)?,
+    })
+}
+
 fn read_u16(bytes: &[u8], offset: usize) -> Option<u16> {
     let low = *bytes.get(offset)? as u16;
     let high = *bytes.get(offset + 1)? as u16;
@@ -99,5 +110,28 @@ mod tests {
             })
         );
         assert_eq!(probe_identity(&config[..1]), None);
+    }
+
+    struct MockConfig([u16; 2]);
+    impl PciConfigAccess for MockConfig {
+        fn read_u16(&self, offset: u8) -> Option<u16> {
+            match offset {
+                PCI_VENDOR_ID_OFFSET => Some(self.0[0]),
+                PCI_DEVICE_ID_OFFSET => Some(self.0[1]),
+                _ => None,
+            }
+        }
+    }
+
+    #[test]
+    fn injected_config_access_keeps_probe_platform_neutral() {
+        let config = MockConfig([VENDOR_ID, DEVICE_ID_BLOCK]);
+        assert_eq!(
+            probe_identity_from(&config),
+            Some(DeviceIdentity {
+                vendor_id: VENDOR_ID,
+                device_id: DEVICE_ID_BLOCK
+            })
+        );
     }
 }
