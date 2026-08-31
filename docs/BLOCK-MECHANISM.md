@@ -50,19 +50,20 @@ payload, невикористані блоки, malformed headers, truncation і
 
 ## Evidence / Доказ
 
-The crate currently proves ten small properties: round-trip after flush,
+The crate currently proves eleven small properties: round-trip after flush,
 bounds/payload rejection, distinction between unwritten and corrupt blocks,
 malformed-header rejection, truncated-block rejection, and byte-identical
-images for identical writes, explicit flush-failure propagation, and reopen
-after flush. These are
+images for identical writes, explicit flush-failure propagation, reopen after
+flush, and rejection of a partially persisted block. These are
 F5 mechanism evidence;
 they do not prove WSM FS reconstruction, journal replay, root publication,
 QEMU integration, or real-device persistence.
 
-Крейт наразі доводить десять малих властивостей: round-trip після flush,
+Крейт наразі доводить одинадцять малих властивостей: round-trip після flush,
 відхилення bounds/payload, розрізнення unwritten і corrupt block, відхилення
 malformed header, відхилення truncated block і byte-identical image для
-однакових записів, явне поширення помилки flush і читання після reopen. Це
+однакових записів, явне поширення помилки flush, читання після reopen і
+відхилення частково записаного блока. Це
 evidence механізму F5, а не
 доказ реконструкції WSM FS, journal replay, root publication, QEMU чи реального
 пристрою.

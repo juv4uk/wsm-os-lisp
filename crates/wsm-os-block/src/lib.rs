@@ -274,6 +274,25 @@ mod tests {
     }
 
     #[test]
+    fn partially_persisted_block_is_rejected() {
+        let path = temp_path("partial");
+        let medium = FileBlockMedium::create(&path, 64, 1).unwrap();
+        drop(medium);
+        let mut file = OpenOptions::new().write(true).open(&path).unwrap();
+        file.seek(SeekFrom::Start(0)).unwrap();
+        file.write_all(&MAGIC[..2]).unwrap();
+        file.sync_data().unwrap();
+        drop(file);
+
+        let mut reopened = FileBlockMedium::open(&path, 64, 1).unwrap();
+        assert!(matches!(
+            reopened.read_block(0),
+            Err(BlockError::InvalidHeader { index: 0 })
+        ));
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
     fn bounds_and_payload_limit_fail_closed() {
         let path = temp_path("bounds");
         let mut medium = FileBlockMedium::create(&path, 32, 1).unwrap();
