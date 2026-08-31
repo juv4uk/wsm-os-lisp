@@ -18,6 +18,24 @@ pub const PAYLOAD_BITS: u8 = WORD_BITS - TAG_BITS;
 
 pub type Word = u64;
 
+/// Descriptor for the first closure ABI proposal. It is metadata only until a
+/// closure tag and runtime ownership rules are ratified.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ClosureDescriptor {
+    pub definition_id: u32,
+    pub environment_ref: Word,
+}
+
+impl ClosureDescriptor {
+    pub const fn new(definition_id: u32, environment_ref: Word) -> Self {
+        Self {
+            definition_id,
+            environment_ref,
+        }
+    }
+}
+
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tag {
@@ -153,6 +171,14 @@ mod tests {
         assert!(!is_aligned_cons_pointer(0));
         assert!(is_aligned_cons_pointer(0x1000));
         assert!(!is_aligned_cons_pointer(0x1008));
+    }
+
+    #[test]
+    fn closure_descriptor_is_metadata_not_a_runtime_value() {
+        let descriptor = ClosureDescriptor::new(7, NIL);
+        assert_eq!(descriptor.definition_id, 7);
+        assert_eq!(descriptor.environment_ref, NIL);
+        assert_eq!(core::mem::size_of::<ClosureDescriptor>(), 16);
     }
 
     #[test]
