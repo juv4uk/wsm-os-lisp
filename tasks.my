@@ -203,6 +203,14 @@
      (context . "QEMU launch can attach a separate virtio-blk disk (commit 7cbb2c9); guest currently ignores it. No PCI/virtio implementation exists yet. Keep the first driver bounded to one queue, one 512-byte sector, read/write/flush, and explicit error exits.")
      (description . "Implement the minimal no_std virtio-blk guest driver: discover the QEMU PCI device, negotiate VERSION_1 and FLUSH where available, submit one bounded request, validate completion/status, and emit deterministic serial evidence. Do not add a general block scheduler or claim persistence until clean-restart Q6b witness passes.")))
 
+   ("WSM-OS-SERIAL-REPL-M5H" .
+    ((priority . 8.7)
+     (capabilities . (wsm-os no-std serial repl cml qemu evidence))
+     (depends-on . (WSM-OS-CONFORMANCE-LADDER-M5 WSM-OS-STRUCTURED-CONDITION-RECORD-M5G))
+     (origin . wsm-os)
+     (context . "Owner requests an interactive Live USB REPL before physical-hardware testing. Current kernel has deterministic serial output only and no input loop. Start with an explicit admitted subset and a bounded line buffer; keep the boot witness non-interactive by default.")
+     (description . "Implement a serial REPL fixture for the admitted machine subset: bounded input buffer, parse/evaluate one expression, print result or structured condition, explicit exit command, and QEMU transcript. Gate physical Live USB testing on this QEMU evidence; do not claim full my-lisp REPL parity.")))
+
    ("WSM-OS-CONFORMANCE-LADDER-M5" .
     ((priority . 7.0)
      (capabilities . (my-lisp cml x86_64 assembly conformance testing proof))
