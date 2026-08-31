@@ -10,6 +10,7 @@ pub const MAX_RECORDS: usize = 64;
 pub enum RecordKind {
     Root,
     Object,
+    Journal,
 }
 
 #[derive(Clone, Copy)]
@@ -91,6 +92,16 @@ pub fn validate_references(stream: &Stream<'_>) -> Result<(), ParseError> {
     if root_ref != object_address {
         return Err(ParseError::InvalidRecord);
     }
+    if stream.count > 2 {
+        let journal = stream.records[2].ok_or(ParseError::InvalidRecord)?;
+        if journal.kind != RecordKind::Journal
+            || !contains(journal.bytes, b"(from . 0)")
+            || !contains(journal.bytes, b"(to . 1)")
+            || !contains(journal.bytes, b"(event publish-root)")
+        {
+            return Err(ParseError::InvalidRecord);
+        }
+    }
     Ok(())
 }
 
@@ -134,6 +145,14 @@ fn classify(record: &[u8]) -> Result<RecordKind, ParseError> {
             return Err(ParseError::InvalidRecord);
         }
         Ok(RecordKind::Object)
+    } else if record.starts_with(b"((format . wsm-fs-journal)") {
+        if !contains(record, b"(from . ")
+            || !contains(record, b"(to . ")
+            || !contains(record, b"(event ")
+        {
+            return Err(ParseError::InvalidRecord);
+        }
+        Ok(RecordKind::Journal)
     } else {
         Err(ParseError::InvalidRecord)
     }
@@ -177,14 +196,15 @@ fn quoted_or_atom_after<'a>(record: &'a [u8], marker: &[u8]) -> Option<&'a [u8]>
 mod tests {
     use super::*;
 
-    const VALID: &[u8] = b"((format . wsm-fs-root) (version 0 1) (revision . 1) (bindings (\"code\" . \"(hello world)\")) (objects \"(hello world)\"))\n((format . wsm-fs-object) (version 0 1) (address . \"(hello world)\") (value hello world))\n";
+    const VALID: &[u8] = b"((format . wsm-fs-root) (version 0 1) (revision . 1) (bindings (\"code\" . \"(hello world)\")) (objects \"(hello world)\"))\n((format . wsm-fs-object) (version 0 1) (address . \"(hello world)\") (value hello world))\n((format . wsm-fs-journal) (version 0 1) (from . 0) (to . 1) (event publish-root))\n";
 
     #[test]
     fn accepts_bounded_data_only_stream() {
         let stream = parse(VALID).unwrap();
-        assert_eq!(stream.count, 2);
+        assert_eq!(stream.count, 3);
         assert_eq!(stream.records[0].unwrap().kind, RecordKind::Root);
         assert_eq!(stream.records[1].unwrap().kind, RecordKind::Object);
+        assert_eq!(stream.records[2].unwrap().kind, RecordKind::Journal);
         validate_references(&stream).unwrap();
         let root = reconstruct_root(&stream).unwrap();
         assert_eq!(root.revision, b" 1");

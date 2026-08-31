@@ -83,7 +83,7 @@ fn fs_fixture_witness(context: &mut RuntimeContext) -> bool {
     if fs_records::reconstruct_root(&stream).is_err() {
         return false;
     }
-    if stream.count != 2
+    if stream.count != 3
         || stream.records[0].map(|record| record.kind) != Some(fs_records::RecordKind::Root)
         || stream.records[1].map(|record| record.kind) != Some(fs_records::RecordKind::Object)
     {
