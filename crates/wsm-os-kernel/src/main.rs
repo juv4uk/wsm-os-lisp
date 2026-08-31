@@ -9,6 +9,7 @@ use wsm_os_runtime::{ConsCell, RuntimeContext};
 use wsm_os_target::{decode_symbol, Word};
 
 mod fs_records;
+mod guest_block;
 
 entry_point!(kernel_main);
 
@@ -30,6 +31,7 @@ fn kernel_main(_boot_info: &'static mut BootInfo) -> ! {
             serial_write(
                 b"WSM-OS FS schema=1 format=wsm-fs-records value=(hello world) status=ok\n",
             );
+            serial_write(b"WSM-OS BLOCK schema=1 medium=guest-memory block=0 read=ok write=ok flush=ok status=ok\n");
             qemu_exit(0x10)
         } else {
             serial_write(b"WSM-OS FS schema=1 error=invalid-record status=error\n");
@@ -77,6 +79,10 @@ fn kernel_main(_boot_info: &'static mut BootInfo) -> ! {
 const FS_RECORDS: &[u8] = include_bytes!("../../../artifacts/fs-qemu-records.txt");
 
 fn fs_fixture_witness(context: &mut RuntimeContext) -> bool {
+    let mut medium = guest_block::GuestBlockMedium::new();
+    if !medium.write(FS_RECORDS) || !medium.read_matches(FS_RECORDS) || !medium.flush() {
+        return false;
+    }
     let Ok(stream) = fs_records::parse(FS_RECORDS) else {
         return false;
     };

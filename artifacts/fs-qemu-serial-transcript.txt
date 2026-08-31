@@ -1,2 +1,3 @@
 WSM-OS BOOT schema=1 arch=x86_64 status=ok
 WSM-OS FS schema=1 format=wsm-fs-records value=(hello world) status=ok
+WSM-OS BLOCK schema=1 medium=guest-memory block=0 read=ok write=ok flush=ok status=ok
