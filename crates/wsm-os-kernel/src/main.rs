@@ -102,7 +102,9 @@ fn serial_write_word(mut value: Word) {
         }
         value /= 10;
     }
-    serial_write(unsafe { core::slice::from_raw_parts(digits.as_ptr().add(cursor), digits.len() - cursor) });
+    serial_write(unsafe {
+        core::slice::from_raw_parts(digits.as_ptr().add(cursor), digits.len() - cursor)
+    });
 }
 
 fn is_first_fixture_result(value: Word, context: &RuntimeContext) -> bool {
@@ -168,7 +170,9 @@ fn serial_write_decimal(mut value: u32) {
         }
         value /= 10;
     }
-    serial_write(unsafe { core::slice::from_raw_parts(digits.as_ptr().add(cursor), digits.len() - cursor) });
+    serial_write(unsafe {
+        core::slice::from_raw_parts(digits.as_ptr().add(cursor), digits.len() - cursor)
+    });
 }
 
 fn qemu_exit(code: u32) -> ! {

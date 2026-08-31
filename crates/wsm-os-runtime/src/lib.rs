@@ -244,7 +244,12 @@ pub unsafe extern "C" fn wsm_atom(context: *mut RuntimeContext, value: Word) -> 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn wsm_fail(context: *mut RuntimeContext, error_code: u32, offending_value: Word, source_id: u32) -> ! {
+pub unsafe extern "C" fn wsm_fail(
+    context: *mut RuntimeContext,
+    error_code: u32,
+    offending_value: Word,
+    source_id: u32,
+) -> ! {
     // SAFETY: guaranteed by this exported function's ABI contract.
     let context = unsafe { context_mut(context) };
     context.condition.kind = error_code;
