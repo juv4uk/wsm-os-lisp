@@ -123,13 +123,15 @@ pub fn reconstruct_root<'a>(stream: &'a Stream<'a>) -> Result<RootView<'a>, Pars
 fn classify(record: &[u8]) -> Result<RecordKind, ParseError> {
     // Envelope grammar is intentionally narrow and data-only at this stage.
     // Every accepted record must declare the same version tuple.
-    if !record.starts_with(b"((format . wsm-fs-")
-        || !record
-            .windows(b"(version 0 1)".len())
-            .any(|window| window == b"(version 0 1)")
-        || !record.ends_with(b"))")
-    {
+    if !record.starts_with(b"((format . wsm-fs-") || !record.ends_with(b"))") {
         return Err(ParseError::InvalidRecord);
+    }
+    if !contains(record, b"(version 0 1)") {
+        return Err(if contains(record, b"(version ") {
+            ParseError::UnsupportedVersion
+        } else {
+            ParseError::InvalidRecord
+        });
     }
     if record.starts_with(b"((format . wsm-fs-root)") {
         if !contains(record, b"(revision . ")
@@ -218,6 +220,10 @@ mod tests {
         assert_eq!(
             parse(&VALID[..VALID.len() - 1]),
             Err(ParseError::UnterminatedRecord)
+        );
+        assert_eq!(
+            parse(b"((format . wsm-fs-root) (version 9 9) (revision . 1) (bindings ()) (objects ()))\n"),
+            Err(ParseError::UnsupportedVersion)
         );
     }
 
