@@ -286,6 +286,45 @@ mod tests {
     }
 
     #[test]
+    fn malformed_header_is_rejected_before_payload_interpretation() {
+        let path = temp_path("header");
+        let mut medium = FileBlockMedium::create(&path, 64, 1).unwrap();
+        medium.write_block(0, b"value").unwrap();
+        medium.flush().unwrap();
+        let mut file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&path)
+            .unwrap();
+        file.seek(SeekFrom::Start(0)).unwrap();
+        file.write_all(b"NOPE").unwrap();
+        drop(file);
+        assert!(matches!(
+            medium.read_block(0),
+            Err(BlockError::InvalidHeader { index: 0 })
+        ));
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn truncated_block_is_rejected_as_io_shape_failure() {
+        let path = temp_path("truncated");
+        let mut medium = FileBlockMedium::create(&path, 64, 1).unwrap();
+        medium.write_block(0, b"value").unwrap();
+        medium.flush().unwrap();
+        medium.file.set_len(8).unwrap();
+        assert!(matches!(
+            medium.read_block(0),
+            Err(BlockError::TruncatedBlock {
+                index: 0,
+                actual: 8,
+                expected: 64
+            })
+        ));
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
     fn identical_writes_have_identical_images() {
         let left = temp_path("left");
         let right = temp_path("right");
