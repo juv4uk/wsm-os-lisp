@@ -9,5 +9,6 @@ members = [
     "crates/wsm-os-target",
     "crates/wsm-os-kernel",
     "crates/wsm-os-fs-parser",
+    "crates/wsm-os-virtio",
 ]
 resolver = "2"
