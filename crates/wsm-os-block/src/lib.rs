@@ -65,6 +65,8 @@ pub struct FileBlockMedium {
     path: PathBuf,
     block_size: usize,
     block_count: u64,
+    #[cfg(test)]
+    injected_partial_write: Option<usize>,
 }
 
 impl FileBlockMedium {
@@ -87,6 +89,8 @@ impl FileBlockMedium {
             path,
             block_size,
             block_count,
+            #[cfg(test)]
+            injected_partial_write: None,
         })
     }
 
@@ -106,6 +110,8 @@ impl FileBlockMedium {
             path,
             block_size,
             block_count,
+            #[cfg(test)]
+            injected_partial_write: None,
         })
     }
 
@@ -129,6 +135,11 @@ impl FileBlockMedium {
     #[cfg(test)]
     fn close_for_test(&mut self) {
         self.file = None;
+    }
+
+    #[cfg(test)]
+    fn inject_partial_write_for_test(&mut self, bytes: usize) {
+        self.injected_partial_write = Some(bytes);
     }
 }
 
@@ -192,6 +203,12 @@ impl BlockMedium for FileBlockMedium {
         raw[8..12].copy_from_slice(&(bytes.len() as u32).to_le_bytes());
         raw[12..16].copy_from_slice(&checksum(bytes).to_le_bytes());
         raw[HEADER_BYTES..HEADER_BYTES + bytes.len()].copy_from_slice(bytes);
+        #[cfg(test)]
+        if let Some(prefix_bytes) = self.injected_partial_write.take() {
+            let written = prefix_bytes.min(raw.len());
+            self.file_mut()?.write_all(&raw[..written])?;
+            return Err(BlockError::Io("injected partial write".to_string()));
+        }
         self.file_mut()?.write_all(&raw)?;
         Ok(())
     }
@@ -283,6 +300,25 @@ mod tests {
         file.write_all(&MAGIC[..2]).unwrap();
         file.sync_data().unwrap();
         drop(file);
+
+        let mut reopened = FileBlockMedium::open(&path, 64, 1).unwrap();
+        assert!(matches!(
+            reopened.read_block(0),
+            Err(BlockError::InvalidHeader { index: 0 })
+        ));
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn injected_partial_write_is_explicit_and_rejected_on_reopen() {
+        let path = temp_path("injected-partial");
+        let mut medium = FileBlockMedium::create(&path, 64, 1).unwrap();
+        medium.inject_partial_write_for_test(2);
+        assert!(matches!(
+            medium.write_block(0, b"fault"),
+            Err(BlockError::Io(message)) if message == "injected partial write"
+        ));
+        drop(medium);
 
         let mut reopened = FileBlockMedium::open(&path, 64, 1).unwrap();
         assert!(matches!(
