@@ -80,6 +80,9 @@ fn fs_fixture_witness(context: &mut RuntimeContext) -> bool {
     let Ok(stream) = fs_records::parse(FS_RECORDS) else {
         return false;
     };
+    if fs_records::validate_references(&stream).is_err() {
+        return false;
+    }
     if stream.count != 2
         || stream.records[0].map(|record| record.kind) != Some(fs_records::RecordKind::Root)
         || stream.records[1].map(|record| record.kind) != Some(fs_records::RecordKind::Object)

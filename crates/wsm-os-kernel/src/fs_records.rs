@@ -67,6 +67,27 @@ pub fn parse(bytes: &[u8]) -> Result<Stream<'_>, ParseError> {
     Ok(Stream { records, count })
 }
 
+/// Check the minimal cross-record reference invariant for the F6 envelope:
+/// the root's object reference must be present as an object address. This is
+/// deliberately content-level validation; cryptographic addressing is Q3.
+pub fn validate_references(stream: &Stream<'_>) -> Result<(), ParseError> {
+    if stream.count < 2 {
+        return Err(ParseError::InvalidRecord);
+    }
+    let root = stream.records[0].ok_or(ParseError::InvalidRecord)?;
+    let object = stream.records[1].ok_or(ParseError::InvalidRecord)?;
+    if root.kind != RecordKind::Root || object.kind != RecordKind::Object {
+        return Err(ParseError::InvalidRecord);
+    }
+    let root_ref = quoted_after(root.bytes, b"(objects ").ok_or(ParseError::InvalidRecord)?;
+    let object_address =
+        quoted_after(object.bytes, b"(address . ").ok_or(ParseError::InvalidRecord)?;
+    if root_ref != object_address {
+        return Err(ParseError::InvalidRecord);
+    }
+    Ok(())
+}
+
 fn classify(record: &[u8]) -> Result<RecordKind, ParseError> {
     // Envelope grammar is intentionally narrow and data-only at this stage.
     // Every accepted record must declare the same version tuple.
@@ -102,6 +123,19 @@ fn contains(haystack: &[u8], needle: &[u8]) -> bool {
         .any(|window| window == needle)
 }
 
+fn quoted_after<'a>(record: &'a [u8], marker: &[u8]) -> Option<&'a [u8]> {
+    let offset = record
+        .windows(marker.len())
+        .position(|window| window == marker)?
+        + marker.len();
+    let rest = &record[offset..];
+    if rest.first().copied()? != b'"' {
+        return None;
+    }
+    let end = rest[1..].iter().position(|byte| *byte == b'"')? + 1;
+    Some(&rest[1..end])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -114,6 +148,7 @@ mod tests {
         assert_eq!(stream.count, 2);
         assert_eq!(stream.records[0].unwrap().kind, RecordKind::Root);
         assert_eq!(stream.records[1].unwrap().kind, RecordKind::Object);
+        validate_references(&stream).unwrap();
     }
 
     #[test]
@@ -126,5 +161,14 @@ mod tests {
             parse(&VALID[..VALID.len() - 1]),
             Err(ParseError::UnterminatedRecord)
         );
+    }
+
+    #[test]
+    fn rejects_dangling_object_reference() {
+        let text = core::str::from_utf8(VALID)
+            .unwrap()
+            .replace("(address . \"(hello world)\")", "(address . \"other\")");
+        let stream = parse(text.as_bytes()).unwrap();
+        assert_eq!(validate_references(&stream), Err(ParseError::InvalidRecord));
     }
 }
