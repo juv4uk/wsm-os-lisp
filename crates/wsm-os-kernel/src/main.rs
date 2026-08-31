@@ -80,7 +80,7 @@ fn fs_fixture_witness(context: &mut RuntimeContext) -> bool {
     let Ok(stream) = fs_records::parse(FS_RECORDS) else {
         return false;
     };
-    if fs_records::validate_references(&stream).is_err() {
+    if fs_records::reconstruct_root(&stream).is_err() {
         return false;
     }
     if stream.count != 2

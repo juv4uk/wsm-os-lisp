@@ -24,6 +24,12 @@ pub struct Stream<'a> {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
+pub struct RootView<'a> {
+    pub revision: &'a [u8],
+    pub object_address: &'a [u8],
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ParseError {
     Empty,
     TooLarge,
@@ -88,6 +94,22 @@ pub fn validate_references(stream: &Stream<'_>) -> Result<(), ParseError> {
     Ok(())
 }
 
+/// Reconstruct the bounded root view only when every referenced object is
+/// present. This is the guest-side missing-object rejection boundary.
+pub fn reconstruct_root<'a>(stream: &'a Stream<'a>) -> Result<RootView<'a>, ParseError> {
+    validate_references(stream)?;
+    let root = stream.records[0].ok_or(ParseError::InvalidRecord)?;
+    let object = stream.records[1].ok_or(ParseError::InvalidRecord)?;
+    let revision =
+        quoted_or_atom_after(root.bytes, b"(revision . ").ok_or(ParseError::InvalidRecord)?;
+    let object_address =
+        quoted_after(object.bytes, b"(address . ").ok_or(ParseError::InvalidRecord)?;
+    Ok(RootView {
+        revision,
+        object_address,
+    })
+}
+
 fn classify(record: &[u8]) -> Result<RecordKind, ParseError> {
     // Envelope grammar is intentionally narrow and data-only at this stage.
     // Every accepted record must declare the same version tuple.
@@ -136,6 +158,21 @@ fn quoted_after<'a>(record: &'a [u8], marker: &[u8]) -> Option<&'a [u8]> {
     Some(&rest[1..end])
 }
 
+fn quoted_or_atom_after<'a>(record: &'a [u8], marker: &[u8]) -> Option<&'a [u8]> {
+    let offset = record
+        .windows(marker.len())
+        .position(|window| window == marker)?
+        + marker.len();
+    let rest = &record[offset..];
+    let end = rest.iter().position(|byte| *byte == b')')?;
+    let value = &rest[..end];
+    if value.is_empty() || value.iter().any(|byte| *byte == b'(' || *byte == b'\n') {
+        None
+    } else {
+        Some(value)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -149,6 +186,8 @@ mod tests {
         assert_eq!(stream.records[0].unwrap().kind, RecordKind::Root);
         assert_eq!(stream.records[1].unwrap().kind, RecordKind::Object);
         validate_references(&stream).unwrap();
+        let root = reconstruct_root(&stream).unwrap();
+        assert_eq!(root.revision, b" 1");
     }
 
     #[test]
@@ -170,5 +209,6 @@ mod tests {
             .replace("(address . \"(hello world)\")", "(address . \"other\")");
         let stream = parse(text.as_bytes()).unwrap();
         assert_eq!(validate_references(&stream), Err(ParseError::InvalidRecord));
+        assert_eq!(reconstruct_root(&stream), Err(ParseError::InvalidRecord));
     }
 }
