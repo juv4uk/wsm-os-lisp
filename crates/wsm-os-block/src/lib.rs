@@ -7,6 +7,7 @@
 //! Це лише механізм байтового сховища. Семантика WSM FS лишається в
 //! `my-lisp`; цей crate не знає про імена, roots, journal або виконання.
 
+use std::collections::BTreeMap;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
@@ -42,6 +43,101 @@ pub enum BlockError {
         index: u64,
     },
     Io(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CapabilityError {
+    UnknownMedium(String),
+    GeometryExceedsGrant,
+    PathOutsideBrokerRoot,
+}
+
+/// A broker-issued grant. Callers cannot construct one without the broker.
+#[derive(Debug, Clone)]
+pub struct BlockCapability {
+    logical_id: String,
+    path: PathBuf,
+    block_size: usize,
+    block_count: u64,
+}
+
+impl BlockCapability {
+    pub fn logical_id(&self) -> &str {
+        &self.logical_id
+    }
+
+    pub fn block_size(&self) -> usize {
+        self.block_size
+    }
+
+    pub fn block_count(&self) -> u64 {
+        self.block_count
+    }
+}
+
+/// Minimal hosted capability broker. It issues bounded grants for registered
+/// logical media; it does not interpret WSM payloads.
+#[derive(Debug, Clone)]
+pub struct BlockCapabilityBroker {
+    root: PathBuf,
+    media: BTreeMap<String, PathBuf>,
+}
+
+impl BlockCapabilityBroker {
+    pub fn new(root: impl AsRef<Path>) -> Self {
+        Self {
+            root: root.as_ref().to_path_buf(),
+            media: BTreeMap::new(),
+        }
+    }
+
+    pub fn register(&mut self, logical_id: impl Into<String>, relative_path: impl AsRef<Path>) {
+        self.media
+            .insert(logical_id.into(), self.root.join(relative_path.as_ref()));
+    }
+
+    pub fn issue(
+        &self,
+        logical_id: &str,
+        block_size: usize,
+        block_count: u64,
+    ) -> Result<BlockCapability, CapabilityError> {
+        let path = self
+            .media
+            .get(logical_id)
+            .ok_or_else(|| CapabilityError::UnknownMedium(logical_id.to_string()))?;
+        if !safe_child_path(&self.root, path) {
+            return Err(CapabilityError::PathOutsideBrokerRoot);
+        }
+        if block_size < HEADER_BYTES
+            || block_size > MAX_BLOCK_SIZE
+            || block_count == 0
+            || block_count > usize::MAX as u64
+        {
+            return Err(CapabilityError::GeometryExceedsGrant);
+        }
+        Ok(BlockCapability {
+            logical_id: logical_id.to_string(),
+            path: path.clone(),
+            block_size,
+            block_count,
+        })
+    }
+
+    pub fn open(&self, capability: &BlockCapability) -> Result<FileBlockMedium, BlockError> {
+        if !safe_child_path(&self.root, &capability.path)
+            || capability.block_size < HEADER_BYTES
+            || capability.block_size > MAX_BLOCK_SIZE
+            || capability.block_count == 0
+        {
+            return Err(BlockError::InvalidGeometry);
+        }
+        FileBlockMedium::open(
+            &capability.path,
+            capability.block_size,
+            capability.block_count,
+        )
+    }
 }
 
 impl From<io::Error> for BlockError {
@@ -229,6 +325,17 @@ fn validate_geometry(block_size: usize, block_count: u64) -> Result<(), BlockErr
     } else {
         total_bytes(block_size, block_count).map(|_| ())
     }
+}
+
+fn safe_child_path(root: &Path, path: &Path) -> bool {
+    path.strip_prefix(root)
+        .map(|relative| {
+            !relative.is_absolute()
+                && relative
+                    .components()
+                    .all(|component| !matches!(component, std::path::Component::ParentDir))
+        })
+        .unwrap_or(false)
 }
 
 fn total_bytes(block_size: usize, block_count: u64) -> Result<u64, BlockError> {
@@ -456,5 +563,51 @@ mod tests {
             Err(BlockError::Io(message)) if message == "medium is closed"
         ));
         fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn capability_broker_rejects_unknown_medium_and_bad_geometry() {
+        let root = std::env::temp_dir().join(format!("wsm-os-capability-{}", std::process::id()));
+        let mut broker = BlockCapabilityBroker::new(&root);
+        broker.register("oracle", "oracle.blocks");
+        assert!(matches!(
+            broker.issue("missing", 64, 1),
+            Err(CapabilityError::UnknownMedium(name)) if name == "missing"
+        ));
+        assert!(matches!(
+            broker.issue("oracle", HEADER_BYTES - 1, 1),
+            Err(CapabilityError::GeometryExceedsGrant)
+        ));
+    }
+
+    #[test]
+    fn capability_broker_issues_bounded_grant_and_opens_registered_medium() {
+        let root =
+            std::env::temp_dir().join(format!("wsm-os-capability-open-{}", std::process::id()));
+        fs::create_dir_all(&root).unwrap();
+        let path = root.join("oracle.blocks");
+        let _created = FileBlockMedium::create(&path, 64, 1).unwrap();
+        let mut broker = BlockCapabilityBroker::new(&root);
+        broker.register("oracle", "oracle.blocks");
+        let grant = broker.issue("oracle", 64, 1).unwrap();
+        assert_eq!(grant.logical_id(), "oracle");
+        let mut medium = broker.open(&grant).unwrap();
+        medium.write_block(0, b"granted").unwrap();
+        medium.flush().unwrap();
+        assert_eq!(medium.read_block(0).unwrap(), b"granted");
+        fs::remove_file(path).unwrap();
+        fs::remove_dir(root).unwrap();
+    }
+
+    #[test]
+    fn capability_broker_rejects_path_escape_registration() {
+        let root =
+            std::env::temp_dir().join(format!("wsm-os-capability-escape-{}", std::process::id()));
+        let mut broker = BlockCapabilityBroker::new(&root);
+        broker.register("escape", "../outside.blocks");
+        assert!(matches!(
+            broker.issue("escape", 64, 1),
+            Err(CapabilityError::PathOutsideBrokerRoot)
+        ));
     }
 }

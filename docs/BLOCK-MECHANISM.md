@@ -50,28 +50,34 @@ payload, невикористані блоки, malformed headers, truncation і
 
 ## Evidence / Доказ
 
-The crate currently proves twelve small properties: round-trip after flush,
+The crate currently proves fifteen small properties: round-trip after flush,
 bounds/payload rejection, distinction between unwritten and corrupt blocks,
 malformed-header rejection, truncated-block rejection, and byte-identical
 images for identical writes, explicit flush-failure propagation, reopen after
 flush, rejection of a partially persisted block, and an explicit injected
-partial-write failure. These are
+partial-write failure, plus broker rejection of unknown media, invalid geometry,
+and path traversal. These are
 F5 mechanism evidence;
 they do not prove WSM FS reconstruction, journal replay, root publication,
 QEMU integration, or real-device persistence.
 
-Крейт наразі доводить дванадцять малих властивостей: round-trip після flush,
+Крейт наразі доводить п’ятнадцять малих властивостей: round-trip після flush,
 відхилення bounds/payload, розрізнення unwritten і corrupt block, відхилення
 malformed header, відхилення truncated block і byte-identical image для
-однакових записів, явне поширення помилки flush, читання після reopen і
-відхилення частково записаного блока і явна injected partial-write failure.
+однакових записів, явне поширення помилки flush, читання після reopen,
+відхилення частково записаного блока, явна injected partial-write failure,
+а також відхилення невідомого medium, неправильної geometry і path traversal.
 Це
 evidence механізму F5, а не
 доказ реконструкції WSM FS, journal replay, root publication, QEMU чи реального
 пристрою.
 
-OS-level path capability restriction is not implemented or claimed: callers
-must provide a permitted path through a higher-level capability boundary.
+The hosted broker now provides a minimal path/geometry capability boundary:
+logical media are registered under a broker root and grants are required to
+open them. This is not a complete OS sandbox, device authorization system,
+revocation protocol, or power-loss durability witness.
 
-OS-level path capability restriction не реалізоване й не заявляється: дозволений
-шлях має надаватися зовнішньою capability boundary.
+Hosted broker тепер дає мінімальну межу capability для path/geometry: logical
+media реєструються під broker root, а для відкриття потрібен grant. Це не
+повна OS sandbox, авторизація пристроїв, протокол відкликання чи доказ
+power-loss durability.
