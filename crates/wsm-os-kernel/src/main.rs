@@ -37,6 +37,8 @@ fn kernel_main(_boot_info: &'static mut BootInfo) -> ! {
             serial_write(b"WSM-OS FS schema=1 error=invalid-record status=error\n");
             qemu_exit(0x12)
         }
+    } else if fixture_name == "repl-fixture" {
+        repl_fixture();
     } else if fixture_name == "m5a-fixture" {
         if is_m5a_fixture_result(result, &context) {
             serial_write(b"WSM-OS RESULT schema=1 value=(40 . t) status=ok\n");
@@ -208,6 +210,41 @@ fn serial_write(bytes: &[u8]) {
     }
 }
 
+fn repl_fixture() -> ! {
+    serial_write(b"WSM-OS REPL schema=1 status=ready\n> ");
+    let mut line = [0_u8; 64];
+    let mut len: usize = 0;
+    loop {
+        if !serial_has_input() {
+            core::hint::spin_loop();
+            continue;
+        }
+        let byte = unsafe { inb(COM1) };
+        if byte == b'\r' || byte == b'\n' {
+            serial_write(b"\n");
+            if len == 1 && line[0] == b'q' {
+                serial_write(b"WSM-OS REPL status=bye\n");
+                qemu_exit(0x10)
+            } else if len == 1 && line[0] == b'h' {
+                serial_write(b"commands: h=help q=quit\n> ");
+            } else {
+                serial_write(b"WSM-OS REPL error=unsupported-form\n> ");
+            }
+            len = 0;
+        } else if byte == 8 || byte == 127 {
+            len = len.saturating_sub(1);
+        } else if len < line.len() {
+            line[len] = byte;
+            len += 1;
+            serial_write(&[byte]);
+        }
+    }
+}
+
+fn serial_has_input() -> bool {
+    unsafe { inb(COM1 + 5) & 1 != 0 }
+}
+
 fn serial_write_decimal(mut value: u32) {
     let mut digits = [0_u8; 10];
     let mut cursor = digits.len();
@@ -238,4 +275,10 @@ fn qemu_exit(code: u32) -> ! {
 
 unsafe fn outb(port: u16, value: u8) {
     asm!("out dx, al", in("dx") port, in("al") value, options(nomem, nostack));
+}
+
+unsafe fn inb(port: u16) -> u8 {
+    let value: u8;
+    asm!("in al, dx", in("dx") port, out("al") value, options(nomem, nostack));
+    value
 }
