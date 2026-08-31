@@ -18,6 +18,10 @@ for required in "$image" "$OVMF_CODE" "$OVMF_VARS"; do
     exit 2
   fi
 done
+if [[ -n "${WSM_QEMU_DATA_DISK:-}" && ! -s "$WSM_QEMU_DATA_DISK" ]]; then
+  echo "MISSING: $WSM_QEMU_DATA_DISK" >&2
+  exit 2
+fi
 
 run_dir=$(mktemp -d)
 trap 'rm -rf "$run_dir"' EXIT
@@ -26,17 +30,21 @@ vars_copy="$run_dir/ovmf-vars.fd"
 cp "$OVMF_VARS" "$vars_copy"
 chmod u+w "$vars_copy"
 
+qemu_args=(
+  -machine q35 -m 128M
+  -drive "if=pflash,unit=0,format=raw,readonly=on,file=$OVMF_CODE"
+  -drive "if=pflash,unit=1,format=raw,file=$vars_copy"
+  -drive "format=raw,file=$image"
+)
+if [[ -n "${WSM_QEMU_DATA_DISK:-}" ]]; then
+  qemu_args+=( -drive "format=raw,file=$WSM_QEMU_DATA_DISK,if=none,id=wsm-data" )
+  qemu_args+=( -device virtio-blk-pci,drive=wsm-data )
+fi
+qemu_args+=( -device isa-debug-exit,iobase=0xf4,iosize=0x04
+  -serial "file:$serial_log" -display none -no-reboot )
+
 set +e
-timeout "$WSM_OS_QEMU_TIMEOUT" "$QEMU_SYSTEM_X86_64" \
-  -machine q35 \
-  -m 128M \
-  -drive "if=pflash,unit=0,format=raw,readonly=on,file=$OVMF_CODE" \
-  -drive "if=pflash,unit=1,format=raw,file=$vars_copy" \
-  -drive "format=raw,file=$image" \
-  -device isa-debug-exit,iobase=0xf4,iosize=0x04 \
-  -serial "file:$serial_log" \
-  -display none \
-  -no-reboot
+timeout "$WSM_OS_QEMU_TIMEOUT" "$QEMU_SYSTEM_X86_64" "${qemu_args[@]}"
 status=$?
 set -e
 
