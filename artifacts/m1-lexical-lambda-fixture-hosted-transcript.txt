@@ -1,0 +1,4 @@
+source=((lambda (x) (cons x (quote ()))) (quote A))
+result=(A)
+execution=lexical-frame
+status=ok

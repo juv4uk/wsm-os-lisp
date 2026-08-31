@@ -75,6 +75,14 @@ fn kernel_main(_boot_info: &'static mut BootInfo) -> ! {
             serial_write(b"WSM-OS RESULT schema=1 error=abi-violation status=error\n");
             qemu_exit(0x12)
         }
+    } else if fixture_name == "m1-lexical-lambda-fixture" {
+        if is_m1_lexical_lambda_result(result, &context) {
+            serial_write(b"WSM-OS RESULT schema=1 value=(A) execution=lexical-frame status=ok\n");
+            qemu_exit(0x10)
+        } else {
+            serial_write(b"WSM-OS RESULT schema=1 error=abi-violation status=error\n");
+            qemu_exit(0x12)
+        }
     } else {
         if is_first_fixture_result(result, &context) {
             serial_write(b"WSM-OS RESULT schema=1 value=(A . B) status=ok\n");
@@ -174,6 +182,13 @@ fn is_first_fixture_result(value: Word, context: &RuntimeContext) -> bool {
         return false;
     };
     decode_symbol(cell.car) == Some(1) && decode_symbol(cell.cdr) == Some(2)
+}
+
+fn is_m1_lexical_lambda_result(value: Word, context: &RuntimeContext) -> bool {
+    let Ok(cell) = context.cell(value) else {
+        return false;
+    };
+    decode_symbol(cell.car) == Some(1) && cell.cdr == wsm_os_target::NIL
 }
 
 fn is_m5a_fixture_result(value: Word, context: &RuntimeContext) -> bool {

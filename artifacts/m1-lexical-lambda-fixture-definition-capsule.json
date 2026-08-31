@@ -1,12 +1,12 @@
 {
   "artifacts": {
     "assembly": {
-      "digest": "4dc24f5fa961b8820c8d5b755779f33e790f847a1097f247548cb98833dff231",
-      "path": "artifacts/m1-identity-lambda-fixture.s"
+      "digest": "d4da670e573ddf2ebef6e19aedde9331110c63f82651f02d2ef7993021ac6cbe",
+      "path": "artifacts/m1-lexical-lambda-fixture.s"
     },
     "object": {
-      "digest": "7386a66874e3e9e27ca07701e77ba1646ff9c8666659d268f7cd725214b07ffb",
-      "path": "artifacts/m1-identity-lambda-fixture.o"
+      "digest": "cd989744ca61724baeef115edd2314765181106fc4a8c317f0933d58ff650803",
+      "path": "artifacts/m1-lexical-lambda-fixture.o"
     }
   },
   "callers": [],
@@ -17,7 +17,7 @@
     "world_image": false
   },
   "code": {
-    "end": 53,
+    "end": 91,
     "entry": "wsm_entry",
     "exports": [
       "wsm_entry"
@@ -41,7 +41,7 @@
       "version": 1
     }
   },
-  "definition_id": "sha256:19fd3994dbcd4754520997267c5867b837a30d64150080528e7cfa083dba615a",
+  "definition_id": "sha256:8934c04c7fa573aa0ea0d11962364df4b79aead1369f74c1c1f5faca7ba5cce0",
   "dependencies": [],
   "digest_algorithm": "sha256",
   "generator": {
@@ -52,7 +52,9 @@
     "target_triple": "x86_64-unknown-none",
     "version": "0.1.0"
   },
-  "imports": [],
+  "imports": [
+    "wsm_cons"
+  ],
   "literal_table": {
     "digest": "cf1111c59cdf0bfe59e92402308e1a7de85798998f5661635075c0fcaf5bcbd3",
     "entries": [
@@ -71,19 +73,19 @@
   "schema": "wsm-definition-capsule",
   "schema_version": 1,
   "source": {
-    "file_digest": "0e97d5037430b57cf50720b0aa12af4012045230738ec91771fb5b78c5bb2cdd",
+    "file_digest": "940f4ab541b9bd34d728c5095a1d583fe8290cee39c72f72cfc428bb799d55af",
     "map": [
       {
         "generated_entry": "wsm_entry",
         "granularity": "definition",
-        "object_end": 53,
+        "object_end": 91,
         "object_start": 0,
-        "source_end_byte": 18,
+        "source_end_byte": 44,
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/m1-identity-lambda-fixture.wsm",
-    "semantic_digest": "bca0e3856ad0063e1290c076c64a6803defdddaf55746fc2660ecd68c8eecfbf"
+    "path": "artifacts/m1-lexical-lambda-fixture.wsm",
+    "semantic_digest": "6789ab4a576282f7794195b8e24d48f9b1db7061e0bf9fe11772fd9dbd4cd12f"
   },
   "symbol_table": {
     "digest": "709075550658fba7a27743fa8615f155473610852e116273d54f946827b2591e",

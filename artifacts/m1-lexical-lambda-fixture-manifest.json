@@ -1,0 +1,17 @@
+{
+  "assembly_digest": "d4da670e573ddf2ebef6e19aedde9331110c63f82651f02d2ef7993021ac6cbe",
+  "cml_sha": "7c3ef66020321f31afc60d8633c621e389857acc",
+  "digest_algorithm": "sha256",
+  "exported": [
+    "wsm_entry"
+  ],
+  "imports": [
+    "wsm_cons"
+  ],
+  "object_digest": "cd989744ca61724baeef115edd2314765181106fc4a8c317f0933d58ff650803",
+  "schema": "wsm-m1-lexical-lambda-fixture-artifact-manifest",
+  "schema_version": 2,
+  "source_file_digest": "940f4ab541b9bd34d728c5095a1d583fe8290cee39c72f72cfc428bb799d55af",
+  "source_semantic_digest": "6789ab4a576282f7794195b8e24d48f9b1db7061e0bf9fe11772fd9dbd4cd12f",
+  "target_contract_digest": "a85b53e8b428325fe1d6369f357706523fff0fd2738ce2e0dda35e2b626b454e"
+}

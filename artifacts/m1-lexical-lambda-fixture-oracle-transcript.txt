@@ -1,0 +1,4 @@
+source=((lambda (x) (cons x (quote ()))) (quote A))
+my-lisp-version=0.33.0
+result=(A)
+status=ok

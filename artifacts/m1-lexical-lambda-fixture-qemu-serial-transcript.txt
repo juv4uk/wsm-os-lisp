@@ -1,0 +1,2 @@
+WSM-OS BOOT schema=1 arch=x86_64 status=ok
+WSM-OS RESULT schema=1 value=(A) execution=lexical-frame status=ok
