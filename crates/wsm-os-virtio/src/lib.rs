@@ -26,6 +26,43 @@ pub const COMMON_CFG_QUEUE_NOTIFY_OFF: u16 = 0x1e;
 pub const MAX_QUEUE_SIZE: u16 = 8;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DeviceStatus(u8);
+
+impl DeviceStatus {
+    pub const fn new() -> Self {
+        Self(0)
+    }
+    pub const fn bits(self) -> u8 {
+        self.0
+    }
+
+    pub fn acknowledge(self) -> Option<Self> {
+        if self.0 == 0 {
+            Some(Self(STATUS_ACKNOWLEDGE))
+        } else {
+            None
+        }
+    }
+    pub fn driver(self) -> Option<Self> {
+        if self.0 == STATUS_ACKNOWLEDGE {
+            Some(Self(STATUS_ACKNOWLEDGE | STATUS_DRIVER))
+        } else {
+            None
+        }
+    }
+    pub fn driver_ok(self) -> Option<Self> {
+        if self.0 == (STATUS_ACKNOWLEDGE | STATUS_DRIVER) {
+            Some(Self(self.0 | STATUS_DRIVER_OK))
+        } else {
+            None
+        }
+    }
+    pub const fn failed(self) -> Self {
+        Self(self.0 | STATUS_FAILED)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DeviceIdentity {
     pub vendor_id: u16,
     pub device_id: u16,
@@ -133,5 +170,17 @@ mod tests {
                 device_id: DEVICE_ID_BLOCK
             })
         );
+    }
+
+    #[test]
+    fn status_progression_is_monotonic_and_fail_closed() {
+        let initial = DeviceStatus::new();
+        let acknowledged = initial.acknowledge().unwrap();
+        let driver = acknowledged.driver().unwrap();
+        let ready = driver.driver_ok().unwrap();
+        assert_eq!(ready.bits(), 7);
+        assert!(initial.driver().is_none());
+        assert!(ready.driver_ok().is_none());
+        assert_eq!(ready.failed().bits(), 0x87);
     }
 }
