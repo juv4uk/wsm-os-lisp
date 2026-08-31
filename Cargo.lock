@@ -517,6 +517,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "wsm-os-block"
+version = "0.1.0"
+
+[[package]]
 name = "wsm-os-hosted"
 version = "0.1.0"
 dependencies = [

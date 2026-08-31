@@ -170,6 +170,14 @@
      (origin . wsm-os)
      (description . "Extend the opaque RuntimeContext with a versioned structured condition record while retaining the small noreturn wsm_fail(context, code) boot ABI. Record operation, offending values, definition/source identity and explicit restart-capability IDs; prove deterministic hosted/QEMU serialization for type and OOM failures. Do not claim resumable conditions, capture native continuations or implement arbitrary restart jumps in this task.")))
 
+   ("WSM-OS-BLOCK-MECHANISM-F5" .
+    ((priority . 8.6)
+     (capabilities . (rust storage filesystem bounded-io checksum fault-injection testing))
+     (origin . wsm-os)
+     (context . "started 2026-08-31: new wsm-os-block crate provides opaque fixed-size file-backed blocks, versioned 16-byte header, FNV-1a integrity checksum, explicit flush, bounds and corruption errors; four unit tests pass. This is mechanism evidence only; no WSM names, roots, journal or evaluation.")
+     (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
+     (description . "Prove a standalone bounded byte medium before WSM-OS FS integration: geometry/index bounds, payload limits, short/truncated I/O, header corruption, checksum mismatch, flush/error propagation and deterministic image. Keep persistent references separate from runtime pointers and defer target string/name ABI.")))
+
    ("WSM-OS-CONFORMANCE-LADDER-M5" .
     ((priority . 7.0)
      (capabilities . (my-lisp cml x86_64 assembly conformance testing proof))

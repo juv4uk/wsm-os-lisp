@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/m4-generator",
+    "crates/wsm-os-block",
     "crates/wsm-os-hosted",
     "crates/wsm-os-image",
     "crates/wsm-os-runtime",
