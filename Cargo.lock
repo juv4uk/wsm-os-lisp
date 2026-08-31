@@ -80,9 +80,9 @@ checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 [[package]]
 name = "cml"
 version = "0.1.0"
-source = "git+https://github.com/juv4uk/cml.git?rev=74246905b833aa884ee869a2a2219f4ce3d94f25#74246905b833aa884ee869a2a2219f4ce3d94f25"
+source = "git+https://github.com/juv4uk/cml.git?rev=98172e1df03ccd97843c23564fb29cd3720ea92a#98172e1df03ccd97843c23564fb29cd3720ea92a"
 dependencies = [
- "wsm-os-target 0.1.0 (git+https://github.com/juv4uk/wsm-os.git?rev=fe168ebc572c82c237faa4a952eec63e531dcc47)",
+ "wsm-os-target 0.1.0 (git+https://github.com/juv4uk/wsm-os.git?rev=bf6d434)",
 ]
 
 [[package]]
@@ -569,7 +569,7 @@ version = "0.1.0"
 [[package]]
 name = "wsm-os-target"
 version = "0.1.0"
-source = "git+https://github.com/juv4uk/wsm-os.git?rev=fe168ebc572c82c237faa4a952eec63e531dcc47#fe168ebc572c82c237faa4a952eec63e531dcc47"
+source = "git+https://github.com/juv4uk/wsm-os.git?rev=bf6d434#bf6d434b21bbb7d3d08a0c07f0a42bc4697d742c"
 
 [[package]]
 name = "wsm-os-virtio"

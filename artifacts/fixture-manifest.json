@@ -1,6 +1,6 @@
 {
   "assembly_digest": "ffea045edd597c2ed253222d0e8459e5e825789dfd0bdb5166c0c88d346772b3",
-  "cml_sha": "74246905b833aa884ee869a2a2219f4ce3d94f25",
+  "cml_sha": "98172e1df03ccd97843c23564fb29cd3720ea92a",
   "digest_algorithm": "sha256",
   "exported": [
     "wsm_entry"
@@ -13,5 +13,5 @@
   "schema_version": 2,
   "source_file_digest": "1d76c4c5fb09cffedadee89fd96e3e8c47208a06993a906f0ba8084326111a46",
   "source_semantic_digest": "ebabf9c9b1da76d36604ad6d3b668a64fb11eb831ede7484fb192393b2782ba9",
-  "target_contract_digest": "8ffea0f316dad255e43020dcf315a546908d179e29ed0206519bd98acf07dfbf"
+  "target_contract_digest": "616a0d68db05d8e98f633fd73300818874583eea4e2ee8d2d7c0998580380048"
 }
