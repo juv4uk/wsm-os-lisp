@@ -35,6 +35,18 @@ root reconstruction, power-loss durability, or device ordering.
 відхиленого record. Вони ще не доводять реальний parser envelopes із
 `my-lisp`, root reconstruction, power-loss durability або ordering пристрою.
 
+The `wsm-fs-image-reader` binary now provides a bounded producer/consumer
+witness: it accepts exactly two non-empty UTF-8 records, writes and flushes a
+file-backed image, reopens it, and validates the envelope prefix atomically.
+This is only a framing/medium witness; it deliberately does not claim WSM
+reconstruction or semantic validation.
+
+`wsm-fs-image-reader` тепер дає bounded producer/consumer witness: приймає
+рівно два непорожні UTF-8 records, записує і flush-ить file-backed image,
+повторно відкриває її та атомарно перевіряє envelope prefix. Це лише witness
+межі framing/medium; він навмисно не заявляє WSM reconstruction або semantic
+validation.
+
 ## Next integration contract / Наступний контракт інтеграції
 
 The next witness must provide a real validator callback backed by the canonical
