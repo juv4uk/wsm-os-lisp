@@ -251,4 +251,46 @@
      (capabilities . (architecture repl operating-system runtime))
      (depends-on . (WSM-OS-CONFORMANCE-LADDER-M5))
      (origin . wsm-os)
-     (description . "Evolve the system from a single AOT frozen expression toward a live Lisp environment. Implement a symbol/function binding table (where name identity remains separated from the symbol ID). Allow replacing function bindings at runtime and evaluating multiple forms sequentially, laying the groundwork for a persistent image."))))))
+     (description . "Evolve the system from a single AOT frozen expression toward a live Lisp environment. Implement a symbol/function binding table (where name identity remains separated from the symbol ID). Allow replacing function bindings at runtime and evaluating multiple forms sequentially, laying the groundwork for a persistent image.")))
+
+   ("WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME" .
+    ((priority . 9.9)
+     (capabilities . (wsm-os runtime x86_64 closures environments qemu conformance))
+     (origin . wsm-os)
+     (description . "Represent an escaping closure as a bounded target value carrying code identity plus captured environment; apply it after its defining call returns. Prove the unchanged fixture through my-lisp oracle, hosted generated code and QEMU. Do not copy Rust Value layout or add constitutional special cases.")))
+
+   ("WSM-OS-CONSTITUTION-GLOBAL-ENV-DEFS" .
+    ((priority . 9.7)
+     (capabilities . (wsm-os runtime globals definitions recursion qemu conformance))
+     (origin . wsm-os)
+     (depends-on . (WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME))
+     (description . "Add bounded global definition/function bindings and application needed by unchanged constitutional definitions, including ordinary and mutual recursion. Keep names separate from value identity and prove each new shape through oracle, hosted and QEMU.")))
+
+   ("WSM-OS-CONSTITUTION-GC-OOM" .
+    ((priority . 9.6)
+     (capabilities . (wsm-os runtime memory garbage-collection oom qemu conformance))
+     (origin . wsm-os)
+     (depends-on . (WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME))
+     (description . "Provide root enumeration and bounded collection for cons, closures and environments before widening heap value types. Exhaustion must yield a deterministic named target failure, not corruption or reset; prove live capture survival and deliberate OOM in hosted and QEMU.")))
+
+   ("WSM-OS-CONSTITUTION-FULL-VALUES-ERRORS" .
+    ((priority . 9.5)
+     (capabilities . (wsm-os runtime strings bytes bignum rational errors qemu contract-3))
+     (origin . wsm-os)
+     (depends-on . (WSM-OS-CONSTITUTION-GC-OOM WSM-OS-CONSTITUTION-GLOBAL-ENV-DEFS))
+     (description . "Implement immutable strings/bytes, bignums, normalized exact rationals and contract-3 named errors as distinct target representations. Preserve exactness and compare canonical values or exact error kinds against the oracle; no string-to-symbol or rational-to-float substitution.")))
+
+   ("WSM-OS-CONSTITUTION-BATCH-QEMU-RUNNER" .
+    ((priority . 9.8)
+     (capabilities . (wsm-os cml qemu constitution conformance provenance testing))
+     (origin . wsm-os)
+     (depends-on . (WSM-OS-CONSTITUTION-FULL-VALUES-ERRORS WSM-OS-CONSTITUTION-GLOBAL-ENV-DEFS))
+     (description . "Consume the CML constitutional manifest and run every stable fixture through hosted target and QEMU, emitting one machine-readable result per fixture with source, oracle, CML, ABI and image provenance. Unsupported or failed fixtures remain explicit; never count omission as coverage.")))
+
+   ("WSM-OS-CONSTITUTION-READER-META-EVAL" .
+    ((priority . 8.8)
+     (capabilities . (wsm-os cml reader evaluator meta-eval qemu constitution))
+     (origin . wsm-os)
+     (depends-on . (WSM-OS-CONSTITUTION-BATCH-QEMU-RUNNER))
+     (description . "After compiled constitutional fixtures pass, add the canonical bounded reader and run the existing WSM meta-evaluator on target so the unchanged Constitution can be loaded as data and evaluated. Keep parser/evaluator policy out of the kernel and capabilities separate.")))
+))))
