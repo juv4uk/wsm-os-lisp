@@ -326,4 +326,13 @@
      (depends-on . (WSM-OS-WSM-PCI-CONFIG-CAPABILITY-D1))
      (description . "wsm_pci_config_capability's current 'unforgeable' guarantee is thinner than ADR-003's prose implies: a capability is just a tagged Word, and validity today means 'decodes correctly AND equals the one constant this function hands out' -- which works only because exactly one capability ID exists. The moment a second capability class is admitted (MMIO, DMA, interrupts -- all named as expected primitive classes in ADR-003 section 2), equality-against-one-constant stops being a meaningful unforgeability check on its own; something has to actually distinguish which capability a Word represents and verify provenance, not just tag-shape. Design and prove a capability model that stays sound with more than one live capability ID before the next capability class (MMIO or DMA) is admitted -- do not add MMIO/DMA/virtqueue logic in this task, this is scoped to the capability-identity mechanism itself.")
      (done . ())))
+
+   ("WSM-OS-TWO-WITNESSES-GRADUATION-CHECK" .
+    ((priority . 6.5)
+     (capabilities . (wsm-os documentation constitution evidence))
+     (origin . ecosystem)
+     (depends-on . (WSM-OS-CONSTITUTION-READER-META-EVAL WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B))
+     (context . "From docs/WSM-TRAJECTORY-SYNTHESIS-2026-09-01.md (ecosystem, owner+session dialogue 2026-09-01): the two lines already converging are Line A / self-expression (reader -> evaluator -> meta-eval.wsm -> WSM evaluates WSM, i.e. WSM-OS-CONSTITUTION-READER-META-EVAL) and Line B / machine control (capability -> PCI -> virtio-blk -> WSM driver -> real device protocol, i.e. WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B). This is not a fifth direction and not new engineering -- it is the graduation check itself, gated on two witnesses existing at the same time, not on volume of code.")
+     (description . "Once both dependencies have real QEMU evidence (a SELF-HOST WITNESS: meta-eval.wsm executes a nontrivial WSM program; and a MACHINE WITNESS: a WSM-authored driver.wsm controls a real/bounded device interface), confirm both hold simultaneously against the same pinned CML/target-contract revision, then update wsm-os/README.md's framing from 'research prototype' toward 'WSM is both its own semantic medium and a systems programming medium' -- only then, not before. Do not weaken either witness's own bar to make this land sooner; do not touch README before both are independently proven.")
+     (done . ())))
 ))))
