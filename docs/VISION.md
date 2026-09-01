@@ -148,22 +148,32 @@ without anything resembling the rest of the CUDA API.
 
 #### Open ownership question (not resolved by this document)
 
-As of 2026-09-01, neither existing repository actually owns this frontier as
-stated above, and this document does not decide it either:
+**Corrected 2026-09-01** — the first version of this section understated how
+crowded this picture already is:
 
 - `wsm-os/repo.my` explicitly lists `cuda-runtime` under `non-authorities`.
-- `wsm-cuda`'s own README describes a narrower, *hosted* path — `WSM fixture
-  -> CML Compute IR -> CPU oracle -> CUDA kernel` — which rides on an
-  existing NVIDIA driver and CUDA runtime already present on the host. It
-  does not currently claim G1/G2 above (mapping BARs, initializing the GPU
-  without any vendor driver underneath).
+- There are now **two separate hosted CUDA surfaces**, not one. CML's own
+  `gpu-cuda` feature (`src/gpu_cuda.rs`/`gpu_cuda_runtime.rs`, PTX via NVRTC)
+  already runs an admitted i32 `map` on real hardware — a GTX 1050 Ti,
+  verified 2026-08-24 (`cml/docs/cuda-runtime.md`), through the host's
+  existing NVIDIA driver (via WSL's `libcuda.so` bridge; the native Linux
+  driver in that environment reports `CUDA_ERROR_NO_DEVICE`), not bare
+  metal. Separately, `wsm-cuda`'s own README describes a similarly-scoped,
+  narrower hosted path (`WSM fixture -> CML Compute IR -> CPU oracle -> CUDA
+  kernel`). How these two relate — whether `wsm-cuda` consumes CML's
+  already-working backend, duplicates it, or owns a genuinely distinct
+  slice — is not documented anywhere found as of this writing.
+- Neither hosted surface claims G1/G2 below (mapping BARs, initializing the
+  GPU without any vendor driver underneath); the bare-metal gap is untouched
+  by both.
 
-Bare-metal GPU initialization (G1-G5) is therefore a real, currently unclaimed
-gap between the two repositories' declared scopes — not silently assigned to
-either one. Whether it becomes a new capability class inside `wsm-os` (via
-the same PCI/MMIO/DMA capability model `ADR-003` already establishes) or a
-separate track owned by `wsm-cuda` is an open decision for whenever this
-frontier is actually approached, not something this document settles.
+Bare-metal GPU initialization (G1-G5) is therefore still a real, currently
+unclaimed gap — not silently assigned to `wsm-os`, `wsm-cuda`, or CML.
+Whether it becomes a new capability class inside `wsm-os` (via the same
+PCI/MMIO/DMA capability model `ADR-003` already establishes) or a separate
+track is an open decision for whenever this frontier is actually approached
+— and resolving the CML/`wsm-cuda` relationship above is a smaller, more
+immediate open question this document also does not settle.
 
 ## The self-hosting shape, restated
 
@@ -266,23 +276,32 @@ WSM-написаний compute-kernel на bare-metal GPU через CML lowerin
 
 #### Відкрите питання авторства (цей документ його не вирішує)
 
-Станом на 2026-09-01 жоден з двох репозиторіїв формально не володіє цим
-фронтиром так, як описано вище:
+**Виправлено 2026-09-01** — перша версія цього розділу применшувала, наскільки
+переповнена ця картина насправді:
 
 - `wsm-os/repo.my` явно перелічує `cuda-runtime` серед `non-authorities`.
-- Власний README `wsm-cuda` описує вужчий, *hosted* шлях — `WSM fixture ->
-  CML Compute IR -> CPU oracle -> CUDA kernel`, який спирається на вже
-  наявний на хості NVIDIA-драйвер і CUDA-рантайм. Він наразі не претендує
-  на G1/G2 вище (мапування BAR, ініціалізація GPU без жодного
-  vendor-драйвера під низом).
+- Зараз є **дві окремі hosted-CUDA поверхні**, не одна. Власна фіча CML
+  `gpu-cuda` (`src/gpu_cuda.rs`/`gpu_cuda_runtime.rs`, PTX через NVRTC) вже
+  виконує допущений i32 `map` на реальному залізі — GTX 1050 Ti, перевірено
+  2026-08-24 (`cml/docs/cuda-runtime.md`), через уже наявний на хості
+  NVIDIA-драйвер (через WSL-міст `libcuda.so`; нативний Linux-драйвер у
+  цьому середовищі повертає `CUDA_ERROR_NO_DEVICE`) — не bare metal.
+  Окремо, власний README `wsm-cuda` описує подібний за обсягом, вужчий
+  hosted-шлях (`WSM fixture -> CML Compute IR -> CPU oracle -> CUDA kernel`).
+  Як ці два співвідносяться — чи `wsm-cuda` споживає вже робочий бекенд CML,
+  чи дублює його, чи володіє справді окремим шматком — ніде не
+  задокументовано на момент написання.
+- Жодна з hosted-поверхонь не претендує на G1/G2 нижче (мапування BAR,
+  ініціалізація GPU без жодного vendor-драйвера під низом); bare-metal
+  розрив не торкнутий жодною з них.
 
-Bare-metal ініціалізація GPU (G1-G5) — це реальна, наразі нічия межа між
-задекларованими обсягами обох репозиторіїв, а не мовчки закріплена за
-кимось із них. Чи стане вона новим класом capability всередині `wsm-os`
-(через ту саму PCI/MMIO/DMA capability-модель, яку вже встановлює
-`ADR-003`), чи окремим напрямком у `wsm-cuda` — відкрите рішення на момент,
-коли до цього фронтиру справді дійде черга, а не те, що вирішує цей
-документ.
+Bare-metal ініціалізація GPU (G1-G5) — і досі реальна, наразі нічия межа —
+не закріплена мовчки ні за `wsm-os`, ні за `wsm-cuda`, ні за CML. Чи стане
+вона новим класом capability всередині `wsm-os` (через ту саму PCI/MMIO/DMA
+capability-модель, яку вже встановлює `ADR-003`), чи окремим напрямком —
+відкрите рішення на момент, коли до цього фронтиру справді дійде черга — а
+розв'язання співвідношення CML/`wsm-cuda` вище є меншим, ближчим відкритим
+питанням, яке цей документ теж не вирішує.
 
 ## Форма самохостингу, ще раз
 
