@@ -7,7 +7,6 @@
 //! wrappers around this same ABI implementation.
 
 use core::mem::MaybeUninit;
-use core::sync::atomic::{AtomicUsize, Ordering};
 use wsm_os_target::{
     ClosureDescriptor, ErrorCode, NIL, RESULT_REGISTER, RUNTIME_IMPORTS, TRUE, Word,
 };
@@ -21,55 +20,95 @@ use wsm_os_target::{
 /// tests, or a future host running more than one independent context).
 /// Capacity is generous for that reason, not because deep concurrency is
 /// expected on the bare-metal target this crate ships to.
+///
+/// Deliberately plain `usize`, not `AtomicUsize`: this `no_std` target's
+/// symbol-purity gate (`scripts/check-runtime-symbols.sh`) builds
+/// unoptimized, where every `core::sync::atomic` operation -- even a bare
+/// `load` -- lowers to an unapproved external `core::sync::atomic::atomic_*`
+/// intrinsic call instead of a single inlined instruction. Plain reads/
+/// writes match the rest of this crate's synchronization story: production
+/// use is single-threaded bare metal (so is every other piece of state
+/// here, including `RuntimeContext` itself). See `claim_arena`'s SAFETY
+/// comment for the one place a real second OS thread touches this array
+/// (this crate's own regression test) and why that's still race-free.
 const MAX_TRACKED_ARENAS: usize = 32;
-static LIVE_ARENAS: [AtomicUsize; MAX_TRACKED_ARENAS] =
-    [const { AtomicUsize::new(0) }; MAX_TRACKED_ARENAS];
+static mut LIVE_ARENAS: [usize; MAX_TRACKED_ARENAS] = [0; MAX_TRACKED_ARENAS];
 
-/// Registers `addr` as a live arena, panicking if it is already registered
-/// (the exact violation `RuntimeContext::new`'s safety contract forbids) or
-/// if the tracking registry is full. A null address (an absent, unused
-/// closure arena) is never tracked.
+/// Registers `addr` as a live arena, halting (see `arena_violation`) if it
+/// is already registered (the exact violation `RuntimeContext::new`'s
+/// safety contract forbids) or if the tracking registry is full. A null
+/// address (an absent, unused closure arena) is never tracked.
 fn claim_arena(addr: usize) {
     if addr == 0 {
         return;
     }
-    let mut free_slot: Option<&AtomicUsize> = None;
-    for slot in LIVE_ARENAS.iter() {
-        let current = slot.load(Ordering::SeqCst);
-        if current == addr {
-            panic!(
-                "RuntimeContext: a second context was constructed over an arena \
-                 (pointer {addr:#x}) that already has a live context -- violates \
-                 the exclusive-ownership safety contract of RuntimeContext::new"
-            );
+    // SAFETY: raw, unsynchronized access to LIVE_ARENAS -- sound because
+    // production use never has two threads at all, and this crate's own
+    // regression test proving arena_violation() fires performs every write
+    // to this array (claiming the first context's arena) strictly before
+    // calling `std::thread::spawn` for the second, violating attempt;
+    // `thread::spawn` is documented to establish a happens-before edge for
+    // everything before it, so that later thread's read is never racing a
+    // concurrent write, even without atomics. Pointer arithmetic (not slice
+    // indexing) throughout, matching this file's existing raw-pointer style
+    // (e.g. `self.closure_heap.add(self.closure_len)` below), so an
+    // in-bounds access never risks an unapproved bounds-check-panic symbol.
+    unsafe {
+        let base = core::ptr::addr_of_mut!(LIVE_ARENAS).cast::<usize>();
+        let mut free_index = MAX_TRACKED_ARENAS;
+        let mut i = 0usize;
+        while i < MAX_TRACKED_ARENAS {
+            let slot = base.add(i);
+            let current = *slot;
+            if current == addr {
+                arena_violation();
+            }
+            if current == 0 && free_index == MAX_TRACKED_ARENAS {
+                free_index = i;
+            }
+            i += 1;
         }
-        if current == 0 && free_slot.is_none() {
-            free_slot = Some(slot);
+        if free_index == MAX_TRACKED_ARENAS {
+            arena_violation();
         }
+        *base.add(free_index) = addr;
     }
-    match free_slot {
-        Some(slot) => slot.store(addr, Ordering::SeqCst),
-        None => panic!(
-            "RuntimeContext: exceeded the arena-tracking registry capacity \
-             ({MAX_TRACKED_ARENAS}); raise MAX_TRACKED_ARENAS if this many \
-             concurrently-live contexts is genuinely expected"
-        ),
+}
+
+#[cold]
+fn arena_violation() -> ! {
+    // Either a live arena pointer collided with another live context's
+    // arena (the exact violation RuntimeContext::new's safety contract
+    // forbids), or the tracking registry (MAX_TRACKED_ARENAS) is full. No
+    // RuntimeContext exists yet at this point (arena registration happens
+    // before construction finishes) to route a structured failure through,
+    // and -- like panic_context below -- the freestanding runtime must not
+    // pull in panic_fmt, so this can only spin.
+    loop {
+        core::hint::spin_loop();
     }
 }
 
 /// Releases `addr` from the live-arena registry, if tracked. Called from
 /// `RuntimeContext`'s `Drop` so `claim_arena` only ever rejects a genuinely
 /// still-live duplicate, never a stale one from an already-dropped context.
+#[inline(always)]
 fn release_arena(addr: usize) {
     if addr == 0 {
         return;
     }
-    for slot in LIVE_ARENAS.iter() {
-        if slot
-            .compare_exchange(addr, 0, Ordering::SeqCst, Ordering::SeqCst)
-            .is_ok()
-        {
-            return;
+    // SAFETY: see claim_arena above -- same single-writer-then-spawn
+    // discipline, and this function is never the racing side of that test.
+    unsafe {
+        let base = core::ptr::addr_of_mut!(LIVE_ARENAS).cast::<usize>();
+        let mut i = 0usize;
+        while i < MAX_TRACKED_ARENAS {
+            let slot = base.add(i);
+            if *slot == addr {
+                *slot = 0;
+                return;
+            }
+            i += 1;
         }
     }
 }
@@ -495,25 +534,56 @@ mod tests {
     }
 
     #[test]
-    fn constructing_a_second_context_over_the_same_arena_panics() {
+    fn constructing_a_second_context_over_the_same_arena_never_returns() {
         // Regression for the arena-exclusivity safety contract that used to
-        // be caller-enforced prose only (see claim_arena / RuntimeContext::
-        // new's SAFETY doc above) -- proves the specific danger (two live
-        // contexts over the SAME arena) is now actually caught, not just
-        // documented.
-        let mut heap = [MaybeUninit::<ConsCell>::uninit(); 4];
-        let first = context(&mut heap);
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        // be caller-enforced prose only (see claim_arena / arena_violation /
+        // RuntimeContext::new's SAFETY doc above) -- proves the specific
+        // danger (two live contexts over the SAME arena) is now actually
+        // caught, not just documented. arena_violation() spins forever
+        // rather than panicking (the freestanding runtime must not pull in
+        // panic_fmt/Display machinery -- see the ERROR: Forbidden external
+        // import failures that caught the first, panic!-based version of
+        // this guard in CI), so this proves it via a bounded wait for a
+        // thread that must never complete, not catch_unwind.
+        //
+        // heap is intentionally leaked (Box::leak) and `first` is
+        // intentionally forgotten (never Dropped): the point of this test is
+        // that a second construction over the same arena must never return,
+        // so nothing here could ever be safely freed anyway. `RuntimeContext`
+        // holds raw pointers (not Send), so only the plain `usize` address
+        // -- not `first` itself -- crosses into the spawned thread.
+        let heap: &'static mut [MaybeUninit<ConsCell>; 4] =
+            std::boxed::Box::leak(std::boxed::Box::new([MaybeUninit::<ConsCell>::uninit(); 4]));
+        let heap_addr = heap.as_mut_ptr() as usize;
+        let first = context(heap);
+        core::mem::forget(first);
+
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
             // SAFETY: deliberately violating the exclusive-ownership
-            // contract to prove the checked guard rejects it; `first` stays
-            // alive (and its arena claimed) for the whole call.
-            unsafe { RuntimeContext::new(heap.as_mut_ptr(), heap.len(), unexpected_failure) }
-        }));
+            // contract to prove the checked guard rejects it; `heap_addr`
+            // points at the same arena `first` (forgotten, not dropped, so
+            // still registered as live) was constructed over.
+            let _second = unsafe {
+                RuntimeContext::new(
+                    heap_addr as *mut MaybeUninit<ConsCell>,
+                    4,
+                    unexpected_failure,
+                )
+            };
+            // Unreachable if the guard works: arena_violation() never
+            // returns, so this send never happens.
+            let _ = tx.send(());
+        });
+        let timed_out = rx
+            .recv_timeout(std::time::Duration::from_millis(500))
+            .is_err();
         assert!(
-            result.is_err(),
-            "constructing a second context over the same live arena should panic"
+            timed_out,
+            "constructing a second context over the same live arena should never \
+             return (arena_violation spins forever), but the second construction \
+             completed"
         );
-        drop(first);
     }
 
     #[test]

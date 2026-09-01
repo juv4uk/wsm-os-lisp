@@ -37,6 +37,7 @@
 core::panicking::panic_const::panic_const_add_overflow
 core::panicking::panic_const::panic_const_div_by_zero
 core::panicking::panic_const::panic_const_rem_by_zero
+wsm_os_runtime::LIVE_ARENAS
 wsm_os_runtime::context_mut::{closure#0}
 wsm_os_runtime::panic_context
 wsm_os_runtime::wsm_atom::{closure#0}
