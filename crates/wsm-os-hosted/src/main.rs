@@ -12,6 +12,43 @@ unsafe extern "C" {
     fn wsm_entry(context: *mut RuntimeContext) -> Word;
 }
 
+const PCI_CONFIG_CAPABILITY_ID: Word = 1;
+
+#[unsafe(no_mangle)]
+pub extern "C" fn wsm_pci_config_capability(_context: *mut RuntimeContext) -> Word {
+    wsm_os_target::encode_capability(PCI_CONFIG_CAPABILITY_ID).unwrap()
+}
+
+/// Hosted reference mechanism for the fixed QEMU D1 fixture BDF 00:05.0.
+/// Driver recognition remains in the generated WSM object.
+#[unsafe(no_mangle)]
+pub extern "C" fn wsm_pci_config_read16(
+    _context: *mut RuntimeContext,
+    capability: Word,
+    bus: Word,
+    device: Word,
+    function: Word,
+    offset: Word,
+) -> Word {
+    let valid_capability =
+        capability == wsm_os_target::encode_capability(PCI_CONFIG_CAPABILITY_ID).unwrap();
+    let coordinates = (
+        decode_fixnum(bus),
+        decode_fixnum(device),
+        decode_fixnum(function),
+        decode_fixnum(offset),
+    );
+    let value = match (valid_capability, coordinates) {
+        (true, (Some(0), Some(5), Some(0), Some(0))) => 0x1af4,
+        (true, (Some(0), Some(5), Some(0), Some(2))) => 0x1042,
+        (true, (Some(0), Some(0..=31), Some(0..=7), Some(offset @ 0..=254))) if offset % 2 == 0 => {
+            0xffff
+        }
+        _ => std::process::exit(4),
+    };
+    wsm_os_target::encode_fixnum(value).unwrap()
+}
+
 extern "C" fn hosted_failure(context_ptr: *const RuntimeContext, code: u32) -> ! {
     let ctx = unsafe { &*context_ptr };
     let kind_str = match ctx.condition.kind {

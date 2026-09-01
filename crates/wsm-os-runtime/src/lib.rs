@@ -12,7 +12,7 @@ use wsm_os_target::{
 };
 
 const _: () = assert!(RESULT_REGISTER.as_bytes()[0] == b'r');
-const _: () = assert!(RUNTIME_IMPORTS.len() == 9);
+const _: () = assert!(RUNTIME_IMPORTS.len() == 11);
 
 pub type FailureHandler = extern "C" fn(context: *const RuntimeContext, code: u32) -> !;
 
@@ -253,6 +253,11 @@ impl RuntimeContext {
                 self.closure_descriptor(value)?;
                 Ok(ValueClass::Atom)
             }
+            tag if tag == wsm_os_target::Tag::Capability as Word
+                && wsm_os_target::decode_capability(value).is_some() =>
+            {
+                Ok(ValueClass::Atom)
+            }
             _ => Err(RuntimeError::AbiViolation),
         }
     }
@@ -469,6 +474,9 @@ mod tests {
         let mut runtime = context(&mut heap);
         assert_eq!(runtime.eq(TRUE, TRUE), Ok(TRUE));
         assert_eq!(runtime.eq(TRUE, NIL), Ok(NIL));
+        let capability = wsm_os_target::encode_capability(1).unwrap();
+        assert_eq!(runtime.atom(capability), Ok(TRUE));
+        assert_eq!(runtime.eq(capability, capability), Ok(TRUE));
         let pair = runtime.cons(TRUE, NIL).unwrap();
         assert_eq!(runtime.eq(pair, pair), Err(RuntimeError::Type));
     }

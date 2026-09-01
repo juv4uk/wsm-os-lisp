@@ -7,7 +7,7 @@
 //! `my_lisp::layout::NanBox`.
 
 pub const CONTRACT_SCHEMA: &str = "wsm-os-target-v1";
-pub const CONTRACT_VERSION: u16 = 1;
+pub const CONTRACT_VERSION: u16 = 2;
 pub const ARCHITECTURE: &str = "x86_64";
 pub const ENDIANNESS: &str = "little";
 pub const WORD_BITS: u8 = 64;
@@ -46,6 +46,7 @@ pub enum Tag {
     Fixnum = 3,
     Symbol = 4,
     Closure = 5,
+    Capability = 6,
 }
 
 pub const NIL: Word = Tag::Nil as Word;
@@ -53,6 +54,7 @@ pub const TRUE: Word = Tag::True as Word;
 pub const FIXNUM_MIN: i64 = -(1_i64 << (PAYLOAD_BITS - 1));
 pub const FIXNUM_MAX: i64 = (1_i64 << (PAYLOAD_BITS - 1)) - 1;
 pub const SYMBOL_ID_MAX: Word = (1_u64 << PAYLOAD_BITS) - 1;
+pub const CAPABILITY_ID_MAX: Word = (1_u64 << PAYLOAD_BITS) - 1;
 
 pub const CONS_ALIGNMENT: usize = 16;
 pub const CONS_BYTES: usize = 16;
@@ -79,6 +81,8 @@ pub const RUNTIME_IMPORTS: &[&str] = &[
     "wsm_closure_new",
     "wsm_closure_definition",
     "wsm_closure_environment",
+    "wsm_pci_config_capability",
+    "wsm_pci_config_read16",
     "wsm_fail",
 ];
 
@@ -127,6 +131,29 @@ pub const fn encode_symbol(id: Word) -> Option<Word> {
 
 pub const fn decode_symbol(word: Word) -> Option<Word> {
     if tag(word) == Tag::Symbol as Word {
+        let id = word >> TAG_BITS;
+        if id != 0 {
+            return Some(id);
+        }
+    }
+    None
+}
+
+/// Encode a non-zero image-local capability handle. The numeric handle is not
+/// authority by itself: every privileged ABI import must validate it against
+/// the capabilities provisioned by the machine substrate.
+#[inline(always)]
+pub const fn encode_capability(id: Word) -> Option<Word> {
+    if id == 0 || id > CAPABILITY_ID_MAX {
+        None
+    } else {
+        Some((id << TAG_BITS) | Tag::Capability as Word)
+    }
+}
+
+#[inline(always)]
+pub const fn decode_capability(word: Word) -> Option<Word> {
+    if tag(word) == Tag::Capability as Word {
         let id = word >> TAG_BITS;
         if id != 0 {
             return Some(id);
@@ -198,6 +225,16 @@ mod tests {
     }
 
     #[test]
+    fn capabilities_are_distinct_non_zero_handles() {
+        assert_eq!(encode_capability(0), None);
+        let capability = encode_capability(1).unwrap();
+        assert_eq!(decode_capability(capability), Some(1));
+        assert_eq!(decode_fixnum(capability), None);
+        assert_eq!(decode_symbol(capability), None);
+        assert_eq!(decode_capability(TRUE), None);
+    }
+
+    #[test]
     fn truth_and_pointer_shapes_are_distinct() {
         assert!(is_false(NIL));
         assert!(!is_false(TRUE));
@@ -234,6 +271,7 @@ mod tests {
             Tag::Fixnum,
             Tag::Symbol,
             Tag::Closure,
+            Tag::Capability,
         ];
         for (index, left) in tags.iter().enumerate() {
             assert!((*left as Word) <= TAG_MASK);
@@ -260,14 +298,15 @@ mod tests {
  (architecture . {ARCHITECTURE})\n\
  (endianness . {ENDIANNESS})\n\
  (word . ((bits . {WORD_BITS}) (pointer-bits . {POINTER_BITS}) (tag-bits . {TAG_BITS}) (tag-mask . {TAG_MASK}) (payload-bits . {PAYLOAD_BITS})))\n\
- (tags . ((cons . {}) (nil . {}) (true . {}) (fixnum . {}) (symbol . {}) (closure . {})))\n\
+ (tags . ((cons . {}) (nil . {}) (true . {}) (fixnum . {}) (symbol . {}) (closure . {}) (capability . {})))\n\
  (immediates . ((nil . {NIL}) (true . {TRUE})))\n\
  (fixnum . ((minimum . {FIXNUM_MIN}) (maximum . {FIXNUM_MAX}) (encoding . signed-shift-left-3-or-tag)))\n\
  (symbol . ((minimum-id . 1) (maximum-id . {SYMBOL_ID_MAX}) (scope . image-local-interned)))\n\
  (cons . ((bytes . {CONS_BYTES}) (alignment . {CONS_ALIGNMENT}) (car-offset . {CONS_CAR_OFFSET}) (cdr-offset . {CONS_CDR_OFFSET}) (zero-pointer . invalid) (ownership . bounded-runtime-heap)))\n\
  (closure . ((bytes . {CLOSURE_BYTES}) (alignment . {CLOSURE_ALIGNMENT}) (definition-id-offset . {CLOSURE_DEFINITION_ID_OFFSET}) (environment-ref-offset . {CLOSURE_ENVIRONMENT_REF_OFFSET}) (definition-scope . image-local) (ownership . bounded-runtime-closure-arena)))\n\
+ (capability . ((minimum-id . 1) (maximum-id . {CAPABILITY_ID_MAX}) (scope . boot-provisioned) (forgeable-by-wsm . false) (privileged-use . runtime-validated)))\n\
  (calling-convention . ((name . {CALLING_CONVENTION}) (entry . {ENTRY_SYMBOL}) (context-register . {ENTRY_CONTEXT_REGISTER}) (result-register . {RESULT_REGISTER}) (stack-alignment-before-call . {STACK_ALIGNMENT_BEFORE_CALL}) (red-zone . forbidden)))\n\
- (runtime-imports . (wsm_cons wsm_car wsm_cdr wsm_eq wsm_atom wsm_closure_new wsm_closure_definition wsm_closure_environment wsm_fail))\n\
+ (runtime-imports . (wsm_cons wsm_car wsm_cdr wsm_eq wsm_atom wsm_closure_new wsm_closure_definition wsm_closure_environment wsm_pci_config_capability wsm_pci_config_read16 wsm_fail))\n\
  (errors . ((out-of-memory . {}) (type . {}) (invalid-symbol . {}) (abi-violation . {})))\n\
  (truth . ((false-value . nil) (fixnum-zero . true)))\n\
  (authority . ((my-lisp-contract . \"{MY_LISP_CONTRACT}\") (my-lisp-sha . \"{MY_LISP_SHA}\") (cml-claimed-contract . \"{CML_CLAIMED_CONTRACT}\") (cml-sha . \"{CML_SHA}\")))\n\
@@ -278,6 +317,7 @@ mod tests {
             Tag::Fixnum as u8,
             Tag::Symbol as u8,
             Tag::Closure as u8,
+            Tag::Capability as u8,
             ErrorCode::OutOfMemory as u32,
             ErrorCode::Type as u32,
             ErrorCode::InvalidSymbol as u32,

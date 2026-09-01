@@ -5,7 +5,7 @@ use bootloader_api::{entry_point, BootInfo};
 use core::arch::asm;
 use core::mem::MaybeUninit;
 use core::panic::PanicInfo;
-use wsm_os_runtime::{ConsCell, RuntimeContext};
+use wsm_os_runtime::{wsm_fail, ConsCell, RuntimeContext};
 use wsm_os_target::{decode_symbol, ClosureDescriptor, Word};
 
 mod fs_records;
@@ -181,6 +181,94 @@ static mut CLOSURES: [MaybeUninit<ClosureDescriptor>; CLOSURE_CAPACITY] =
 
 unsafe extern "C" {
     fn wsm_entry(context: *mut RuntimeContext) -> Word;
+}
+
+const PCI_CONFIG_CAPABILITY_ID: Word = 1;
+const PCI_CONFIG_ADDRESS: u16 = 0xcf8;
+const PCI_CONFIG_DATA: u16 = 0xcfc;
+
+/// Boot-provisioned, read-only PCI segment-0/bus-0 capability for the first
+/// driver witness. Device recognition remains in generated WSM.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wsm_pci_config_capability(context: *mut RuntimeContext) -> Word {
+    if context.is_null() {
+        loop {
+            core::hint::spin_loop();
+        }
+    }
+    match wsm_os_target::encode_capability(PCI_CONFIG_CAPABILITY_ID) {
+        Some(capability) => capability,
+        None => unsafe {
+            wsm_fail(
+                context,
+                wsm_os_target::ErrorCode::AbiViolation as u32,
+                0,
+                0x5043_4901,
+            )
+        },
+    }
+}
+
+/// Perform one bounded PCI configuration mechanism-1 read. This function
+/// knows ranges and privilege, not virtio identity or driver policy.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wsm_pci_config_read16(
+    context: *mut RuntimeContext,
+    capability: Word,
+    bus: Word,
+    device: Word,
+    function: Word,
+    offset: Word,
+) -> Word {
+    let expected = wsm_os_target::encode_capability(PCI_CONFIG_CAPABILITY_ID);
+    let (Some(0), Some(device), Some(function), Some(offset)) = (
+        wsm_os_target::decode_fixnum(bus),
+        wsm_os_target::decode_fixnum(device),
+        wsm_os_target::decode_fixnum(function),
+        wsm_os_target::decode_fixnum(offset),
+    ) else {
+        unsafe {
+            wsm_fail(
+                context,
+                wsm_os_target::ErrorCode::AbiViolation as u32,
+                capability,
+                0x5043_4902,
+            )
+        }
+    };
+    if Some(capability) != expected
+        || !(0..=31).contains(&device)
+        || !(0..=7).contains(&function)
+        || !(0..=254).contains(&offset)
+        || offset % 2 != 0
+    {
+        unsafe {
+            wsm_fail(
+                context,
+                wsm_os_target::ErrorCode::AbiViolation as u32,
+                capability,
+                0x5043_4903,
+            )
+        }
+    }
+    let address = 0x8000_0000_u32
+        | ((device as u32) << 11)
+        | ((function as u32) << 8)
+        | ((offset as u32) & 0xfc);
+    unsafe { outl(PCI_CONFIG_ADDRESS, address) };
+    let value = unsafe { inl(PCI_CONFIG_DATA) };
+    let shift = ((offset as u32) & 2) * 8;
+    match wsm_os_target::encode_fixnum(((value >> shift) & 0xffff) as i64) {
+        Some(value) => value,
+        None => unsafe {
+            wsm_fail(
+                context,
+                wsm_os_target::ErrorCode::AbiViolation as u32,
+                capability,
+                0x5043_4904,
+            )
+        },
+    }
 }
 
 extern "C" fn kernel_failure(context_ptr: *const RuntimeContext, _code: u32) -> ! {
@@ -367,5 +455,15 @@ unsafe fn outb(port: u16, value: u8) {
 unsafe fn inb(port: u16) -> u8 {
     let value: u8;
     asm!("in al, dx", in("dx") port, out("al") value, options(nomem, nostack));
+    value
+}
+
+unsafe fn outl(port: u16, value: u32) {
+    asm!("out dx, eax", in("dx") port, in("eax") value, options(nomem, nostack));
+}
+
+unsafe fn inl(port: u16) -> u32 {
+    let value: u32;
+    asm!("in eax, dx", in("dx") port, out("eax") value, options(nomem, nostack));
     value
 }
