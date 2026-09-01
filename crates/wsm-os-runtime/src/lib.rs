@@ -7,9 +7,72 @@
 //! wrappers around this same ABI implementation.
 
 use core::mem::MaybeUninit;
+use core::sync::atomic::{AtomicUsize, Ordering};
 use wsm_os_target::{
     ClosureDescriptor, ErrorCode, NIL, RESULT_REGISTER, RUNTIME_IMPORTS, TRUE, Word,
 };
+
+/// `RuntimeContext::new`/`new_with_closures`'s safety contract requires each
+/// arena to be exclusively owned by exactly one live context. That contract
+/// used to be caller-enforced prose only. This is a real, checked guard
+/// against the specific danger (two live contexts over the *same* arena
+/// pointer) rather than a global single-context limit, so it doesn't break
+/// legitimate concurrent contexts over distinct arenas (parallel unit
+/// tests, or a future host running more than one independent context).
+/// Capacity is generous for that reason, not because deep concurrency is
+/// expected on the bare-metal target this crate ships to.
+const MAX_TRACKED_ARENAS: usize = 32;
+static LIVE_ARENAS: [AtomicUsize; MAX_TRACKED_ARENAS] =
+    [const { AtomicUsize::new(0) }; MAX_TRACKED_ARENAS];
+
+/// Registers `addr` as a live arena, panicking if it is already registered
+/// (the exact violation `RuntimeContext::new`'s safety contract forbids) or
+/// if the tracking registry is full. A null address (an absent, unused
+/// closure arena) is never tracked.
+fn claim_arena(addr: usize) {
+    if addr == 0 {
+        return;
+    }
+    let mut free_slot: Option<&AtomicUsize> = None;
+    for slot in LIVE_ARENAS.iter() {
+        let current = slot.load(Ordering::SeqCst);
+        if current == addr {
+            panic!(
+                "RuntimeContext: a second context was constructed over an arena \
+                 (pointer {addr:#x}) that already has a live context -- violates \
+                 the exclusive-ownership safety contract of RuntimeContext::new"
+            );
+        }
+        if current == 0 && free_slot.is_none() {
+            free_slot = Some(slot);
+        }
+    }
+    match free_slot {
+        Some(slot) => slot.store(addr, Ordering::SeqCst),
+        None => panic!(
+            "RuntimeContext: exceeded the arena-tracking registry capacity \
+             ({MAX_TRACKED_ARENAS}); raise MAX_TRACKED_ARENAS if this many \
+             concurrently-live contexts is genuinely expected"
+        ),
+    }
+}
+
+/// Releases `addr` from the live-arena registry, if tracked. Called from
+/// `RuntimeContext`'s `Drop` so `claim_arena` only ever rejects a genuinely
+/// still-live duplicate, never a stale one from an already-dropped context.
+fn release_arena(addr: usize) {
+    if addr == 0 {
+        return;
+    }
+    for slot in LIVE_ARENAS.iter() {
+        if slot
+            .compare_exchange(addr, 0, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+        {
+            return;
+        }
+    }
+}
 
 const _: () = assert!(RESULT_REGISTER.as_bytes()[0] == b'r');
 const _: () = assert!(RUNTIME_IMPORTS.len() == 11);
@@ -73,12 +136,20 @@ impl RuntimeContext {
     ///
     /// `heap` must point to `capacity` writable, properly aligned
     /// `MaybeUninit<ConsCell>` slots and remain exclusively owned by this
-    /// context for its lifetime.
+    /// context for its lifetime. This is now a checked invariant, not just a
+    /// documented one: constructing a second context over the same `heap`
+    /// pointer while one is still live panics (see `claim_arena` above),
+    /// released again on `Drop`. Audited call graph as of 2026-09-01: the
+    /// two real entry points (`wsm-os-kernel`'s `kernel_main`, registered as
+    /// the single bootloader `entry_point!`, and `wsm-os-hosted`'s `main`)
+    /// each construct exactly one context, once, over their own private
+    /// arena, for the life of that function.
     pub unsafe fn new(
         heap: *mut MaybeUninit<ConsCell>,
         capacity: usize,
         failure_handler: FailureHandler,
     ) -> Self {
+        claim_arena(heap as usize);
         Self {
             heap,
             capacity,
@@ -108,6 +179,7 @@ impl RuntimeContext {
         failure_handler: FailureHandler,
     ) -> Self {
         let mut context = unsafe { Self::new(heap, capacity, failure_handler) };
+        claim_arena(closure_heap as usize);
         context.closure_heap = closure_heap;
         context.closure_capacity = closure_capacity;
         context
@@ -270,6 +342,13 @@ impl RuntimeContext {
     }
 }
 
+impl Drop for RuntimeContext {
+    fn drop(&mut self) {
+        release_arena(self.heap as usize);
+        release_arena(self.closure_heap as usize);
+    }
+}
+
 unsafe fn context_mut<'a>(context: *mut RuntimeContext) -> &'a mut RuntimeContext {
     // SAFETY: every exported ABI function requires the target contract's
     // non-null, exclusively borrowed context pointer. A null pointer is an
@@ -413,6 +492,39 @@ mod tests {
                 unexpected_failure,
             )
         }
+    }
+
+    #[test]
+    fn constructing_a_second_context_over_the_same_arena_panics() {
+        // Regression for the arena-exclusivity safety contract that used to
+        // be caller-enforced prose only (see claim_arena / RuntimeContext::
+        // new's SAFETY doc above) -- proves the specific danger (two live
+        // contexts over the SAME arena) is now actually caught, not just
+        // documented.
+        let mut heap = [MaybeUninit::<ConsCell>::uninit(); 4];
+        let first = context(&mut heap);
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            // SAFETY: deliberately violating the exclusive-ownership
+            // contract to prove the checked guard rejects it; `first` stays
+            // alive (and its arena claimed) for the whole call.
+            unsafe { RuntimeContext::new(heap.as_mut_ptr(), heap.len(), unexpected_failure) }
+        }));
+        assert!(
+            result.is_err(),
+            "constructing a second context over the same live arena should panic"
+        );
+        drop(first);
+    }
+
+    #[test]
+    fn dropping_a_context_releases_its_arena_for_reuse() {
+        // The exclusivity guard above must not become a permanent leak: once
+        // a context legitimately goes out of scope, the same arena pointer
+        // has to be constructible again.
+        let mut heap = [MaybeUninit::<ConsCell>::uninit(); 4];
+        drop(context(&mut heap));
+        let second = context(&mut heap);
+        drop(second);
     }
 
     #[test]
