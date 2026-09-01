@@ -16,5 +16,5 @@
 (runtime-imports . (wsm_cons wsm_car wsm_cdr wsm_eq wsm_atom wsm_closure_new wsm_closure_definition wsm_closure_environment wsm_pci_config_capability wsm_pci_config_read16 wsm_fail))
 (errors . ((out-of-memory . 1) (type . 2) (invalid-symbol . 3) (abi-violation . 4)))
 (truth . ((false-value . nil) (fixnum-zero . true)))
-(authority . ((my-lisp-contract . "3.0") (my-lisp-sha . "667b587394dc8d3fc8dadff7c925e5bce68ed887") (cml-claimed-contract . "2.0") (cml-sha . "1266c83e26232d69d04ef71ce5bcf0bd8b745353")))
+(authority . ((my-lisp-contract . "3.0") (my-lisp-sha . "667b587394dc8d3fc8dadff7c925e5bce68ed887") (cml-claimed-contract . "2.0") (cml-sha . "655c4c34e4912b550ffac96d0dee245093671384")))
 (first-fixture . ((source . "(cons (quote A) (quote B))") (expected . "(A . B)"))))

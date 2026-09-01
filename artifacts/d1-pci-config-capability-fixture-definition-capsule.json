@@ -1,12 +1,12 @@
 {
   "artifacts": {
     "assembly": {
-      "digest": "ffea045edd597c2ed253222d0e8459e5e825789dfd0bdb5166c0c88d346772b3",
-      "path": "artifacts/fixture.s"
+      "digest": "edac7ed3507695453b3c451632a2e2e0368074cb9107fe58cb804987eab27d56",
+      "path": "artifacts/d1-pci-config-capability-fixture.s"
     },
     "object": {
-      "digest": "17fff544b027b97d451ac8ee90ee5fa6f7d80b63cc8bca67dabf1dbdb41e6cf9",
-      "path": "artifacts/fixture.o"
+      "digest": "e116acafe07b7ad1cb8b647f2227a6dfa413c81bdc047b6094bce4d6cae3bec3",
+      "path": "artifacts/d1-pci-config-capability-fixture.o"
     }
   },
   "callers": [],
@@ -17,7 +17,7 @@
     "world_image": false
   },
   "code": {
-    "end": 62,
+    "end": 704,
     "entry": "wsm_entry",
     "exports": [
       "wsm_entry"
@@ -41,7 +41,7 @@
       "version": 2
     }
   },
-  "definition_id": "sha256:65b3e136a40ad13459c9c13693a9980a9ee602924f2f9f6ee77a354acf6a4fad",
+  "definition_id": "sha256:a84858b355ffd615d274e5a3876db73ed5fb4289ddd953e07c072d17254a9fe5",
   "dependencies": [],
   "digest_algorithm": "sha256",
   "generator": {
@@ -53,7 +53,16 @@
     "version": "0.1.0"
   },
   "imports": [
-    "wsm_cons"
+    "wsm_car",
+    "wsm_cdr",
+    "wsm_closure_definition",
+    "wsm_closure_environment",
+    "wsm_closure_new",
+    "wsm_cons",
+    "wsm_eq",
+    "wsm_fail",
+    "wsm_pci_config_capability",
+    "wsm_pci_config_read16"
   ],
   "literal_table": {
     "digest": "cf1111c59cdf0bfe59e92402308e1a7de85798998f5661635075c0fcaf5bcbd3",
@@ -73,19 +82,19 @@
   "schema": "wsm-definition-capsule",
   "schema_version": 1,
   "source": {
-    "file_digest": "1d76c4c5fb09cffedadee89fd96e3e8c47208a06993a906f0ba8084326111a46",
+    "file_digest": "2f9ef1d1d9c8a662e20b318402976fa2e1e13c6806b809cb3f2c6784095d8976",
     "map": [
       {
         "generated_entry": "wsm_entry",
         "granularity": "definition",
-        "object_end": 62,
+        "object_end": 704,
         "object_start": 0,
-        "source_end_byte": 26,
+        "source_end_byte": 245,
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/fixture.wsm",
-    "semantic_digest": "ebabf9c9b1da76d36604ad6d3b668a64fb11eb831ede7484fb192393b2782ba9"
+    "path": "artifacts/d1-pci-config-capability-fixture.wsm",
+    "semantic_digest": "41b47774fa5780e28805a158c7d9ea702270cd721e86f21ffdc006890103731d"
   },
   "symbol_table": {
     "digest": "709075550658fba7a27743fa8615f155473610852e116273d54f946827b2591e",

@@ -38,7 +38,14 @@ qemu_args=(
 )
 if [[ -n "${WSM_QEMU_DATA_DISK:-}" ]]; then
   qemu_args+=( -drive "format=raw,file=$WSM_QEMU_DATA_DISK,if=none,id=wsm-data" )
-  qemu_args+=( -device virtio-blk-pci,drive=wsm-data )
+  virtio_device="virtio-blk-pci,drive=wsm-data"
+  if [[ -n "${WSM_QEMU_VIRTIO_ADDR:-}" ]]; then
+    virtio_device+=",addr=${WSM_QEMU_VIRTIO_ADDR}"
+  fi
+  if [[ "${WSM_QEMU_VIRTIO_DISABLE_LEGACY:-0}" == 1 ]]; then
+    virtio_device+=",disable-legacy=on"
+  fi
+  qemu_args+=( -device "$virtio_device" )
 fi
 qemu_args+=( -device isa-debug-exit,iobase=0xf4,iosize=0x04
   -serial "file:$serial_log" -display none -no-reboot )

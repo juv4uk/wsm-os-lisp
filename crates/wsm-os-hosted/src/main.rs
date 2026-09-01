@@ -1,6 +1,6 @@
 use std::mem::MaybeUninit;
 
-use wsm_os_runtime::{ConsCell, RuntimeContext};
+use wsm_os_runtime::{ConsCell, RuntimeContext, wsm_fail};
 use wsm_os_target::{ClosureDescriptor, FIRST_FIXTURE_SOURCE, Word, decode_fixnum, decode_symbol};
 
 core::arch::global_asm!(
@@ -23,7 +23,7 @@ pub extern "C" fn wsm_pci_config_capability(_context: *mut RuntimeContext) -> Wo
 /// Driver recognition remains in the generated WSM object.
 #[unsafe(no_mangle)]
 pub extern "C" fn wsm_pci_config_read16(
-    _context: *mut RuntimeContext,
+    context: *mut RuntimeContext,
     capability: Word,
     bus: Word,
     device: Word,
@@ -44,7 +44,14 @@ pub extern "C" fn wsm_pci_config_read16(
         (true, (Some(0), Some(0..=31), Some(0..=7), Some(offset @ 0..=254))) if offset % 2 == 0 => {
             0xffff
         }
-        _ => std::process::exit(4),
+        _ => unsafe {
+            wsm_fail(
+                context,
+                wsm_os_target::ErrorCode::AbiViolation as u32,
+                capability,
+                0x5043_4903,
+            )
+        },
     };
     wsm_os_target::encode_fixnum(value).unwrap()
 }

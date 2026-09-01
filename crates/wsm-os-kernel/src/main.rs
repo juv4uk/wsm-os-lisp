@@ -124,6 +124,22 @@ fn kernel_main(_boot_info: &'static mut BootInfo) -> ! {
             );
             qemu_exit(0x12)
         }
+    } else if fixture_name == "d1-pci-config-capability-fixture" {
+        if result == wsm_os_target::TRUE {
+            serial_write(
+                b"WSM-OS DRIVER schema=1 driver=virtio-blk stage=pci-config value=t execution=wsm status=ok\n",
+            );
+            qemu_exit(0x10)
+        } else {
+            serial_write(
+                b"WSM-OS DRIVER schema=1 driver=virtio-blk stage=pci-config error=unexpected-value status=error\n",
+            );
+            qemu_exit(0x12)
+        }
+    } else if fixture_name == "d1-pci-config-bounds-fixture" {
+        // A bounded capability violation must have trapped through wsm_fail.
+        serial_write(b"WSM-OS DRIVER schema=1 driver=virtio-blk stage=pci-config error=missing-condition status=error\n");
+        qemu_exit(0x12)
     } else {
         if is_first_fixture_result(result, &context) {
             serial_write(b"WSM-OS RESULT schema=1 value=(A . B) status=ok\n");

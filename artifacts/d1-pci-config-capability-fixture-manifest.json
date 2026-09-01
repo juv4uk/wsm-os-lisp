@@ -1,0 +1,26 @@
+{
+  "assembly_digest": "edac7ed3507695453b3c451632a2e2e0368074cb9107fe58cb804987eab27d56",
+  "cml_sha": "655c4c34e4912b550ffac96d0dee245093671384",
+  "digest_algorithm": "sha256",
+  "exported": [
+    "wsm_entry"
+  ],
+  "imports": [
+    "wsm_car",
+    "wsm_cdr",
+    "wsm_closure_definition",
+    "wsm_closure_environment",
+    "wsm_closure_new",
+    "wsm_cons",
+    "wsm_eq",
+    "wsm_fail",
+    "wsm_pci_config_capability",
+    "wsm_pci_config_read16"
+  ],
+  "object_digest": "e116acafe07b7ad1cb8b647f2227a6dfa413c81bdc047b6094bce4d6cae3bec3",
+  "schema": "wsm-d1-pci-config-capability-fixture-artifact-manifest",
+  "schema_version": 2,
+  "source_file_digest": "2f9ef1d1d9c8a662e20b318402976fa2e1e13c6806b809cb3f2c6784095d8976",
+  "source_semantic_digest": "41b47774fa5780e28805a158c7d9ea702270cd721e86f21ffdc006890103731d",
+  "target_contract_digest": "f710eb3b26d84b4ea1d09965e79f211474e16a2bffc6b510894c9e7ac3071c74"
+}

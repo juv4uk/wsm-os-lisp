@@ -214,9 +214,11 @@
 
    ("WSM-OS-WSM-PCI-CONFIG-CAPABILITY-D1" .
     ((priority . 9.3)
+     (done . t)
      (capabilities . (wsm cml wsm-os x86_64 qemu pci capability-abi evidence))
      (depends-on . (WSM-OS-WSM-PCI-IDENTITY-D0))
      (origin . wsm-os)
+     (context . "Completed 2026-09-01. ABI v2 adds opaque capability values and only two target-profile calls: pci-config-capability and bounded pci-config-read16. The unchanged positive WSM fixture read QEMU q35 BDF 00:05.0 through PCI mechanism 1 and recognized modern virtio-blk 1af4:1042; hosted returned t and QEMU emitted DRIVER stage=pci-config value=t execution=wsm. A second unchanged WSM fixture requested device 32 and both hosted and QEMU emitted structured ABI source=1346586883 value=14. QEMU used a disposable raw disk at addr=5 with disable-legacy=on. This proves bounded PCI configuration observation, not enumeration, BAR/MMIO access, DMA, virtqueues, block I/O, physical hardware or durability. Next observed driver blocker: discover a matching BDF without hard-coding 00:05.0.")
      (description . "Remove D0's first observed blocker: define an opaque, non-forgeable, bounded PCI configuration capability; admit a general pci-config-read16 operation through CML and the target ABI; provision the capability explicitly at boot; and let unchanged WSM read vendor/device values from QEMU before applying the D0 predicate. The substrate may execute the privileged config-cycle, but must not recognize virtio or choose driver policy. Prove bounds/error behavior and QEMU observation; do not add MMIO, DMA or virtqueue logic yet.")))
 
    ("WSM-OS-SERIAL-REPL-M5H" .

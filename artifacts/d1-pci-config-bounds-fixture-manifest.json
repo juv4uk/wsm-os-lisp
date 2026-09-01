@@ -1,0 +1,18 @@
+{
+  "assembly_digest": "4473c8e2aff151aaa0f3fe895189bcdba0ae0f1e2a6eba967d6d9ce569182ccf",
+  "cml_sha": "655c4c34e4912b550ffac96d0dee245093671384",
+  "digest_algorithm": "sha256",
+  "exported": [
+    "wsm_entry"
+  ],
+  "imports": [
+    "wsm_pci_config_capability",
+    "wsm_pci_config_read16"
+  ],
+  "object_digest": "153e25ed5be49b64d1e4e37dc9866940c1c91cf950f79d00952bb07b4ea4324c",
+  "schema": "wsm-d1-pci-config-bounds-fixture-artifact-manifest",
+  "schema_version": 2,
+  "source_file_digest": "b8d6a2b448a1d9c37ff9504e481008eb1cbe1c7d3ee005cb39141796f1de1cf5",
+  "source_semantic_digest": "77a73491c9e6d7e3765ec17c155d439b8f9a45877dd300411e297e7a78f4854c",
+  "target_contract_digest": "f710eb3b26d84b4ea1d09965e79f211474e16a2bffc6b510894c9e7ac3071c74"
+}

@@ -1,12 +1,12 @@
 {
   "artifacts": {
     "assembly": {
-      "digest": "ffea045edd597c2ed253222d0e8459e5e825789dfd0bdb5166c0c88d346772b3",
-      "path": "artifacts/fixture.s"
+      "digest": "4473c8e2aff151aaa0f3fe895189bcdba0ae0f1e2a6eba967d6d9ce569182ccf",
+      "path": "artifacts/d1-pci-config-bounds-fixture.s"
     },
     "object": {
-      "digest": "17fff544b027b97d451ac8ee90ee5fa6f7d80b63cc8bca67dabf1dbdb41e6cf9",
-      "path": "artifacts/fixture.o"
+      "digest": "153e25ed5be49b64d1e4e37dc9866940c1c91cf950f79d00952bb07b4ea4324c",
+      "path": "artifacts/d1-pci-config-bounds-fixture.o"
     }
   },
   "callers": [],
@@ -17,7 +17,7 @@
     "world_image": false
   },
   "code": {
-    "end": 62,
+    "end": 152,
     "entry": "wsm_entry",
     "exports": [
       "wsm_entry"
@@ -41,7 +41,7 @@
       "version": 2
     }
   },
-  "definition_id": "sha256:65b3e136a40ad13459c9c13693a9980a9ee602924f2f9f6ee77a354acf6a4fad",
+  "definition_id": "sha256:9b7bb0725c9972279b9bc6557cb0e74631d9501c4820c8e5bfb298cc243af516",
   "dependencies": [],
   "digest_algorithm": "sha256",
   "generator": {
@@ -53,7 +53,8 @@
     "version": "0.1.0"
   },
   "imports": [
-    "wsm_cons"
+    "wsm_pci_config_capability",
+    "wsm_pci_config_read16"
   ],
   "literal_table": {
     "digest": "cf1111c59cdf0bfe59e92402308e1a7de85798998f5661635075c0fcaf5bcbd3",
@@ -73,19 +74,19 @@
   "schema": "wsm-definition-capsule",
   "schema_version": 1,
   "source": {
-    "file_digest": "1d76c4c5fb09cffedadee89fd96e3e8c47208a06993a906f0ba8084326111a46",
+    "file_digest": "b8d6a2b448a1d9c37ff9504e481008eb1cbe1c7d3ee005cb39141796f1de1cf5",
     "map": [
       {
         "generated_entry": "wsm_entry",
         "granularity": "definition",
-        "object_end": 62,
+        "object_end": 152,
         "object_start": 0,
-        "source_end_byte": 26,
+        "source_end_byte": 77,
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/fixture.wsm",
-    "semantic_digest": "ebabf9c9b1da76d36604ad6d3b668a64fb11eb831ede7484fb192393b2782ba9"
+    "path": "artifacts/d1-pci-config-bounds-fixture.wsm",
+    "semantic_digest": "77a73491c9e6d7e3765ec17c155d439b8f9a45877dd300411e297e7a78f4854c"
   },
   "symbol_table": {
     "digest": "709075550658fba7a27743fa8615f155473610852e116273d54f946827b2591e",
