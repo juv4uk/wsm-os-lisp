@@ -1,0 +1,24 @@
+{
+  "assembly_digest": "5a1d7399b0cd1f0b257fc379b332d5689745b2ef36114eba7ad541d3f3ea2105",
+  "cml_sha": "1266c83e26232d69d04ef71ce5bcf0bd8b745353",
+  "digest_algorithm": "sha256",
+  "exported": [
+    "wsm_entry"
+  ],
+  "imports": [
+    "wsm_car",
+    "wsm_cdr",
+    "wsm_closure_definition",
+    "wsm_closure_environment",
+    "wsm_closure_new",
+    "wsm_cons",
+    "wsm_eq",
+    "wsm_fail"
+  ],
+  "object_digest": "1b35451ee9ce4db304cc2cedc9fa0d275827625a7cb1d7dec5f2c78cf9cbbb27",
+  "schema": "wsm-d0-virtio-identity-fixture-artifact-manifest",
+  "schema_version": 2,
+  "source_file_digest": "7d555b05f2337f57b9fb9c6ea63857d2d83d39041db5f4533ad3d3a978c1a945",
+  "source_semantic_digest": "07108c9921724337139792b5961227ef5dfcf06f223e642eb12ea3e74271d4a7",
+  "target_contract_digest": "0752434756206092dd5e417ceb9a9dab76c47dff734f9990fbe7a454cec3bb97"
+}

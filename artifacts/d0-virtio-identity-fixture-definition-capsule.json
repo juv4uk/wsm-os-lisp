@@ -1,0 +1,112 @@
+{
+  "artifacts": {
+    "assembly": {
+      "digest": "5a1d7399b0cd1f0b257fc379b332d5689745b2ef36114eba7ad541d3f3ea2105",
+      "path": "artifacts/d0-virtio-identity-fixture.s"
+    },
+    "object": {
+      "digest": "1b35451ee9ce4db304cc2cedc9fa0d275827625a7cb1d7dec5f2c78cf9cbbb27",
+      "path": "artifacts/d0-virtio-identity-fixture.o"
+    }
+  },
+  "callers": [],
+  "capabilities": {
+    "hot_replacement": false,
+    "inspectable_metadata": true,
+    "loader": false,
+    "world_image": false
+  },
+  "code": {
+    "end": 400,
+    "entry": "wsm_entry",
+    "exports": [
+      "wsm_entry"
+    ],
+    "range_kind": "object-relative",
+    "section": ".text",
+    "start": 0
+  },
+  "contracts": {
+    "cml": {
+      "revision": "1266c83e26232d69d04ef71ce5bcf0bd8b745353",
+      "supported_contract": "2.0"
+    },
+    "my_lisp": {
+      "contract": "3.0",
+      "revision": "667b587394dc8d3fc8dadff7c925e5bce68ed887"
+    },
+    "target_abi": {
+      "digest": "0752434756206092dd5e417ceb9a9dab76c47dff734f9990fbe7a454cec3bb97",
+      "schema": "wsm-os-target-v1",
+      "version": 1
+    }
+  },
+  "definition_id": "sha256:3cd35bbb9c65305019de0607420e58f13a2f4af4e091316a94ce56ffcff97204",
+  "dependencies": [],
+  "digest_algorithm": "sha256",
+  "generator": {
+    "assembler_family": "gnu-as",
+    "name": "m4-generator",
+    "object_canonicalizer": "gnu-objcopy-remove-note-gnu-property",
+    "object_format": "elf64-x86-64",
+    "target_triple": "x86_64-unknown-none",
+    "version": "0.1.0"
+  },
+  "imports": [
+    "wsm_car",
+    "wsm_cdr",
+    "wsm_closure_definition",
+    "wsm_closure_environment",
+    "wsm_closure_new",
+    "wsm_cons",
+    "wsm_eq",
+    "wsm_fail"
+  ],
+  "literal_table": {
+    "digest": "cf1111c59cdf0bfe59e92402308e1a7de85798998f5661635075c0fcaf5bcbd3",
+    "entries": [
+      {
+        "encoded_word": 12,
+        "kind": "symbol",
+        "symbol_id": 1
+      },
+      {
+        "encoded_word": 20,
+        "kind": "symbol",
+        "symbol_id": 2
+      }
+    ]
+  },
+  "schema": "wsm-definition-capsule",
+  "schema_version": 1,
+  "source": {
+    "file_digest": "7d555b05f2337f57b9fb9c6ea63857d2d83d39041db5f4533ad3d3a978c1a945",
+    "map": [
+      {
+        "generated_entry": "wsm_entry",
+        "granularity": "definition",
+        "object_end": 400,
+        "object_start": 0,
+        "source_end_byte": 128,
+        "source_start_byte": 0
+      }
+    ],
+    "path": "artifacts/d0-virtio-identity-fixture.wsm",
+    "semantic_digest": "07108c9921724337139792b5961227ef5dfcf06f223e642eb12ea3e74271d4a7"
+  },
+  "symbol_table": {
+    "digest": "709075550658fba7a27743fa8615f155473610852e116273d54f946827b2591e",
+    "entries": [
+      {
+        "encoded_word": 12,
+        "id": 1,
+        "name": "A"
+      },
+      {
+        "encoded_word": 20,
+        "id": 2,
+        "name": "B"
+      }
+    ]
+  }
+}

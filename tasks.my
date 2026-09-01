@@ -190,18 +190,34 @@
    ("WSM-OS-FS-VIRTUAL-DISK-PERSISTENCE-Q6B" .
     ((priority . 8.8)
      (capabilities . (wsm-os qemu block-device storage persistence evidence))
-     (depends-on . (WSM-OS-FS-MACHINE-WITNESS-F6 WSM-OS-BLOCK-MECHANISM-F5))
+     (depends-on . (WSM-OS-FS-MACHINE-WITNESS-F6 WSM-OS-BLOCK-MECHANISM-F5 WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B))
      (origin . wsm-os)
      (context . "Q6a guest-memory read/write/flush witness is committed as ad61201; Q6b design is docs/Q6B-VIRTUAL-DISK-DESIGN.md (commit 4fb107b). Implement a separate disposable QEMU raw disk and guest-visible bounded block ABI; clean-restart persistence is still OPEN." )
      (description . "Implement Q6b: attach a separate disposable virtual disk, perform bounded guest read/write/flush, cleanly restart with the same disk, and validate header/checksum/payload after reopen. Record exact kernel/image provenance and transcript. Do not claim power-loss durability until Q7 crash evidence.")))
 
    ("WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B" .
     ((priority . 9.0)
-     (capabilities . (rust no-std x86_64 qemu pci virtio block-device))
-     (depends-on . (WSM-OS-FS-VIRTUAL-DISK-PERSISTENCE-Q6B))
+     (capabilities . (wsm cml no-std x86_64 qemu pci virtio block-device capability-abi))
+     (depends-on . (WSM-OS-WSM-PCI-CONFIG-CAPABILITY-D1))
      (origin . wsm-os)
-     (context . "QEMU launch can attach a separate virtio-blk disk (commit 7cbb2c9); guest currently ignores it. No PCI/virtio implementation exists yet. Keep the first driver bounded to one queue, one 512-byte sector, read/write/flush, and explicit error exits.")
-     (description . "Implement the minimal no_std virtio-blk guest driver: discover the QEMU PCI device, negotiate VERSION_1 and FLUSH where available, submit one bounded request, validate completion/status, and emit deterministic serial evidence. Do not add a general block scheduler or claim persistence until clean-restart Q6b witness passes.")))
+     (context . "Owner amended ADR-003 on 2026-09-01: production device logic belongs in compiled WSM over a minimal capability ABI. Rust may remain bootstrap/reference/test code. QEMU already attaches a separate virtio-blk disk; the guest still lacks a real capability path to it.")
+     (description . "Implement the minimal WSM virtio-blk guest driver over bounded machine capabilities: WSM owns discovery, register protocol, virtqueue descriptors, request state, completion and error interpretation; the machine substrate owns only privileged PCI/MMIO access, DMA mapping, interrupt entry and fences. Compare an optional Rust reference against the WSM driver on the same QEMU sector/checksum. Do not add a general scheduler or claim physical/power-loss durability.")))
+
+   ("WSM-OS-WSM-PCI-IDENTITY-D0" .
+    ((priority . 9.2)
+     (done . t)
+     (capabilities . (wsm cml x86_64 qemu pci virtio evidence))
+     (depends-on . (WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME))
+     (origin . wsm-os)
+     (context . "Completed locally 2026-09-01. Unchanged WSM fixture recognizes virtio vendor 0x1af4 (6900) and modern block device 0x1042 (4162). Canonical my-lisp oracle=t, hosted generated target=t, and bounded QEMU emitted DRIVER stage=identity value=t execution=wsm. Generated manifest pins CML 1266c83 and object sha256 1b35451ee9ce4db304cc2cedc9fa0d275827625a7cb1d7dec5f2c78cf9cbbb27. Claim boundary: device logic only; no PCI configuration access occurred.")
+     (description . "Prove the first driver-owned slice as ordinary WSM: recognize virtio-blk vendor/device identity, pass unchanged through the canonical oracle, CML, hosted runtime and QEMU, then record the next blocker as bounded pci-config-read16 capability input. This fixture proves WSM device logic only; it must not be reported as PCI access or a working block driver.")))
+
+   ("WSM-OS-WSM-PCI-CONFIG-CAPABILITY-D1" .
+    ((priority . 9.3)
+     (capabilities . (wsm cml wsm-os x86_64 qemu pci capability-abi evidence))
+     (depends-on . (WSM-OS-WSM-PCI-IDENTITY-D0))
+     (origin . wsm-os)
+     (description . "Remove D0's first observed blocker: define an opaque, non-forgeable, bounded PCI configuration capability; admit a general pci-config-read16 operation through CML and the target ABI; provision the capability explicitly at boot; and let unchanged WSM read vendor/device values from QEMU before applying the D0 predicate. The substrate may execute the privileged config-cycle, but must not recognize virtio or choose driver policy. Prove bounds/error behavior and QEMU observation; do not add MMIO, DMA or virtqueue logic yet.")))
 
    ("WSM-OS-SERIAL-REPL-M5H" .
     ((priority . 8.7)
