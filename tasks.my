@@ -311,4 +311,19 @@
      (origin . wsm-os)
      (depends-on . (WSM-OS-CONSTITUTION-BATCH-QEMU-RUNNER))
      (description . "After compiled constitutional fixtures pass, add the canonical bounded reader and run the existing WSM meta-evaluator on target so the unchanged Constitution can be loaded as data and evaluated. Keep parser/evaluator policy out of the kernel and capabilities separate.")))
+
+   ("WSM-OS-RUNTIMECONTEXT-EXCLUSIVE-OWNERSHIP" .
+    ((priority . 7.8)
+     (capabilities . (rust memory-safety unsafe soundness runtime))
+     (origin . wsm-os)
+     (description . "crates/wsm-os-runtime's RuntimeContext::new / new_with_closures are unsafe fn whose entire safety contract -- 'the arena stays exclusively owned for the context's lifetime' -- is caller-enforced prose, not typestate. Nothing in the type system stops a second RuntimeContext being constructed over the same heap pointer/arena, which would violate every bounds-check invariant the rest of the crate (cell()/closure_descriptor()'s address-offset/alignment/len checks) relies on. Every other unsafe block in this crate carries a specific, locally-verifiable SAFETY comment tied to a check performed nearby; this constructor contract is the one place that pattern breaks down. In the current single-threaded bare-metal setting this is probably benign, but the gap between what ADR-003/DEFINITION-CAPSULE claim about bounded, capability-checked memory and what the type system actually proves here is real. Either encode exclusive ownership in the type (a marker/token that can't be duplicated, or making the constructor genuinely safe by construction) or add an explicit doc-comment + regression test demonstrating why a second RuntimeContext over the same arena cannot occur in this codebase's actual call graph today.")
+     (done . ())))
+
+   ("WSM-OS-PCI-CAPABILITY-UNFORGEABILITY-HARDENING" .
+    ((priority . 8.3)
+     (capabilities . (wsm rust capability-model pci security))
+     (origin . wsm-os)
+     (depends-on . (WSM-OS-WSM-PCI-CONFIG-CAPABILITY-D1))
+     (description . "wsm_pci_config_capability's current 'unforgeable' guarantee is thinner than ADR-003's prose implies: a capability is just a tagged Word, and validity today means 'decodes correctly AND equals the one constant this function hands out' -- which works only because exactly one capability ID exists. The moment a second capability class is admitted (MMIO, DMA, interrupts -- all named as expected primitive classes in ADR-003 section 2), equality-against-one-constant stops being a meaningful unforgeability check on its own; something has to actually distinguish which capability a Word represents and verify provenance, not just tag-shape. Design and prove a capability model that stays sound with more than one live capability ID before the next capability class (MMIO or DMA) is admitted -- do not add MMIO/DMA/virtqueue logic in this task, this is scoped to the capability-identity mechanism itself.")
+     (done . ())))
 ))))
