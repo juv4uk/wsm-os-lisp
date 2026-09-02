@@ -14,7 +14,7 @@
      (done . t)
      (capabilities . (architecture x86_64 assembly compiler contract proof))
      (depends-on . ())
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Define the machine-readable wsm-os x86_64 target ABI before any emitter uses numeric constants: little-endian 64-bit values; nil/true/fixnum/symbol/cons tags; ownership, alignment and heap pointer rules; System V AMD64 integer calling convention; versioned wsm_cons/wsm_car/wsm_cdr/wsm_eq/wsm_atom/wsm_fail imports; canonical result and structured failure records. Pin my-lisp/CML SHAs and the first (cons (quote A) (quote B)) oracle fixture. Add parser/validation tests for the contract. Do not import Rust Value/NanBox layout as authority.")
      (context . "completed 2026-08-29 by wsl-viveka-1 under direct owner assignment after swarm claim quorum was unavailable: fe168eb pushed. Dependency-free no_std wsm-os-target crate is the numeric source of truth; generated target-contract.wsm is byte-exact tested; 5/5 ABI tests, cargo check --lib, cargo fmt and my-lisp lint pass. CI added.")))
 
@@ -23,7 +23,7 @@
      (done . t)
      (capabilities . (cml compiler rust x86_64 assembly lowering testing proof))
      (depends-on . (WSM-OS-TARGET-ABI-M0))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Add the x86_64-freestanding GNU assembly backend to cml as a consumer of admitted shared Ir. Consume the wsm-os target contract, emit deterministic .s, and fail closed before partial output for unsupported nodes. First slice: the minimum Ir needed for the frozen cons/quoted-symbol fixture, then bounded Car/Cdr/Eq/Atom only with tests. Assemble the output and prove undefined symbols are restricted to the versioned wsm_* runtime ABI. No libc, OS, filesystem or silent C-backend fallback; do not claim full my-lisp 3.0.")
      (context . "completed 2026-08-29 by wsl-viveka-1 under direct owner assignment: CML commit 1f7142a pushed. Backend consumes pinned wsm-os-target fe168eb, preflights all IR before emission, supports literals/quote plus cons/car/cdr/eq/atom, and emits deterministic SysV AMD64 GNU assembly without libc or fallback. Real assembler/nm tests 5/5 pass, library tests 5/5 pass, GitHub Actions run 33244954299 SUCCESS.")))
 
@@ -32,7 +32,7 @@
      (done . t)
      (capabilities . (rust x86_64 assembly runtime testing my-lisp proof))
      (depends-on . (WSM-OS-CML-X86-FREESTANDING-M1))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Implement the shared freestanding wsm_* runtime core and a bounded hosted harness around the exact M1 object: tagged value encode/decode, interned fixture symbols, cons heap, deterministic bump allocation and structured OOM/type failure. Keep host startup/output outside the runtime core. Execute the frozen expression and require canonical result/error parity with pinned my-lisp. Hosted parity is not bare-metal evidence.")
      (context . "completed 2026-08-29 by Antigravity under direct owner assignment: 1750000 pushed.")))
 
@@ -41,7 +41,7 @@
      (done . t)
      (capabilities . (research rust x86_64 uefi licensing architecture))
      (depends-on . (WSM-OS-TARGET-ABI-M0))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Choose the smallest maintained x86_64 UEFI/QEMU boot substrate for the observed Gigabyte H170-Gaming 3 target and WSL/GitHub build environments. Verify exact license/NOTICE obligations, Rust target/tool requirements, deterministic serial test path and test-only QEMU exit. Compare candidates from primary docs; do not add a dependency until the decision is recorded and license-cleared.")))
 
    ("WSM-OS-BOOT-TOOLCHAIN-M3B" .
@@ -49,14 +49,14 @@
      (done . t)
      (capabilities . (guix rust qemu x86_64 build ci testing))
      (depends-on . (WSM-OS-BOOT-SUBSTRATE-DECISION-M3A))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Provision the minimum reproducible toolchain selected by M3A: pinned Rust bare-metal target/components, QEMU and required linker/image tools through the repo manifest/CI. Prove clean tool discovery and a bounded no-op image build. Do not install broad toolchains or write physical devices.")))
 
    ("WSM-OS-BOOT-SUBSTRATE-REALIGN-M3A1" .
     ((priority . 10.0)
      (capabilities . (research rust x86_64 uefi qemu architecture testing proof))
      (depends-on . (WSM-OS-BOOT-SUBSTRATE-DECISION-M3A))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (done . t)
      (description . "Reconcile ADR-002 with the executable boot path. The ADR selects maintained bootloader v0.11 and UEFI, while the current code resolves bootloader 0.9.x and cargo bootimage. Choose and implement one honest path; if the ratified UEFI decision remains, migrate to the v0.11 bootloader_api/builder flow and remove legacy bootimage assumptions. Exact dependency, lockfile, image format, build command, QEMU firmware and CI evidence must agree. Do not call a legacy BIOS bootimage UEFI evidence.")
      (context . "completed 2026-08-29 under direct owner assignment: a5797f5 replaces the temporary legacy-only 755e0e9 resolution with bootloader_api/UefiBoot 0.11.17, an explicit UEFI image-builder and no bootimage runner. Local 2,162,688-byte UEFI image created; GitHub Actions 33257753471 SUCCESS after formatting follow-up 64ba9df.")))
@@ -66,7 +66,7 @@
      (done . t)
      (capabilities . (guix rust qemu x86_64 build ci testing proof))
      (depends-on . (WSM-OS-BOOT-SUBSTRATE-REALIGN-M3A1))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Make the selected boot toolchain reproducible rather than merely working on latest nightly. Pin the exact Rust nightly/components and every image-builder or bootimage tool actually used; record QEMU/firmware discovery and bounded build commands in repo configuration and CI. Completion requires a clean build from the declared pins and a pushed CI run; moving nightly or an undeclared global cargo tool is not pinned evidence.")
      (context . "completed 2026-08-29: rust-toolchain.toml pins nightly-2026-07-27, rust-src, llvm-tools-preview and x86_64-unknown-none; Cargo pins bootloader/bootloader_api 0.11.17. Moving nightly wcslen failure is documented. GitHub Actions 33257753471 built the kernel and non-empty UEFI image successfully.")))
 
@@ -74,7 +74,7 @@
     ((priority . 9.5)
      (capabilities . (my-lisp cml rust runtime testing provenance proof))
      (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (done . t)
      (description . "Replace the self-referential M2 expected-string witness with independent pinned oracle evidence. Run the frozen fixture through the declared my-lisp revision, store or reproducibly generate the canonical value/error transcript and digest, and compare hosted runtime output to that artifact. Reconcile target-contract CML_SHA with the actual CML revision used to generate/link the object. A hardcoded shared expected constant alone is contract conformance, not oracle parity.")))
 
@@ -82,7 +82,7 @@
     ((priority . 9.0)
      (capabilities . (rust x86_64 assembly runtime testing proof))
      (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (done . t)
      (context . "verified 2026-08-29: demangled exact allowlist passes locally and in GitHub Actions run 33266814494; raw Rust crate hashes are intentionally excluded from the stable boundary. Corrective commits c7b8536 and 5986e67.")
      (description . "Replace the hosted-runtime blacklist grep with an exact undefined-symbol allowlist at the freestanding link boundary. Inspect the final bare runtime object/archive with nm or llvm-nm; permit only explicitly documented compiler/runtime support symbols and versioned wsm_* ABI imports as appropriate, and fail on every other undefined symbol. Prove that calloc/realloc/write/open/socket/pthread/__libc-style leaks cannot pass merely because they were absent from the old blacklist.")))
@@ -92,7 +92,7 @@
      (done . t)
      (capabilities . (rust x86_64 uefi qemu serial testing ci proof))
      (depends-on . (WSM-OS-BOOT-TOOLCHAIN-PIN-M3B1))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Create the minimal freestanding boot image with entry point, panic path and serial writer. Under a bounded QEMU run emit exactly WSM-OS BOOT schema=1 arch=x86_64 status=ok and exit through the selected test mechanism. CI must distinguish success, panic and timeout. QEMU evidence only; no physical-disk or hardware write.")
      (context . "verified 2026-08-29: COM1 serial writer emitted the exact final BOOT witness under bounded QEMU/UEFI; panic and timeout remain distinct exits. GitHub Actions run 33266814494 passed. Implementation da3be30; corrective commits c7b8536, 6cc1f35, 5986e67.")))
 
@@ -101,7 +101,7 @@
      (done . t)
      (capabilities . (cml my-lisp x86_64 assembly rust qemu integration testing proof))
      (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2 WSM-OS-M2-ORACLE-EVIDENCE-REALIGN WSM-OS-SERIAL-BOOT-WITNESS-M3C))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Link the exact CML-generated M1 object and M2 runtime into the M3 image, boot in QEMU, and emit WSM-OS RESULT schema=1 value=(A . B) status=ok. Commit source fixture, oracle output, contract SHAs, generated-artifact digest and serial transcript together. Compare canonical value and failure class, not only exit status. Mark QEMU-BOOT-PARITY, never physical-hardware parity.")
      (context . "verified 2026-08-30: exact committed fixture.o (sha256 c116f6d8b42c91ad176239642ccd0b8965a276d13e86a09767058c4b2fde8293) linked into the freestanding kernel with the M2 runtime. Local Guix QEMU 10.2.1 and GitHub Actions run 33280152276 emitted the committed BOOT+RESULT transcript and exited through the structured success path. Implementation 84ccad4. Evidence class QEMU-BOOT-PARITY only; no physical-hardware claim.")))
 
@@ -110,7 +110,7 @@
      (done . t)
      (capabilities . (cml compiler x86_64 assembly reproducibility testing proof))
      (depends-on . (WSM-OS-CML-X86-FREESTANDING-M1 WSM-OS-HOST-RUNTIME-PARITY-M2))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Prepare the compiler-owned half of M4 without touching boot/runtime: one deterministic command must compile the frozen WSM fixture through pinned CML into GNU assembly and an object, then emit a manifest containing source digest, CML SHA, target-contract SHA, object digest, exported entry symbol and exact undefined wsm_* imports. Run twice and require byte-identical assembly/object/manifest; fail closed on any extra import. Commit the small fixture bundle or a reproducible generator as decided by existing artifact policy. Do not add language features or claim QEMU parity.")))
 
    ("WSM-OS-CML-X86-FIXNUM-BRANCH-M5A" .
@@ -118,7 +118,7 @@
      (done . t)
      (capabilities . (my-lisp cml x86_64 arithmetic cond qemu testing proof))
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Extend the x86_64 freestanding backend by exactly one conformance slice: ABI-range fixnum literals, atomic eq, and cond branching on canonical NIL only. Add target preflight, host-link parity and QEMU parity fixtures against the pinned my-lisp oracle. Unsupported arithmetic and closures must remain named compile errors; no silent fallback.")
      (context . "compiler implementation a52b690 is contained in pinned CML 7424690, but this task remains open until its own hosted+QEMU oracle fixtures satisfy the full acceptance criteria.")))
 
@@ -127,7 +127,7 @@
      (done . t)
      (capabilities . (cml compiler x86_64 assembly arithmetic conformance testing proof))
      (depends-on . (WSM-OS-CML-X86-FIXNUM-BRANCH-M5A))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Add the next isolated x86_64 conformance slice: checked fixnum addition and subtraction with exact overflow mapped to the ratified runtime error boundary. Differentially verify boundary values against pinned my-lisp in hosted and QEMU paths. Do not add multiplication, closures, GC, or widen the numeric model in the same change.")
      (context . "compiler implementation b526cd6 is contained in pinned CML 7424690, but this task remains open until boundary/error behavior has independent hosted+QEMU oracle evidence.")))
 
@@ -136,7 +136,7 @@
      (done . t)
      (capabilities . (cml compiler x86_64 assembly tail-calls conformance testing proof))
      (depends-on . (WSM-OS-CML-X86-FIXNUM-BRANCH-M5A))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Preserve tail position as explicit admitted CML metadata and prove target-level stack safety before general closures. Implement exactly one first-order self-tail-call path whose x86 lowering restores/reuses the current frame and jumps rather than accumulating native calls. Differentially run the pinned 100,000-deep tail-recursion obligation through my-lisp, hosted generated x86 and QEMU; record bounded stack evidence. Non-tail calls, mutual recursion, closures and continuations remain separately unsupported unless explicitly added.")
      (context . "compiler implementation dd5382f is contained in pinned CML 7424690. A prior wsm-os tail fixture was reverted to restore the frozen M4 witness, so the task remains open until a separate 100,000-deep hosted+QEMU evidence fixture is committed without replacing M4.")))
 
@@ -145,7 +145,7 @@
      (done . t)
      (capabilities . (cml compiler metadata reproducibility debugging proof))
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4 WSM-OS-M4-COMPILER-ARTIFACT-BUNDLE))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Turn the deterministic M4 artifact manifest into one versioned definition capsule: stable definition ID, source digest and source map, contract revisions, generator/toolchain identity, code range/entry, literal and symbol table digests, callers/dependencies, exact imports and object/assembly digests with explicit algorithms. Regenerate twice and require byte-identical output; compare committed fixture.s, fixture.o and manifest/capsule sections fail-closed; prove the hosted-generated assembly and kernel-linked object identify the same definition. This is inspectable metadata only: do not implement hot replacement, a loader or a world image in the same task.")
      (context . "verified 2026-08-30: definition capsule v1 implemented in 0435cb9; cross-Binutils non-semantic ELF note drift exposed by CI run 33280964422 and fixed fail-closed by object canonicalization 5a9dc7e. GitHub Actions run 33281082120 GREEN: double regeneration, byte-identical committed source/assembly/object/manifest/capsule, recomputed section validation, deliberate mismatch rejection, QEMU parity and workspace tests. Stable definition ID sha256:0a998b9cc9975d82acea6919a93715e21e4ec13ff0d9ee6ae320c6458594ed21. Metadata only; no loader/hot replacement/world-image claim.")))
 
@@ -153,27 +153,27 @@
     ((priority . 7.6)
      (capabilities . (my-lisp cml x86_64 qemu fpga protocol conformance debugging proof))
      (depends-on . (WSM-OS-DEFINITION-CAPSULE-M5D WSM-OS-CML-TAIL-CALL-PROOF-M5C))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Define and prove a bounded versioned semantic trace shared by my-lisp oracle, hosted generated x86 and QEMU, with an explicitly deferred fpga-lisp consumer. Minimum events: enter-definition, primitive-call, allocate logical-cell-id, branch, return and fail. Compare stable definition/object IDs and canonical values, never raw addresses, wall time or target instructions. Add one divergence fixture proving the checker reports the first semantic mismatch; a longer trace is execution evidence, not stronger truth authority.")))
 
    ("WSM-OS-IMMUTABLE-LITERAL-SPACE-DECISION-M5F" .
     ((priority . 6.8)
      (capabilities . (architecture cml x86_64 memory image contract proof))
      (depends-on . (WSM-OS-DEFINITION-CAPSULE-M5D))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Decide whether quoted immutable cons graphs may live in a relocatable read-only image section instead of consuming the mutable bump heap at boot. Reconcile the proposal with the current ABI rule that every cons pointer is owned by the active heap; specify pointer validation, object identity, relocation, printer traversal and future GC interaction. Benchmark boot allocation on representative quoted fixtures. No backend may emit read-only cons pointers until the target contract is explicitly ratified and negative ownership tests exist.")))
 
    ("WSM-OS-STRUCTURED-CONDITION-RECORD-M5G" .
     ((priority . 6.5)
      (capabilities . (runtime errors debugging architecture contract testing))
      (depends-on . (WSM-OS-DEFINITION-CAPSULE-M5D))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Extend the opaque RuntimeContext with a versioned structured condition record while retaining the small noreturn wsm_fail(context, code) boot ABI. Record operation, offending values, definition/source identity and explicit restart-capability IDs; prove deterministic hosted/QEMU serialization for type and OOM failures. Do not claim resumable conditions, capture native continuations or implement arbitrary restart jumps in this task.")))
 
    ("WSM-OS-BLOCK-MECHANISM-F5" .
     ((priority . 8.6)
      (capabilities . (rust storage filesystem bounded-io checksum fault-injection testing))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (context . "started 2026-08-31: new wsm-os-block crate provides opaque fixed-size file-backed blocks, versioned 16-byte header, FNV-1a integrity checksum, explicit flush, bounds and corruption errors; four unit tests pass. This is mechanism evidence only; no WSM names, roots, journal or evaluation.")
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
      (description . "Prove a standalone bounded byte medium before WSM-OS FS integration: geometry/index bounds, payload limits, short/truncated I/O, header corruption, checksum mismatch, flush/error propagation and deterministic image. Keep persistent references separate from runtime pointers and defer target string/name ABI.")))
@@ -182,7 +182,7 @@
     ((priority . 7.2)
      (capabilities . (wsm-os filesystem runtime cml qemu evidence))
      (depends-on . (WSM-OS-BLOCK-MECHANISM-F5 WSM-OS-CONFORMANCE-LADDER-M5))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (status . partial)
      (context . "First bounded machine fixture implemented 2026-08-31: WSM_FIXTURE=fs-fixture embeds the canonical two-record F6 stream, validates exact bounded bytes, materializes (hello world) in the cons heap, and emits a QEMU serial witness. Commit pending. This is read-only machine evidence; semantic parser parity, disk I/O and durability remain open.")
    (description . "After independent block evidence, add one read-only data-only FS witness to hosted/QEMU: materialize a bounded serialized value into the cons heap, print its canonical observation, and compare with pinned my-lisp FS oracle. Do not persist runtime pointers, execute stored bytes, or claim durable filesystem semantics.")))
@@ -191,7 +191,7 @@
     ((priority . 8.8)
      (capabilities . (wsm-os qemu block-device storage persistence evidence))
      (depends-on . (WSM-OS-FS-MACHINE-WITNESS-F6 WSM-OS-BLOCK-MECHANISM-F5 WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (context . "Q6a guest-memory read/write/flush witness is committed as ad61201; Q6b design is docs/Q6B-VIRTUAL-DISK-DESIGN.md (commit 4fb107b). Implement a separate disposable QEMU raw disk and guest-visible bounded block ABI; clean-restart persistence is still OPEN." )
      (description . "Implement Q6b: attach a separate disposable virtual disk, perform bounded guest read/write/flush, cleanly restart with the same disk, and validate header/checksum/payload after reopen. Record exact kernel/image provenance and transcript. Do not claim power-loss durability until Q7 crash evidence.")))
 
@@ -199,7 +199,7 @@
     ((priority . 9.0)
      (capabilities . (wsm cml no-std x86_64 qemu pci virtio block-device capability-abi))
      (depends-on . (WSM-OS-WSM-PCI-CONFIG-CAPABILITY-D1))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (context . "Owner amended ADR-003 on 2026-09-01: production device logic belongs in compiled WSM over a minimal capability ABI. Rust may remain bootstrap/reference/test code. QEMU already attaches a separate virtio-blk disk; the guest still lacks a real capability path to it.")
      (description . "Implement the minimal WSM virtio-blk guest driver over bounded machine capabilities: WSM owns discovery, register protocol, virtqueue descriptors, request state, completion and error interpretation; the machine substrate owns only privileged PCI/MMIO access, DMA mapping, interrupt entry and fences. Compare an optional Rust reference against the WSM driver on the same QEMU sector/checksum. Do not add a general scheduler or claim physical/power-loss durability.")))
 
@@ -208,7 +208,7 @@
      (done . t)
      (capabilities . (wsm cml x86_64 qemu pci virtio evidence))
      (depends-on . (WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (context . "Completed locally 2026-09-01. Unchanged WSM fixture recognizes virtio vendor 0x1af4 (6900) and modern block device 0x1042 (4162). Canonical my-lisp oracle=t, hosted generated target=t, and bounded QEMU emitted DRIVER stage=identity value=t execution=wsm. Generated manifest pins CML 1266c83 and object sha256 1b35451ee9ce4db304cc2cedc9fa0d275827625a7cb1d7dec5f2c78cf9cbbb27. Claim boundary: device logic only; no PCI configuration access occurred.")
      (description . "Prove the first driver-owned slice as ordinary WSM: recognize virtio-blk vendor/device identity, pass unchanged through the canonical oracle, CML, hosted runtime and QEMU, then record the next blocker as bounded pci-config-read16 capability input. This fixture proves WSM device logic only; it must not be reported as PCI access or a working block driver.")))
 
@@ -217,7 +217,7 @@
      (done . t)
      (capabilities . (wsm cml wsm-os x86_64 qemu pci capability-abi evidence))
      (depends-on . (WSM-OS-WSM-PCI-IDENTITY-D0))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (context . "Completed 2026-09-01. ABI v2 adds opaque capability values and only two target-profile calls: pci-config-capability and bounded pci-config-read16. The unchanged positive WSM fixture read QEMU q35 BDF 00:05.0 through PCI mechanism 1 and recognized modern virtio-blk 1af4:1042; hosted returned t and QEMU emitted DRIVER stage=pci-config value=t execution=wsm. A second unchanged WSM fixture requested device 32 and both hosted and QEMU emitted structured ABI source=1346586883 value=14. QEMU used a disposable raw disk at addr=5 with disable-legacy=on. This proves bounded PCI configuration observation, not enumeration, BAR/MMIO access, DMA, virtqueues, block I/O, physical hardware or durability. Next observed driver blocker: discover a matching BDF without hard-coding 00:05.0.")
      (description . "Remove D0's first observed blocker: define an opaque, non-forgeable, bounded PCI configuration capability; admit a general pci-config-read16 operation through CML and the target ABI; provision the capability explicitly at boot; and let unchanged WSM read vendor/device values from QEMU before applying the D0 predicate. The substrate may execute the privileged config-cycle, but must not recognize virtio or choose driver policy. Prove bounds/error behavior and QEMU observation; do not add MMIO, DMA or virtqueue logic yet.")))
 
@@ -225,7 +225,7 @@
     ((priority . 8.7)
      (capabilities . (wsm-os no-std serial repl cml qemu evidence))
      (depends-on . (WSM-OS-CONFORMANCE-LADDER-M5 WSM-OS-STRUCTURED-CONDITION-RECORD-M5G))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (context . "Owner requests an interactive Live USB REPL before physical-hardware testing. Current kernel has deterministic serial output only and no input loop. Start with an explicit admitted subset and a bounded line buffer; keep the boot witness non-interactive by default.")
      (description . "Implement a serial REPL fixture for the admitted machine subset: bounded input buffer, parse/evaluate one expression, print result or structured condition, explicit exit command, and QEMU transcript. Gate physical Live USB testing on this QEMU evidence; do not claim full my-lisp REPL parity.")))
 
@@ -233,98 +233,98 @@
     ((priority . 7.0)
      (capabilities . (my-lisp cml x86_64 assembly conformance testing proof))
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4 WSM-OS-CML-TAIL-CALL-PROOF-M5C))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Expand conformance one obligation at a time: () truth/branch; fixnum and symbol identity; car/cdr/cons; nested canonical printing; named type/arity/OOM errors; one closure only after environment layout is ratified. Every fixture must match pinned my-lisp through CML admission, hosted runtime and QEMU. Do not broaden to keyboard/disk/network/GUI.")))
 
    ("WSM-OS-MYLISP-NOSTD-DECISION-M6" .
     ((priority . 6.0)
      (capabilities . (rust no-std my-lisp architecture testing evidence))
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "After the AOT witness is green, run a bounded portability spike for my-lisp core: classify std imports, move eligible containers to alloc/core behind features, make time/stdin/global capability registry explicit platform services, and test no_std+alloc compilation separately. Decide with measured code size/complexity whether to retain AOT only or add an interactive interpreter. Do not rewrite the hosted core or claim Rc collects cycles.")))
 
    ("WSM-OS-COPYING-GC-M7" .
     ((priority . 5.0)
      (capabilities . (rust memory x86_64 garbage-collection architecture))
      (depends-on . (WSM-OS-CONFORMANCE-LADDER-M5 WSM-OS-SEMANTIC-TRACE-M5E WSM-OS-IMMUTABLE-LITERAL-SPACE-DECISION-M5F))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Replace the initial bounded bump allocator with a semi-space copying collector. Leverage the fact that all cons cells are 16-bytes and tags perfectly distinguish pointers. Implement from-space/to-space swapping, root tracing from the WsmContext, and graph traversal. Do not implement generational or ephemeral GC. Maintain explicit OOM when both spaces are full.")))
 
    ("WSM-OS-STACK-BUFFER-M8" .
     ((priority . 5.0)
      (capabilities . (rust memory architecture runtime))
      (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Implement the WSM call stack as a contiguous array of Word in the WsmContext (stack_start, stack_ptr, stack_end). Use this for execution frames instead of heap-allocating every frame. Keep it strictly as the third storage primitive alongside registers and the cons heap.")))
 
    ("WSM-OS-TINY-ISA-M9" .
     ((priority . 4.0)
      (capabilities . (cml compiler architecture interpreter))
      (depends-on . (WSM-OS-MYLISP-NOSTD-DECISION-M6))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Design a tiny ~15-instruction WSM bytecode ISA (LOAD_CONST, LOAD_SYMBOL, CONS, CAR, CALL, BRANCH_FALSE, etc.). Add a second backend path to CML to emit this bytecode, and implement a tiny tag-dispatch interpreter in wsm-os. This provides a portable alternative to x86_64 AOT emission and sets the stage for fpga-lisp.")))
 
    ("WSM-OS-LIVE-IMAGE-M10" .
     ((priority . 3.0)
      (capabilities . (architecture repl operating-system runtime))
      (depends-on . (WSM-OS-CONFORMANCE-LADDER-M5))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "Evolve the system from a single AOT frozen expression toward a live Lisp environment. Implement a symbol/function binding table (where name identity remains separated from the symbol ID). Allow replacing function bindings at runtime and evaluating multiple forms sequentially, laying the groundwork for a persistent image.")))
 
    ("WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME" .
     ((priority . 9.9)
      (done . t)
      (capabilities . (wsm-os runtime x86_64 closures environments qemu conformance))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (context . "Completed 2026-09-01 in ba899a7 on runtime foundation 4f5f727 and CML 1266c83. Closure tag 5 points only into a bounded 16-byte-aligned closure arena; image-local definition ID and owned WSM environment are bounds-checked; foreign/malformed pointers and OOM fail closed. Target/runtime 12/12 PASS, oracle=(A B), hosted=(A B), QEMU boot transcript=(A B) execution=escaping-closure; all artifact manifests/capsules verify against the pinned SHA.")
      (description . "Represent an escaping closure as a bounded target value carrying code identity plus captured environment; apply it after its defining call returns. Prove the unchanged fixture through my-lisp oracle, hosted generated code and QEMU. Do not copy Rust Value layout or add constitutional special cases.")))
 
    ("WSM-OS-CONSTITUTION-GLOBAL-ENV-DEFS" .
     ((priority . 9.7)
      (capabilities . (wsm-os runtime globals definitions recursion qemu conformance))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (depends-on . (WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME))
      (description . "Add bounded global definition/function bindings and application needed by unchanged constitutional definitions, including ordinary and mutual recursion. Keep names separate from value identity and prove each new shape through oracle, hosted and QEMU.")))
 
    ("WSM-OS-CONSTITUTION-GC-OOM" .
     ((priority . 9.6)
      (capabilities . (wsm-os runtime memory garbage-collection oom qemu conformance))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (depends-on . (WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME))
      (description . "Provide root enumeration and bounded collection for cons, closures and environments before widening heap value types. Exhaustion must yield a deterministic named target failure, not corruption or reset; prove live capture survival and deliberate OOM in hosted and QEMU.")))
 
    ("WSM-OS-CONSTITUTION-FULL-VALUES-ERRORS" .
     ((priority . 9.5)
      (capabilities . (wsm-os runtime strings bytes bignum rational errors qemu contract-3))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (depends-on . (WSM-OS-CONSTITUTION-GC-OOM WSM-OS-CONSTITUTION-GLOBAL-ENV-DEFS))
      (description . "Implement immutable strings/bytes, bignums, normalized exact rationals and contract-3 named errors as distinct target representations. Preserve exactness and compare canonical values or exact error kinds against the oracle; no string-to-symbol or rational-to-float substitution.")))
 
    ("WSM-OS-CONSTITUTION-BATCH-QEMU-RUNNER" .
     ((priority . 9.8)
      (capabilities . (wsm-os cml qemu constitution conformance provenance testing))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (depends-on . (WSM-OS-CONSTITUTION-FULL-VALUES-ERRORS WSM-OS-CONSTITUTION-GLOBAL-ENV-DEFS))
      (description . "Consume the CML constitutional manifest and run every stable fixture through hosted target and QEMU, emitting one machine-readable result per fixture with source, oracle, CML, ABI and image provenance. Unsupported or failed fixtures remain explicit; never count omission as coverage.")))
 
    ("WSM-OS-CONSTITUTION-READER-META-EVAL" .
     ((priority . 8.8)
      (capabilities . (wsm-os cml reader evaluator meta-eval qemu constitution))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (depends-on . (WSM-OS-CONSTITUTION-BATCH-QEMU-RUNNER))
      (description . "After compiled constitutional fixtures pass, add the canonical bounded reader and run the existing WSM meta-evaluator on target so the unchanged Constitution can be loaded as data and evaluated. Keep parser/evaluator policy out of the kernel and capabilities separate.")))
 
    ("WSM-OS-RUNTIMECONTEXT-EXCLUSIVE-OWNERSHIP" .
     ((priority . 7.8)
      (capabilities . (rust memory-safety unsafe soundness runtime))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (description . "crates/wsm-os-runtime's RuntimeContext::new / new_with_closures are unsafe fn whose entire safety contract -- 'the arena stays exclusively owned for the context's lifetime' -- is caller-enforced prose, not typestate. Nothing in the type system stops a second RuntimeContext being constructed over the same heap pointer/arena, which would violate every bounds-check invariant the rest of the crate (cell()/closure_descriptor()'s address-offset/alignment/len checks) relies on. Every other unsafe block in this crate carries a specific, locally-verifiable SAFETY comment tied to a check performed nearby; this constructor contract is the one place that pattern breaks down. In the current single-threaded bare-metal setting this is probably benign, but the gap between what ADR-003/DEFINITION-CAPSULE claim about bounded, capability-checked memory and what the type system actually proves here is real. Either encode exclusive ownership in the type (a marker/token that can't be duplicated, or making the constructor genuinely safe by construction) or add an explicit doc-comment + regression test demonstrating why a second RuntimeContext over the same arena cannot occur in this codebase's actual call graph today.")
      (done . (t . "wsl-nidana-1 2026-09-01: audited call graph (exactly 4 construction sites: 2 self-contained test helpers in wsm-os-runtime, plus wsm-os-kernel's single entry_point! kernel_main and wsm-os-hosted's main, each building one private arena once). Chose the checked-guard path over typestate to avoid touching #[repr(C)]'s FFI-facing layout: added a per-arena (not global) live-pointer registry (claim_arena/release_arena, AtomicUsize slots, no_std/no-alloc) that panics on a genuine same-pointer double-construction but doesn't false-positive on distinct concurrent arenas (parallel tests, future multi-context hosts); wired into new()/new_with_closures(), released via a new Drop impl. Regression tests added: constructing_a_second_context_over_the_same_arena_panics, dropping_a_context_releases_its_arena_for_reuse. Verified the guard is load-bearing, not decorative: temporarily disabled the two claim_arena call sites and confirmed the panic test then correctly fails (no panic fires); restored and re-confirmed 7/7 wsm-os-runtime tests pass. Also confirmed both real consumers still build clean: cargo build -p wsm-os-hosted and -p wsm-os-kernel --target x86_64-unknown-none --release, plus a hosted run still prints the unchanged (A . B) fixture result."))))
 
    ("WSM-OS-PCI-CAPABILITY-UNFORGEABILITY-HARDENING" .
     ((priority . 8.3)
      (capabilities . (wsm rust capability-model pci security))
-     (origin . wsm-os)
+     (origin . wsm-os-lisp)
      (depends-on . (WSM-OS-WSM-PCI-CONFIG-CAPABILITY-D1))
      (description . "wsm_pci_config_capability's current 'unforgeable' guarantee is thinner than ADR-003's prose implies: a capability is just a tagged Word, and validity today means 'decodes correctly AND equals the one constant this function hands out' -- which works only because exactly one capability ID exists. The moment a second capability class is admitted (MMIO, DMA, interrupts -- all named as expected primitive classes in ADR-003 section 2), equality-against-one-constant stops being a meaningful unforgeability check on its own; something has to actually distinguish which capability a Word represents and verify provenance, not just tag-shape. Design and prove a capability model that stays sound with more than one live capability ID before the next capability class (MMIO or DMA) is admitted -- do not add MMIO/DMA/virtqueue logic in this task, this is scoped to the capability-identity mechanism itself.")
      (done . ())))

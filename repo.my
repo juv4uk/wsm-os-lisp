@@ -1,7 +1,11 @@
-; repo.my — Swarm Contract v0.1 scope declaration for wsm-os.
+; repo.my — Swarm Contract v0.1 scope declaration for wsm-os-lisp.
+; Renamed 2026-09-02 from wsm-os: the owner started a new, independent
+; repo (wsm) that begins from () with no inherited Lisp/Rust history --
+; this repo is renamed to make explicit that it is the prior, Lisp-lineage
+; WSM-on-x86_64 lab, not the new clean-slate project.
 
 (repository
-  (id wsm-os)
+  (id wsm-os-lisp)
   (role bare-metal-wsm-target)
   (exports x86_64-target-contract boot-runtime boot-image hardware-evidence)
   (imports language-semantics compiler-middle-end cml-ir)
