@@ -79,6 +79,18 @@ fn render(value: Word, context: &RuntimeContext) -> Result<String, &'static str>
     if value == wsm_os_target::TRUE {
         return Ok("t".to_string());
     }
+    // 2026-09-02: wsm-os-runtime's eq/atom no longer produce Tag::True (a
+    // manufactured primitive canonical WSM never had) -- they produce
+    // canonical Symbol("t"), encoded with the reserved SYMBOL_ID_MAX
+    // sentinel id (see wsm-os-runtime::CANONICAL_T's own comment for why a
+    // sentinel, not a proven-unique id, given wsm-os-target's per-program
+    // symbol interning). Render it the same way the old TAG_TRUE case was
+    // rendered, before falling through to this fixture's own hardcoded
+    // per-program symbol table (which never registered this id, since it
+    // is not a symbol *this* compiled program itself interned).
+    if let Some(wsm_os_target::SYMBOL_ID_MAX) = decode_symbol(value) {
+        return Ok("t".to_string());
+    }
     if let Some(integer) = decode_fixnum(value) {
         return Ok(integer.to_string());
     }

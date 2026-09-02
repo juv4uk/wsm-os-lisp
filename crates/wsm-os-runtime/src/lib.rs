@@ -8,7 +8,26 @@
 
 use core::mem::MaybeUninit;
 use wsm_os_target::{
-    ClosureDescriptor, ErrorCode, NIL, RESULT_REGISTER, RUNTIME_IMPORTS, TRUE, Word,
+    ClosureDescriptor, ErrorCode, NIL, RESULT_REGISTER, RUNTIME_IMPORTS, SYMBOL_ID_MAX, TRUE,
+    Word, encode_symbol,
+};
+
+/// Canonical `t`, as an ordinary interned Symbol -- not the standalone
+/// `Tag::True` primitive canonical WSM never had (`t` is plain
+/// `Symbol("t")` in the Rust oracle, not a distinct primitive). 2026-09-02
+/// owner directive: "() не визначаємо... t має пройти тим самим шляхом, що
+/// й будь-який інший Symbol." `wsm-os-target`'s symbol ids are documented
+/// as image-local-interned (each compiled program gets its own sequential
+/// ids), so there is no single canonical id for `t` shared across programs
+/// the way a frozen global symbol table would provide -- `SYMBOL_ID_MAX` is
+/// reserved as a sentinel here, matching `wsm-my-lisp/asm/nucleus.s`'s own
+/// `SYM_T_WORD` fix, making collision with a real per-program-interned id
+/// practically unreachable but not a proven-unique encoding. `Tag::True`
+/// itself stays declared in `wsm_os_target::Tag` for now (a separate,
+/// bigger question); nothing in this crate produces it anymore.
+const CANONICAL_T: Word = match encode_symbol(SYMBOL_ID_MAX) {
+    Some(word) => word,
+    None => unreachable!(),
 };
 
 /// `RuntimeContext::new`/`new_with_closures`'s safety contract requires each
@@ -331,14 +350,14 @@ impl RuntimeContext {
         if self.classify(left)? == ValueClass::Cons || self.classify(right)? == ValueClass::Cons {
             return Err(RuntimeError::Type);
         }
-        Ok(if left == right { TRUE } else { NIL })
+        Ok(if left == right { CANONICAL_T } else { NIL })
     }
 
     pub fn atom(&self, value: Word) -> Result<Word, RuntimeError> {
         Ok(if self.classify(value)? == ValueClass::Cons {
             NIL
         } else {
-            TRUE
+            CANONICAL_T
         })
     }
 
@@ -607,7 +626,7 @@ mod tests {
         let descriptor = runtime.closure_descriptor(closure).unwrap();
         assert_eq!(descriptor.definition_id, 7);
         assert_eq!(descriptor.environment_ref, environment);
-        assert_eq!(runtime.atom(closure), Ok(TRUE));
+        assert_eq!(runtime.atom(closure), Ok(CANONICAL_T));
         assert_eq!(runtime.closure(8, NIL), Err(RuntimeError::OutOfMemory));
         assert_eq!(runtime.closure_descriptor(TRUE), Err(RuntimeError::Type));
 
@@ -640,7 +659,7 @@ mod tests {
         assert_eq!(runtime.car(pair), Ok(TRUE));
         assert_eq!(runtime.cdr(pair), Ok(NIL));
         assert_eq!(runtime.atom(pair), Ok(NIL));
-        assert_eq!(runtime.atom(TRUE), Ok(TRUE));
+        assert_eq!(runtime.atom(TRUE), Ok(CANONICAL_T));
         assert_eq!(runtime.car(0), Err(RuntimeError::Type));
 
         let mut foreign_heap = [MaybeUninit::<ConsCell>::uninit(); 1];
@@ -654,11 +673,11 @@ mod tests {
     fn eq_is_atomic_identity_and_rejects_pairs() {
         let mut heap = [MaybeUninit::uninit(); 1];
         let mut runtime = context(&mut heap);
-        assert_eq!(runtime.eq(TRUE, TRUE), Ok(TRUE));
+        assert_eq!(runtime.eq(TRUE, TRUE), Ok(CANONICAL_T));
         assert_eq!(runtime.eq(TRUE, NIL), Ok(NIL));
         let capability = wsm_os_target::encode_capability(1).unwrap();
-        assert_eq!(runtime.atom(capability), Ok(TRUE));
-        assert_eq!(runtime.eq(capability, capability), Ok(TRUE));
+        assert_eq!(runtime.atom(capability), Ok(CANONICAL_T));
+        assert_eq!(runtime.eq(capability, capability), Ok(CANONICAL_T));
         let pair = runtime.cons(TRUE, NIL).unwrap();
         assert_eq!(runtime.eq(pair, pair), Err(RuntimeError::Type));
     }
