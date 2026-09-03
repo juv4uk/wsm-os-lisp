@@ -337,4 +337,12 @@
      (context . "From docs/WSM-TRAJECTORY-SYNTHESIS-2026-09-01.md (ecosystem, owner+session dialogue 2026-09-01): the two lines already converging are Line A / self-expression (reader -> evaluator -> meta-eval.wsm -> WSM evaluates WSM, i.e. WSM-OS-CONSTITUTION-READER-META-EVAL) and Line B / machine control (capability -> PCI -> virtio-blk -> WSM driver -> real device protocol, i.e. WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B). This is not a fifth direction and not new engineering -- it is the graduation check itself, gated on two witnesses existing at the same time, not on volume of code.")
      (description . "Once both dependencies have real QEMU evidence (a SELF-HOST WITNESS: meta-eval.wsm executes a nontrivial WSM program; and a MACHINE WITNESS: a WSM-authored driver.wsm controls a real/bounded device interface), confirm both hold simultaneously against the same pinned CML/target-contract revision, then update wsm-os/README.md's framing from 'research prototype' toward 'WSM is both its own semantic medium and a systems programming medium' -- only then, not before. Do not weaken either witness's own bar to make this land sooner; do not touch README before both are independently proven.")
      (done . ())))
+
+  ("WSM-OS-BLOCK-OWNERSHIP-RESOLUTION" . (
+    (priority . 5.5)
+    (capabilities . (documentation ownership filesystem))
+    (origin . ecosystem)
+    (context . "Found 2026-09-04 during WSM-FS-CROSS-REPO-HARMONIZATION (ecosystem session): the block-mechanism owner named in the FS harmonization plan ('wsm-os-block', opaque bounded bytes, commit 3e0976a 'add bounded file-backed block mechanism') lives here in wsm-os-lisp (crates/wsm-os-block/, crates/wsm-os-fs-adapter/) -- NOT in the current wsm-os repository, which explicitly disclaims continuity with this lab ('це не продовження старої лабораторії wsm-os-lisp, нічого звідти не переноситься, окрім самої назви').")
+    (description . "Resolve, don't assume: should wsm-os-block/wsm-os-fs-adapter migrate into wsm-os proper (breaking the stated non-continuation rule for this one crate), or does wsm-os-lisp stay the intended, still-live home for this specific piece of FS work despite the general disclaimer? Either answer is legitimate -- this task exists so the ambiguity is recorded and decided once, not silently assumed by whichever agent next touches FS harmonization.")
+    (done . ())))
 )))
