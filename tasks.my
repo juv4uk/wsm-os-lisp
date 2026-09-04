@@ -11,7 +11,7 @@
 
 ("WSM-OS-TARGET-ABI-M0" .
     ((priority . 10.0)
-     (done . t)
+     (done . nil)
      (capabilities . (architecture x86_64 assembly compiler contract proof))
      (depends-on . ())
      (origin . wsm-os-lisp)
@@ -20,7 +20,7 @@
 
    ("WSM-OS-CML-X86-FREESTANDING-M1" .
     ((priority . 10.0)
-     (done . t)
+     (done . nil)
      (capabilities . (cml compiler rust x86_64 assembly lowering testing proof))
      (depends-on . (WSM-OS-TARGET-ABI-M0))
      (origin . wsm-os-lisp)
@@ -29,7 +29,7 @@
 
    ("WSM-OS-HOST-RUNTIME-PARITY-M2" .
     ((priority . 9.0)
-     (done . t)
+     (done . nil)
      (capabilities . (rust x86_64 assembly runtime testing my-lisp proof))
      (depends-on . (WSM-OS-CML-X86-FREESTANDING-M1))
      (origin . wsm-os-lisp)
@@ -38,7 +38,7 @@
 
    ("WSM-OS-BOOT-SUBSTRATE-DECISION-M3A" .
     ((priority . 8.0)
-     (done . t)
+     (done . nil)
      (capabilities . (research rust x86_64 uefi licensing architecture))
      (depends-on . (WSM-OS-TARGET-ABI-M0))
      (origin . wsm-os-lisp)
@@ -46,7 +46,7 @@
 
    ("WSM-OS-BOOT-TOOLCHAIN-M3B" .
     ((priority . 8.0)
-     (done . t)
+     (done . nil)
      (capabilities . (guix rust qemu x86_64 build ci testing))
      (depends-on . (WSM-OS-BOOT-SUBSTRATE-DECISION-M3A))
      (origin . wsm-os-lisp)
@@ -57,13 +57,13 @@
      (capabilities . (research rust x86_64 uefi qemu architecture testing proof))
      (depends-on . (WSM-OS-BOOT-SUBSTRATE-DECISION-M3A))
      (origin . wsm-os-lisp)
-     (done . t)
+     (done . nil)
      (description . "Reconcile ADR-002 with the executable boot path. The ADR selects maintained bootloader v0.11 and UEFI, while the current code resolves bootloader 0.9.x and cargo bootimage. Choose and implement one honest path; if the ratified UEFI decision remains, migrate to the v0.11 bootloader_api/builder flow and remove legacy bootimage assumptions. Exact dependency, lockfile, image format, build command, QEMU firmware and CI evidence must agree. Do not call a legacy BIOS bootimage UEFI evidence.")
      (context . "completed 2026-08-29 under direct owner assignment: a5797f5 replaces the temporary legacy-only 755e0e9 resolution with bootloader_api/UefiBoot 0.11.17, an explicit UEFI image-builder and no bootimage runner. Local 2,162,688-byte UEFI image created; GitHub Actions 33257753471 SUCCESS after formatting follow-up 64ba9df.")))
 
    ("WSM-OS-BOOT-TOOLCHAIN-PIN-M3B1" .
     ((priority . 9.5)
-     (done . t)
+     (done . nil)
      (capabilities . (guix rust qemu x86_64 build ci testing proof))
      (depends-on . (WSM-OS-BOOT-SUBSTRATE-REALIGN-M3A1))
      (origin . wsm-os-lisp)
@@ -75,7 +75,7 @@
      (capabilities . (my-lisp cml rust runtime testing provenance proof))
      (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2))
      (origin . wsm-os-lisp)
-     (done . t)
+     (done . nil)
      (description . "Replace the self-referential M2 expected-string witness with independent pinned oracle evidence. Run the frozen fixture through the declared my-lisp revision, store or reproducibly generate the canonical value/error transcript and digest, and compare hosted runtime output to that artifact. Reconcile target-contract CML_SHA with the actual CML revision used to generate/link the object. A hardcoded shared expected constant alone is contract conformance, not oracle parity.")))
 
    ("WSM-OS-M2-RUNTIME-IMPORT-ALLOWLIST" .
@@ -83,13 +83,13 @@
      (capabilities . (rust x86_64 assembly runtime testing proof))
      (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2))
      (origin . wsm-os-lisp)
-     (done . t)
+     (done . nil)
      (context . "verified 2026-08-29: demangled exact allowlist passes locally and in GitHub Actions run 33266814494; raw Rust crate hashes are intentionally excluded from the stable boundary. Corrective commits c7b8536 and 5986e67.")
      (description . "Replace the hosted-runtime blacklist grep with an exact undefined-symbol allowlist at the freestanding link boundary. Inspect the final bare runtime object/archive with nm or llvm-nm; permit only explicitly documented compiler/runtime support symbols and versioned wsm_* ABI imports as appropriate, and fail on every other undefined symbol. Prove that calloc/realloc/write/open/socket/pthread/__libc-style leaks cannot pass merely because they were absent from the old blacklist.")))
 
    ("WSM-OS-SERIAL-BOOT-WITNESS-M3C" .
     ((priority . 9.0)
-     (done . t)
+     (done . nil)
      (capabilities . (rust x86_64 uefi qemu serial testing ci proof))
      (depends-on . (WSM-OS-BOOT-TOOLCHAIN-PIN-M3B1))
      (origin . wsm-os-lisp)
@@ -98,7 +98,7 @@
 
    ("WSM-OS-FIRST-QEMU-PARITY-M4" .
     ((priority . 10.0)
-     (done . t)
+     (done . nil)
      (capabilities . (cml my-lisp x86_64 assembly rust qemu integration testing proof))
      (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2 WSM-OS-M2-ORACLE-EVIDENCE-REALIGN WSM-OS-SERIAL-BOOT-WITNESS-M3C))
      (origin . wsm-os-lisp)
@@ -107,7 +107,7 @@
 
    ("WSM-OS-M4-COMPILER-ARTIFACT-BUNDLE" .
     ((priority . 9.5)
-     (done . t)
+     (done . nil)
      (capabilities . (cml compiler x86_64 assembly reproducibility testing proof))
      (depends-on . (WSM-OS-CML-X86-FREESTANDING-M1 WSM-OS-HOST-RUNTIME-PARITY-M2))
      (origin . wsm-os-lisp)
@@ -115,7 +115,7 @@
 
    ("WSM-OS-CML-X86-FIXNUM-BRANCH-M5A" .
     ((priority . 7.9)
-     (done . t)
+     (done . nil)
      (capabilities . (my-lisp cml x86_64 arithmetic cond qemu testing proof))
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
      (origin . wsm-os-lisp)
@@ -124,7 +124,7 @@
 
    ("WSM-OS-CML-X86-ARITHMETIC-M5B" .
     ((priority . 7.0)
-     (done . t)
+     (done . nil)
      (capabilities . (cml compiler x86_64 assembly arithmetic conformance testing proof))
      (depends-on . (WSM-OS-CML-X86-FIXNUM-BRANCH-M5A))
      (origin . wsm-os-lisp)
@@ -133,7 +133,7 @@
 
    ("WSM-OS-CML-TAIL-CALL-PROOF-M5C" .
     ((priority . 8.5)
-     (done . t)
+     (done . nil)
      (capabilities . (cml compiler x86_64 assembly tail-calls conformance testing proof))
      (depends-on . (WSM-OS-CML-X86-FIXNUM-BRANCH-M5A))
      (origin . wsm-os-lisp)
@@ -142,7 +142,7 @@
 
    ("WSM-OS-DEFINITION-CAPSULE-M5D" .
     ((priority . 7.8)
-     (done . t)
+     (done . nil)
      (capabilities . (cml compiler metadata reproducibility debugging proof))
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4 WSM-OS-M4-COMPILER-ARTIFACT-BUNDLE))
      (origin . wsm-os-lisp)
@@ -205,7 +205,7 @@
 
    ("WSM-OS-WSM-PCI-IDENTITY-D0" .
     ((priority . 9.2)
-     (done . t)
+     (done . nil)
      (capabilities . (wsm cml x86_64 qemu pci virtio evidence))
      (depends-on . (WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME))
      (origin . wsm-os-lisp)
@@ -214,7 +214,7 @@
 
    ("WSM-OS-WSM-PCI-CONFIG-CAPABILITY-D1" .
     ((priority . 9.3)
-     (done . t)
+     (done . nil)
      (capabilities . (wsm cml wsm-os x86_64 qemu pci capability-abi evidence))
      (depends-on . (WSM-OS-WSM-PCI-IDENTITY-D0))
      (origin . wsm-os-lisp)
@@ -273,7 +273,7 @@
 
    ("WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME" .
     ((priority . 9.9)
-     (done . t)
+     (done . nil)
      (capabilities . (wsm-os runtime x86_64 closures environments qemu conformance))
      (origin . wsm-os-lisp)
      (context . "Completed 2026-09-01 in ba899a7 on runtime foundation 4f5f727 and CML 1266c83. Closure tag 5 points only into a bounded 16-byte-aligned closure arena; image-local definition ID and owned WSM environment are bounds-checked; foreign/malformed pointers and OOM fail closed. Target/runtime 12/12 PASS, oracle=(A B), hosted=(A B), QEMU boot transcript=(A B) execution=escaping-closure; all artifact manifests/capsules verify against the pinned SHA.")
