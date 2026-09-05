@@ -178,6 +178,35 @@ choose and provision the minimum reproducible boot toolchain before M1 begins.
 7. **Resource policy:** builds/tests remain bounded for 4 CPU threads and the
    7.7 GiB currently assigned to WSL.
 
+## Live Physical Boot Evidence (Ventoy / UEFI Handoff)
+
+**Measured:** 2026-09-03  
+**Source Provenance:** `wsm-os/probe/physical-boot-probe.c` running via Ventoy on real hardware; log artifact `WSM-PROBE-LOG.TXT` (UTF-16LE, 2720 bytes) written to USB volume.  
+**Hardware Identity:** GA-H170-Gaming 3 / Intel Core i5-6400 (Skylake family 6 model 94 stepping 3).  
+
+### 1. Stable hardware/platform facts
+- **CPU Signature:** CPUID leaf 1 = `0x000506E3` (family 6 model 94 stepping 3, initial APIC ID = 0).
+- **CPUID Leaf 0 Max:** `max_leaf = 22`, vendor = `GenuineIntel`.
+- **Microcode revision at boot:** `RDMSR 0x8B` = `0x00000000000000C2` (pre-OS firmware microcode F22e).
+- **TSC measured delta:** 271,239,404 cycles / 100ms `Stall()` -> implied base rate ~2,712 MHz (matches physical 2.7 GHz base clock).
+- **Physical Memory:** 46 UEFI descriptors, 4,227,091 total pages (16,512 MiB), 4,039,737 conventional/usable pages (15,780 MiB).
+- **GOP Framebuffer:** Base `0xE1000000`, resolution `1024x768`, pixels-per-scanline = 1024, mode = 1 (Intel HD Graphics 530).
+
+### 2. Boot-session-specific observed state (DO NOT HARDCODE AS KERNEL CONSTANTS)
+> [!WARNING]
+> **RULE:** The following values are specific to the 2026-09-03 UEFI boot session on this specific firmware. They MUST be discovered dynamically at runtime (via UEFI SystemTable / ConfigurationTables / memory map) and must NEVER be treated as compile-time ABI constants.
+
+- **CR0:** `0x0000000080000013` (PE=1, PG=1, WP=0, ET=1)
+- **CR3 (Page Table Base):** `0x000000004F2F3000`
+- **CR4:** `0x0000000000000668` (PAE=1, OSFXSR=1, OSXMMEXCPT=1, PGE=0)
+- **EFER (MSR 0xC0000080):** `0x0000000000000500` (LME=1, LMA=1, NXE=0)
+- **RSP:** `0x000000004F5F3660` (16-byte aligned)
+- **RFLAGS:** `0x0000000000200202` (IF=1, interrupts enabled)
+- **GDTR:** base `0x0000000000000000`, limit `0x0000000000000047`
+- **IDTR:** base `0x000000004F5F0000`, limit `0x0000000000000FFF`
+- **ACPI RSDP address:** `0x000000005A506000`
+- **SMBIOS address:** `0x000000005AD9F000` (SMBIOS3 / 64-bit)
+
 ## Reproduction commands
 
 Linux/WSL evidence was collected with `uname`, `/etc/os-release`, `lscpu`,
@@ -368,6 +397,35 @@ Windows повідомляє ці справні аудіо-завершення
    існує окремо ратифікованого плану драйвера/рантайму.
 7. **Resource policy:** build-и/тести лишаються обмеженими 4 CPU-потоками та
    7.7 GiB, поточним розподілом для WSL.
+
+## Докази живого фізичного завантаження (Ventoy / UEFI Handoff)
+
+**Виміряно:** 2026-09-03  
+**Походження джерела (Provenance):** `wsm-os/probe/physical-boot-probe.c`, запущений через Ventoy на реальному обладнанні; лог-артефакт `WSM-PROBE-LOG.TXT` (UTF-16LE, 2720 байтів), записаний на USB-том.  
+**Ідентичність заліза:** GA-H170-Gaming 3 / Intel Core i5-6400 (Skylake family 6 model 94 stepping 3).  
+
+### 1. Стабільні апаратні / платформені факти
+- **Сигнатура CPU:** CPUID leaf 1 = `0x000506E3` (family 6 model 94 stepping 3, initial APIC ID = 0).
+- **CPUID Leaf 0 Max:** `max_leaf = 22`, vendor = `GenuineIntel`.
+- **Ревізія мікрокоду при старті:** `RDMSR 0x8B` = `0x00000000000000C2` (прошивка F22e до завантаження ОС).
+- **Виміряна дельта TSC:** 271,239,404 циклів / 100ms `Stall()` -> розрахована базова частота ~2,712 МГц (відповідає фізичній базовій частоті 2.7 ГГц).
+- **Фізична пам'ять:** 46 UEFI дескрипторів, 4,227,091 сторінок усього (16,512 МіБ), 4,039,737 звичайних/доступних сторінок (15,780 МіБ).
+- **GOP Framebuffer:** Базова адреса `0xE1000000`, роздільність `1024x768`, scanline = 1024, mode = 1 (Intel HD Graphics 530).
+
+### 2. Стан, специфічний для сесії завантаження (НЕ ХАРДКОДИТИ ЯК КОНСТАНТИ ЯДРА)
+> [!WARNING]
+> **ПРАВИЛО:** Наведені нижче значення є специфічними для сесії завантаження 2026-09-03 на цій версії firmware. Їх ОБОВ'ЯЗКОВО визначати динамічно під час виконання (через UEFI SystemTable / ConfigurationTables / memory map) і НІКОЛИ не вважати постійними константами ABI чи ядра.
+
+- **CR0:** `0x0000000080000013` (PE=1, PG=1, WP=0, ET=1)
+- **CR3 (База таблиць сторінок):** `0x000000004F2F3000`
+- **CR4:** `0x0000000000000668` (PAE=1, OSFXSR=1, OSXMMEXCPT=1, PGE=0)
+- **EFER (MSR 0xC0000080):** `0x0000000000000500` (LME=1, LMA=1, NXE=0)
+- **RSP:** `0x000000004F5F3660` (вирівняно по 16 байт)
+- **RFLAGS:** `0x0000000000200202` (IF=1, переривання дозволені)
+- **GDTR:** base `0x0000000000000000`, limit `0x0000000000000047`
+- **IDTR:** base `0x000000004F5F0000`, limit `0x0000000000000FFF`
+- **Адреса ACPI RSDP:** `0x000000005A506000`
+- **Адреса SMBIOS:** `0x000000005AD9F000` (SMBIOS3 / 64-bit)
 
 ## Команди відтворення
 

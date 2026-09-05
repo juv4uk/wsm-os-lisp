@@ -345,4 +345,12 @@
     (context . "Found 2026-09-04 during WSM-FS-CROSS-REPO-HARMONIZATION (ecosystem session): the block-mechanism owner named in the FS harmonization plan ('wsm-os-block', opaque bounded bytes, commit 3e0976a 'add bounded file-backed block mechanism') lives here in wsm-os-lisp (crates/wsm-os-block/, crates/wsm-os-fs-adapter/) -- NOT in the current wsm-os repository, which explicitly disclaims continuity with this lab ('це не продовження старої лабораторії wsm-os-lisp, нічого звідти не переноситься, окрім самої назви').")
     (description . "Resolve, don't assume: should wsm-os-block/wsm-os-fs-adapter migrate into wsm-os proper (breaking the stated non-continuation rule for this one crate), or does wsm-os-lisp stay the intended, still-live home for this specific piece of FS work despite the general disclaimer? Either answer is legitimate -- this task exists so the ambiguity is recorded and decided once, not silently assumed by whichever agent next touches FS harmonization.")
     (done . ())))
+
+  ("WSM-OS-LISP-RAW-UEFI-HANDOFF-PROBE" . (
+    (priority . 7.5)
+    (capabilities . (x86_64 uefi bare-metal handoff exit-boot-services proof))
+    (origin . wsm-os-lisp)
+    (context . "Source inspiration: wsm-os/probe/exit-boundary-probe.c, which demonstrated verified ExitBootServices() crossing + raw 16550 UART logging on real GA-H170-Gaming 3 / i5-6400 hardware without UEFI services. In wsm-os-lisp, this is scoped strictly to proving the freestanding Lisp machine execution path can survive the raw boundary.")
+    (description . "Prove that wsm-os-lisp can cross the ExitBootServices boundary and retain raw serial execution without importing wsm-os semantics, architecture, or non-Lisp concepts. Maintain the strict separation of wsm-os-lisp as the bare-metal target of the Lisp Quartet.")
+    (done . ())))
 )))

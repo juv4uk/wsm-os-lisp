@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ -z "${OVMF_CODE:-}" || -z "${OVMF_VARS:-}" ]]; then
-  echo "usage: OVMF_CODE=/path/code.fd OVMF_VARS=/path/vars.fd $0" >&2
-  exit 2
-fi
+# Resolve OVMF via explicit environment first, then Guix discovery
+source "$(dirname "$0")/ovmf-env.sh"
 
 run_fixture() {
   local fixture=$1

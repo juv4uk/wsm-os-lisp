@@ -8,9 +8,10 @@ fi
 
 image=$1
 : "${QEMU_SYSTEM_X86_64:=qemu-system-x86_64}"
-: "${OVMF_CODE:?set OVMF_CODE to the read-only OVMF code image}"
-: "${OVMF_VARS:?set OVMF_VARS to the OVMF variable template}"
 : "${WSM_OS_QEMU_TIMEOUT:=20}"
+
+# Resolve OVMF via explicit environment first, then Guix discovery
+source "$(dirname "$0")/ovmf-env.sh"
 
 for required in "$image" "$OVMF_CODE" "$OVMF_VARS"; do
   if [[ ! -s "$required" ]]; then
