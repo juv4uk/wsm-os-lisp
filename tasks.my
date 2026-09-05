@@ -351,6 +351,6 @@
     (capabilities . (x86_64 uefi bare-metal handoff exit-boot-services proof))
     (origin . wsm-os-lisp)
     (context . "Source inspiration: wsm-os/probe/exit-boundary-probe.c, which demonstrated verified ExitBootServices() crossing + raw 16550 UART logging on real GA-H170-Gaming 3 / i5-6400 hardware without UEFI services. In wsm-os-lisp, this is scoped strictly to proving the freestanding Lisp machine execution path can survive the raw boundary.")
-    (description . "Prove that wsm-os-lisp can cross the ExitBootServices boundary and retain raw serial execution without importing wsm-os semantics, architecture, or non-Lisp concepts. Maintain the strict separation of wsm-os-lisp as the bare-metal target of the Lisp Quartet.")
-    (done . ())))
+    (done . (t . "Completed 2026-09-05. Proved architectural isolation: under bootloader_api 0.11.17, kernel_main executes strictly post-ExitBootServices with no firmware boot services available; serial I/O is 100% direct register port operations (inb/outb COM1 0x3F8); Lisp execution engine (wsm_entry, cons heap, closure arena, tail calls, VirtIO/PCI capability access) operates autonomously in freestanding x86_64 mode without importing non-Lisp wsm-os architecture. Documented in docs/RAW-UEFI-HANDOFF-EVIDENCE.md."))))
 )))
+
