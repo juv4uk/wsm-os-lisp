@@ -1,4 +1,9 @@
-# wsm-os
+# wsm-os-lisp
+
+> [!IMPORTANT]
+> **ROLE IN ECOSYSTEM (MY-LISP EXECUTION QUARTET):**  
+> `wsm-os-lisp` is the **legacy bare-metal execution target** for the `my-lisp` lineage (`my-lisp` oracle → `cml` lowering → `wsm-os-lisp` freestanding UEFI target).  
+> **DO NOT MODERNIZE INTO `wsm-os`:** `wsm-os` (`juv4uk/wsm-os`) is a separate, independent physical hardware laboratory for `juv4uk/wsm`. `wsm-os-lisp` preserves the working Lisp-machine UEFI/QEMU kernel and bare-metal execution harness. See `ecosystem/decisions/2026-09-05-my-lisp-execution-quartet-and-wsm-os-lisp-role.md`.
 
 Research and executable prototypes for a WSM-native Lisp machine on real
 hardware.
@@ -83,7 +88,12 @@ This is `QEMU-BOOT-PARITY`, not a physical-hardware claim.
 
 ---
 
-## Про wsm-os / About wsm-os (Ukrainian)
+## Про wsm-os-lisp / About wsm-os-lisp (Ukrainian)
+
+> [!IMPORTANT]
+> **РОЛЬ В ЕКОСИСТЕМІ (КВАРТЕТ ВИКОНАННЯ MY-LISP):**  
+> `wsm-os-lisp` є **контрольним bare-metal таргетом виконання** для лінії `my-lisp` (`my-lisp` оракул → `cml` lowering → `wsm-os-lisp` автономний UEFI таргет).  
+> **НЕ МОДЕРНІЗУВАТИ В `wsm-os`:** `wsm-os` (`juv4uk/wsm-os`) є окремою незалежною фізичною лабораторією для `juv4uk/wsm`. `wsm-os-lisp` зберігає перевірене Lisp-machine UEFI/QEMU ядро та стенд bare-metal виконання. Див. `ecosystem/decisions/2026-09-05-my-lisp-execution-quartet-and-wsm-os-lisp-role.md`.
 
 Дослідження та виконувані прототипи WSM-нативної Lisp-машини на реальному
 обладнанні.
