@@ -406,17 +406,32 @@ fn repl_fixture() -> ! {
         let byte = unsafe { inb(COM1) };
         if byte == b'\r' || byte == b'\n' {
             serial_write(b"\n");
-            if len == 1 && line[0] == b'q' {
+            let input = trim_whitespace(&line[..len]);
+            if input.len() == 1 && input[0] == b'q' {
                 serial_write(b"WSM-OS REPL status=bye\n");
                 qemu_exit(0x10)
-            } else if len == 1 && line[0] == b'h' {
-                serial_write(b"commands: h=help q=quit\n> ");
-            } else if bytes_eq(&line[..len], b"nil") {
+            } else if input.len() == 1 && input[0] == b'h' {
+                serial_write(b"commands: h=help q=quit <fixnum> nil t\n> ");
+            } else if bytes_eq(input, b"nil") {
                 serial_write(b"WSM-OS REPL value=nil\n> ");
-            } else if bytes_eq(&line[..len], b"t") {
+            } else if bytes_eq(input, b"t") {
                 serial_write(b"WSM-OS REPL value=t\n> ");
+            } else if let Some(n) = parse_i64(input) {
+                if let Some(_word) = wsm_os_target::encode_fixnum(n) {
+                    serial_write(b"WSM-OS REPL value=");
+                    serial_write_signed_decimal(n);
+                    serial_write(b"\n> ");
+                } else {
+                    serial_write(b"WSM-OS CONDITION schema=1 kind=NUMERIC_OVERFLOW source=repl value=");
+                    serial_write(input);
+                    serial_write(b"\n> ");
+                }
+            } else if !input.is_empty() {
+                serial_write(b"WSM-OS CONDITION schema=1 kind=TYPE source=repl value=");
+                serial_write(input);
+                serial_write(b"\n> ");
             } else {
-                serial_write(b"WSM-OS REPL error=unsupported-form\n> ");
+                serial_write(b"> ");
             }
             len = 0;
         } else if byte == 8 || byte == 127 {
@@ -426,6 +441,62 @@ fn repl_fixture() -> ! {
             len += 1;
             serial_write(&[byte]);
         }
+    }
+}
+
+fn trim_whitespace(mut slice: &[u8]) -> &[u8] {
+    while let Some((&first, rest)) = slice.split_first() {
+        if first == b' ' || first == b'\t' {
+            slice = rest;
+        } else {
+            break;
+        }
+    }
+    while let Some((&last, rest)) = slice.split_last() {
+        if last == b' ' || last == b'\t' {
+            slice = rest;
+        } else {
+            break;
+        }
+    }
+    slice
+}
+
+fn parse_i64(bytes: &[u8]) -> Option<i64> {
+    if bytes.is_empty() {
+        return None;
+    }
+    let (is_negative, digits) = match bytes[0] {
+        b'-' => (true, &bytes[1..]),
+        b'+' => (false, &bytes[1..]),
+        _ => (false, bytes),
+    };
+    if digits.is_empty() {
+        return None;
+    }
+    let mut acc: i64 = 0;
+    for &b in digits {
+        if !b.is_ascii_digit() {
+            return None;
+        }
+        let digit = (b - b'0') as i64;
+        acc = acc.checked_mul(10)?;
+        if is_negative {
+            acc = acc.checked_sub(digit)?;
+        } else {
+            acc = acc.checked_add(digit)?;
+        }
+    }
+    Some(acc)
+}
+
+fn serial_write_signed_decimal(value: i64) {
+    if value < 0 {
+        serial_write(b"-");
+        let magnitude = (-(value as i128)) as u64;
+        serial_write_word(magnitude);
+    } else {
+        serial_write_word(value as u64);
     }
 }
 

@@ -1,0 +1,16 @@
+WSM-OS BOOT schema=1 arch=x86_64 status=ok
+WSM-OS REPL schema=1 status=ready
+> h
+commands: h=help q=quit <fixnum> nil t
+> 42
+WSM-OS REPL value=42
+> -17
+WSM-OS REPL value=-17
+> nil
+WSM-OS REPL value=nil
+> t
+WSM-OS REPL value=t
+> foo
+WSM-OS CONDITION schema=1 kind=TYPE source=repl value=foo
+> q
+WSM-OS REPL status=bye

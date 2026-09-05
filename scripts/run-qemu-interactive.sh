@@ -28,5 +28,5 @@ timeout "$WSM_OS_QEMU_TIMEOUT" "$QEMU_SYSTEM_X86_64" \
   -drive "if=pflash,unit=1,format=raw,file=$vars_copy" \
   -drive "format=raw,file=$image" \
   -device isa-debug-exit,iobase=0xf4,iosize=0x04 \
-  -chardev stdio,id=wsm-serial,mux=off,signal=off \
-  -serial chardev:wsm-serial -nographic -no-reboot
+  -display none \
+  -serial stdio -no-reboot

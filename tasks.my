@@ -223,10 +223,11 @@
 
    ("WSM-OS-SERIAL-REPL-M5H" .
     ((priority . 8.7)
+     (done . t)
      (capabilities . (wsm-os no-std serial repl cml qemu evidence))
      (depends-on . (WSM-OS-CONFORMANCE-LADDER-M5 WSM-OS-STRUCTURED-CONDITION-RECORD-M5G))
      (origin . wsm-os-lisp)
-     (context . "Owner requests an interactive Live USB REPL before physical-hardware testing. Current kernel has deterministic serial output only and no input loop. Start with an explicit admitted subset and a bounded line buffer; keep the boot witness non-interactive by default.")
+     (context . "VERIFIED 2026-09-05: Freestanding serial REPL implemented in crates/wsm-os-kernel/src/main.rs for the admitted machine subset (bounded line buffer, whitespace trim, commands h/q, fixnums, nil, canonical t, structured condition reporting for type errors/overflow). Rebuilt target/wsm-os-repl-uefi.img executed in QEMU via COM1 UART; interactive transcript captured in artifacts/m5h-repl-fixture-qemu-serial-transcript.txt. Boot witness remains non-interactive by default.")
      (description . "Implement a serial REPL fixture for the admitted machine subset: bounded input buffer, parse/evaluate one expression, print result or structured condition, explicit exit command, and QEMU transcript. Gate physical Live USB testing on this QEMU evidence; do not claim full my-lisp REPL parity.")))
 
    ("WSM-OS-CONFORMANCE-LADDER-M5" .
