@@ -113,7 +113,7 @@ fn kernel_main(_boot_info: &'static mut BootInfo) -> ! {
             qemu_exit(0x12)
         }
     } else if fixture_name == "d0-virtio-identity-fixture" {
-        if result == wsm_os_target::TRUE {
+        if result == wsm_os_target::CANONICAL_T || result == wsm_os_target::TRUE {
             serial_write(
                 b"WSM-OS DRIVER schema=1 driver=virtio-blk stage=identity value=t execution=wsm status=ok\n",
             );
@@ -125,7 +125,7 @@ fn kernel_main(_boot_info: &'static mut BootInfo) -> ! {
             qemu_exit(0x12)
         }
     } else if fixture_name == "d1-pci-config-capability-fixture" {
-        if result == wsm_os_target::TRUE {
+        if result == wsm_os_target::CANONICAL_T || result == wsm_os_target::TRUE {
             serial_write(
                 b"WSM-OS DRIVER schema=1 driver=virtio-blk stage=pci-config value=t execution=wsm status=ok\n",
             );
@@ -355,7 +355,8 @@ fn is_m5a_fixture_result(value: Word, context: &RuntimeContext) -> bool {
     let Ok(cell) = context.cell(value) else {
         return false;
     };
-    wsm_os_target::decode_fixnum(cell.car) == Some(40) && cell.cdr == wsm_os_target::TRUE
+    wsm_os_target::decode_fixnum(cell.car) == Some(40)
+        && (cell.cdr == wsm_os_target::CANONICAL_T || cell.cdr == wsm_os_target::TRUE)
 }
 
 fn is_m5b_success_fixture_result(value: Word, context: &RuntimeContext) -> bool {
@@ -430,6 +431,15 @@ fn repl_fixture() -> ! {
 
 fn bytes_eq(left: &[u8], right: &[u8]) -> bool {
     left.len() == right.len() && left.iter().zip(right).all(|(a, b)| a == b)
+}
+
+#[allow(dead_code)]
+fn serial_write_hex(value: u64) {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    for i in (0..16).rev() {
+        let nibble = ((value >> (i * 4)) & 0xf) as usize;
+        unsafe { outb(COM1, HEX[nibble]) };
+    }
 }
 
 fn serial_has_input() -> bool {

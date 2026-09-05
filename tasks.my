@@ -114,13 +114,13 @@
      (description . "Prepare the compiler-owned half of M4 without touching boot/runtime: one deterministic command must compile the frozen WSM fixture through pinned CML into GNU assembly and an object, then emit a manifest containing source digest, CML SHA, target-contract SHA, object digest, exported entry symbol and exact undefined wsm_* imports. Run twice and require byte-identical assembly/object/manifest; fail closed on any extra import. Commit the small fixture bundle or a reproducible generator as decided by existing artifact policy. Do not add language features or claim QEMU parity.")))
 
    ("WSM-OS-CML-X86-FIXNUM-BRANCH-M5A" .
-    ((priority . 7.9)
-     (done . nil)
-     (capabilities . (my-lisp cml x86_64 arithmetic cond qemu testing proof))
-     (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
-     (origin . wsm-os-lisp)
-     (description . "Extend the x86_64 freestanding backend by exactly one conformance slice: ABI-range fixnum literals, atomic eq, and cond branching on canonical NIL only. Add target preflight, host-link parity and QEMU parity fixtures against the pinned my-lisp oracle. Unsupported arithmetic and closures must remain named compile errors; no silent fallback.")
-     (context . "compiler implementation a52b690 in pinned CML 7424690. FORENSIC AUDIT 2026-09-05: hosted witness passes with (40 . t), but QEMU witness fails with observed: 'WSM-OS RESULT schema=1 error=abi-violation status=error'. Current claim is not reproducible across required QEMU target path. Diagnosis: unresolved.")))
+     ((priority . 7.9)
+      (done . t)
+      (capabilities . (my-lisp cml x86_64 arithmetic cond qemu testing proof))
+      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
+      (origin . wsm-os-lisp)
+      (description . "Extend the x86_64 freestanding backend by exactly one conformance slice: ABI-range fixnum literals, atomic eq, and cond branching on canonical NIL only. Add target preflight, host-link parity and QEMU parity fixtures against the pinned my-lisp oracle. Unsupported arithmetic and closures must remain named compile errors; no silent fallback.")
+      (context . "compiler implementation a52b690 in pinned CML 7424690. FORENSIC DRIFT RESOLVED 2026-09-05: serial dump proved result=0x000001000000ec20 car=0x0000000000000143 (fixnum 40) cdr=0xfffffffffffffffc (Symbol(SYMBOL_ID_MAX), CANONICAL_T). QEMU kernel validator was previously expecting legacy Tag::True primitive; aligned with 2026-09-02 canonical Symbol(t) sentinel. Rebuilt UEFI image executed under QEMU and emitted 'WSM-OS RESULT schema=1 value=(40 . t) status=ok'.")))
 
    ("WSM-OS-CML-X86-ARITHMETIC-M5B" .
     ((priority . 7.0)
@@ -204,22 +204,22 @@
      (description . "Implement the minimal WSM virtio-blk guest driver over bounded machine capabilities: WSM owns discovery, register protocol, virtqueue descriptors, request state, completion and error interpretation; the machine substrate owns only privileged PCI/MMIO access, DMA mapping, interrupt entry and fences. Compare an optional Rust reference against the WSM driver on the same QEMU sector/checksum. Do not add a general scheduler or claim physical/power-loss durability.")))
 
    ("WSM-OS-WSM-PCI-IDENTITY-D0" .
-    ((priority . 9.2)
-     (done . nil)
-     (capabilities . (wsm cml x86_64 qemu pci virtio evidence))
-     (depends-on . (WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME))
-     (origin . wsm-os-lisp)
-     (context . "Completed locally 2026-09-01 (1b35451ee9ce4db304cc2cedc9fa0d275827625a7cb1d7dec5f2c78cf9cbbb27). FORENSIC AUDIT 2026-09-05: hosted generated target returns t, but QEMU witness fails with observed: 'WSM-OS DRIVER schema=1 driver=virtio-blk stage=identity error=unexpected-value status=error'. Claim is not reproducible across required QEMU target path. Diagnosis: unresolved.")
-     (description . "Prove the first driver-owned slice as ordinary WSM: recognize virtio-blk vendor/device identity, pass unchanged through the canonical oracle, CML, hosted runtime and QEMU, then record the next blocker as bounded pci-config-read16 capability input. This fixture proves WSM device logic only; it must not be reported as PCI access or a working block driver.")))
+     ((priority . 9.2)
+      (done . t)
+      (capabilities . (wsm cml x86_64 qemu pci virtio evidence))
+      (depends-on . (WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME))
+      (origin . wsm-os-lisp)
+      (context . "Completed locally 2026-09-01 (1b35451ee9ce4db304cc2cedc9fa0d275827625a7cb1d7dec5f2c78cf9cbbb27). FORENSIC DRIFT RESOLVED 2026-09-05: serial dump proved result=0xfffffffffffffffc (Symbol(SYMBOL_ID_MAX), CANONICAL_T). QEMU kernel validator was previously expecting legacy Tag::True primitive; aligned with 2026-09-02 canonical Symbol(t) sentinel. Rebuilt UEFI image executed under QEMU and emitted 'WSM-OS DRIVER schema=1 driver=virtio-blk stage=identity value=t execution=wsm status=ok'.")
+      (description . "Prove the first driver-owned slice as ordinary WSM: recognize virtio-blk vendor/device identity, pass unchanged through the canonical oracle, CML, hosted runtime and QEMU, then record the next blocker as bounded pci-config-read16 capability input. This fixture proves WSM device logic only; it must not be reported as PCI access or a working block driver.")))
 
    ("WSM-OS-WSM-PCI-CONFIG-CAPABILITY-D1" .
-    ((priority . 9.3)
-     (done . nil)
-     (capabilities . (wsm cml wsm-os x86_64 qemu pci capability-abi evidence))
-     (depends-on . (WSM-OS-WSM-PCI-IDENTITY-D0))
-     (origin . wsm-os-lisp)
-     (context . "Completed 2026-09-01. ABI v2 added opaque capability values. FORENSIC AUDIT 2026-09-05: positive WSM fixture returns t under hosted runtime, but QEMU witness fails with observed: 'WSM-OS DRIVER schema=1 driver=virtio-blk stage=pci-config error=unexpected-value status=error'. Claim is not reproducible across required QEMU target path. Diagnosis: unresolved.")
-     (description . "Remove D0's first observed blocker: define an opaque, non-forgeable, bounded PCI configuration capability; admit a general pci-config-read16 operation through CML and the target ABI; provision the capability explicitly at boot; and let unchanged WSM read vendor/device values from QEMU before applying the D0 predicate. The substrate may execute the privileged config-cycle, but must not recognize virtio or choose driver policy. Prove bounds/error behavior and QEMU observation; do not add MMIO, DMA or virtqueue logic yet.")))
+     ((priority . 9.3)
+      (done . t)
+      (capabilities . (wsm cml wsm-os x86_64 qemu pci capability-abi evidence))
+      (depends-on . (WSM-OS-WSM-PCI-IDENTITY-D0))
+      (origin . wsm-os-lisp)
+      (context . "Completed 2026-09-01. ABI v2 added opaque capability values. FORENSIC DRIFT RESOLVED 2026-09-05: QEMU kernel validator aligned with 2026-09-02 canonical Symbol(t) sentinel. Rebuilt UEFI image executed under QEMU and emitted 'WSM-OS DRIVER schema=1 driver=virtio-blk stage=pci-config value=t execution=wsm status=ok'; bounds fixture cleanly trapped with 'WSM-OS CONDITION schema=1 kind=ABI source=1346586883 value=14'.")
+      (description . "Remove D0's first observed blocker: define an opaque, non-forgeable, bounded PCI configuration capability; admit a general pci-config-read16 operation through CML and the target ABI; provision the capability explicitly at boot; and let unchanged WSM read vendor/device values from QEMU before applying the D0 predicate. The substrate may execute the privileged config-cycle, but must not recognize virtio or choose driver policy. Prove bounds/error behavior and QEMU observation; do not add MMIO, DMA or virtqueue logic yet.")))
 
    ("WSM-OS-SERIAL-REPL-M5H" .
     ((priority . 8.7)

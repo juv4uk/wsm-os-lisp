@@ -8,27 +8,11 @@
 
 use core::mem::MaybeUninit;
 use wsm_os_target::{
-    ClosureDescriptor, ErrorCode, NIL, RESULT_REGISTER, RUNTIME_IMPORTS, SYMBOL_ID_MAX, TRUE,
-    Word, encode_symbol,
+    ClosureDescriptor, ErrorCode, NIL, RESULT_REGISTER, RUNTIME_IMPORTS, TRUE,
+    Word,
 };
+pub use wsm_os_target::CANONICAL_T;
 
-/// Canonical `t`, as an ordinary interned Symbol -- not the standalone
-/// `Tag::True` primitive canonical WSM never had (`t` is plain
-/// `Symbol("t")` in the Rust oracle, not a distinct primitive). 2026-09-02
-/// owner directive: "() не визначаємо... t має пройти тим самим шляхом, що
-/// й будь-який інший Symbol." `wsm-os-target`'s symbol ids are documented
-/// as image-local-interned (each compiled program gets its own sequential
-/// ids), so there is no single canonical id for `t` shared across programs
-/// the way a frozen global symbol table would provide -- `SYMBOL_ID_MAX` is
-/// reserved as a sentinel here, matching `wsm-my-lisp/asm/nucleus.s`'s own
-/// `SYM_T_WORD` fix, making collision with a real per-program-interned id
-/// practically unreachable but not a proven-unique encoding. `Tag::True`
-/// itself stays declared in `wsm_os_target::Tag` for now (a separate,
-/// bigger question); nothing in this crate produces it anymore.
-const CANONICAL_T: Word = match encode_symbol(SYMBOL_ID_MAX) {
-    Some(word) => word,
-    None => unreachable!(),
-};
 
 /// `RuntimeContext::new`/`new_with_closures`'s safety contract requires each
 /// arena to be exclusively owned by exactly one live context. That contract

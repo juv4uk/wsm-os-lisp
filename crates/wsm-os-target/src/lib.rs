@@ -56,6 +56,10 @@ pub const FIXNUM_MAX: i64 = (1_i64 << (PAYLOAD_BITS - 1)) - 1;
 pub const SYMBOL_ID_MAX: Word = (1_u64 << PAYLOAD_BITS) - 1;
 pub const CAPABILITY_ID_MAX: Word = (1_u64 << PAYLOAD_BITS) - 1;
 
+/// Canonical `t` represented as Symbol(SYMBOL_ID_MAX) sentinel.
+pub const CANONICAL_T: Word = (SYMBOL_ID_MAX << TAG_BITS) | Tag::Symbol as Word;
+
+
 pub const CONS_ALIGNMENT: usize = 16;
 pub const CONS_BYTES: usize = 16;
 pub const CONS_CAR_OFFSET: usize = 0;
