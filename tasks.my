@@ -11,7 +11,7 @@
 
 ("WSM-OS-TARGET-ABI-M0" .
     ((priority . 10.0)
-     (done . nil)
+     (done . t)
      (capabilities . (architecture x86_64 assembly compiler contract proof))
      (depends-on . ())
      (origin . wsm-os-lisp)
@@ -20,7 +20,7 @@
 
    ("WSM-OS-CML-X86-FREESTANDING-M1" .
     ((priority . 10.0)
-     (done . nil)
+     (done . t)
      (capabilities . (cml compiler rust x86_64 assembly lowering testing proof))
      (depends-on . (WSM-OS-TARGET-ABI-M0))
      (origin . wsm-os-lisp)
@@ -29,7 +29,7 @@
 
    ("WSM-OS-HOST-RUNTIME-PARITY-M2" .
     ((priority . 9.0)
-     (done . nil)
+     (done . t)
      (capabilities . (rust x86_64 assembly runtime testing my-lisp proof))
      (depends-on . (WSM-OS-CML-X86-FREESTANDING-M1))
      (origin . wsm-os-lisp)
@@ -57,13 +57,13 @@
      (capabilities . (research rust x86_64 uefi qemu architecture testing proof))
      (depends-on . (WSM-OS-BOOT-SUBSTRATE-DECISION-M3A))
      (origin . wsm-os-lisp)
-     (done . nil)
+     (done . t)
      (description . "Reconcile ADR-002 with the executable boot path. The ADR selects maintained bootloader v0.11 and UEFI, while the current code resolves bootloader 0.9.x and cargo bootimage. Choose and implement one honest path; if the ratified UEFI decision remains, migrate to the v0.11 bootloader_api/builder flow and remove legacy bootimage assumptions. Exact dependency, lockfile, image format, build command, QEMU firmware and CI evidence must agree. Do not call a legacy BIOS bootimage UEFI evidence.")
      (context . "completed 2026-08-29 under direct owner assignment: a5797f5 replaces the temporary legacy-only 755e0e9 resolution with bootloader_api/UefiBoot 0.11.17, an explicit UEFI image-builder and no bootimage runner. Local 2,162,688-byte UEFI image created; GitHub Actions 33257753471 SUCCESS after formatting follow-up 64ba9df.")))
 
    ("WSM-OS-BOOT-TOOLCHAIN-PIN-M3B1" .
     ((priority . 9.5)
-     (done . nil)
+     (done . t)
      (capabilities . (guix rust qemu x86_64 build ci testing proof))
      (depends-on . (WSM-OS-BOOT-SUBSTRATE-REALIGN-M3A1))
      (origin . wsm-os-lisp)
@@ -83,13 +83,13 @@
      (capabilities . (rust x86_64 assembly runtime testing proof))
      (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2))
      (origin . wsm-os-lisp)
-     (done . nil)
+     (done . t)
      (context . "verified 2026-08-29: demangled exact allowlist passes locally and in GitHub Actions run 33266814494; raw Rust crate hashes are intentionally excluded from the stable boundary. Corrective commits c7b8536 and 5986e67.")
      (description . "Replace the hosted-runtime blacklist grep with an exact undefined-symbol allowlist at the freestanding link boundary. Inspect the final bare runtime object/archive with nm or llvm-nm; permit only explicitly documented compiler/runtime support symbols and versioned wsm_* ABI imports as appropriate, and fail on every other undefined symbol. Prove that calloc/realloc/write/open/socket/pthread/__libc-style leaks cannot pass merely because they were absent from the old blacklist.")))
 
    ("WSM-OS-SERIAL-BOOT-WITNESS-M3C" .
     ((priority . 9.0)
-     (done . nil)
+     (done . t)
      (capabilities . (rust x86_64 uefi qemu serial testing ci proof))
      (depends-on . (WSM-OS-BOOT-TOOLCHAIN-PIN-M3B1))
      (origin . wsm-os-lisp)
@@ -98,7 +98,7 @@
 
    ("WSM-OS-FIRST-QEMU-PARITY-M4" .
     ((priority . 10.0)
-     (done . nil)
+     (done . t)
      (capabilities . (cml my-lisp x86_64 assembly rust qemu integration testing proof))
      (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2 WSM-OS-M2-ORACLE-EVIDENCE-REALIGN WSM-OS-SERIAL-BOOT-WITNESS-M3C))
      (origin . wsm-os-lisp)
@@ -107,7 +107,7 @@
 
    ("WSM-OS-M4-COMPILER-ARTIFACT-BUNDLE" .
     ((priority . 9.5)
-     (done . nil)
+     (done . t)
      (capabilities . (cml compiler x86_64 assembly reproducibility testing proof))
      (depends-on . (WSM-OS-CML-X86-FREESTANDING-M1 WSM-OS-HOST-RUNTIME-PARITY-M2))
      (origin . wsm-os-lisp)
@@ -120,11 +120,11 @@
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
      (origin . wsm-os-lisp)
      (description . "Extend the x86_64 freestanding backend by exactly one conformance slice: ABI-range fixnum literals, atomic eq, and cond branching on canonical NIL only. Add target preflight, host-link parity and QEMU parity fixtures against the pinned my-lisp oracle. Unsupported arithmetic and closures must remain named compile errors; no silent fallback.")
-     (context . "compiler implementation a52b690 is contained in pinned CML 7424690, but this task remains open until its own hosted+QEMU oracle fixtures satisfy the full acceptance criteria.")))
+     (context . "compiler implementation a52b690 in pinned CML 7424690. FORENSIC AUDIT 2026-09-05: hosted witness passes with (40 . t), but QEMU witness fails with observed: 'WSM-OS RESULT schema=1 error=abi-violation status=error'. Current claim is not reproducible across required QEMU target path. Diagnosis: unresolved.")))
 
    ("WSM-OS-CML-X86-ARITHMETIC-M5B" .
     ((priority . 7.0)
-     (done . nil)
+     (done . t)
      (capabilities . (cml compiler x86_64 assembly arithmetic conformance testing proof))
      (depends-on . (WSM-OS-CML-X86-FIXNUM-BRANCH-M5A))
      (origin . wsm-os-lisp)
@@ -133,7 +133,7 @@
 
    ("WSM-OS-CML-TAIL-CALL-PROOF-M5C" .
     ((priority . 8.5)
-     (done . nil)
+     (done . t)
      (capabilities . (cml compiler x86_64 assembly tail-calls conformance testing proof))
      (depends-on . (WSM-OS-CML-X86-FIXNUM-BRANCH-M5A))
      (origin . wsm-os-lisp)
@@ -142,7 +142,7 @@
 
    ("WSM-OS-DEFINITION-CAPSULE-M5D" .
     ((priority . 7.8)
-     (done . nil)
+     (done . t)
      (capabilities . (cml compiler metadata reproducibility debugging proof))
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4 WSM-OS-M4-COMPILER-ARTIFACT-BUNDLE))
      (origin . wsm-os-lisp)
@@ -180,11 +180,11 @@
 
    ("WSM-OS-FS-MACHINE-WITNESS-F6" .
     ((priority . 7.2)
+     (done . t)
      (capabilities . (wsm-os filesystem runtime cml qemu evidence))
      (depends-on . (WSM-OS-BLOCK-MECHANISM-F5 WSM-OS-CONFORMANCE-LADDER-M5))
      (origin . wsm-os-lisp)
-     (status . partial)
-     (context . "First bounded machine fixture implemented 2026-08-31: WSM_FIXTURE=fs-fixture embeds the canonical two-record F6 stream, validates exact bounded bytes, materializes (hello world) in the cons heap, and emits a QEMU serial witness. Commit pending. This is read-only machine evidence; semantic parser parity, disk I/O and durability remain open.")
+     (context . "First bounded machine fixture implemented 2026-08-31; verified live 2026-09-05 via scripts/rebuild-and-run-fs-qemu.sh: WSM_FIXTURE=fs-fixture embeds canonical F6 stream, materializes (hello world) in cons heap, and emits QEMU serial witness WSM-OS FS schema=1 format=wsm-fs-records value=(hello world) status=ok. This is read-only machine evidence.")
    (description . "After independent block evidence, add one read-only data-only FS witness to hosted/QEMU: materialize a bounded serialized value into the cons heap, print its canonical observation, and compare with pinned my-lisp FS oracle. Do not persist runtime pointers, execute stored bytes, or claim durable filesystem semantics.")))
 
    ("WSM-OS-FS-VIRTUAL-DISK-PERSISTENCE-Q6B" .
@@ -209,7 +209,7 @@
      (capabilities . (wsm cml x86_64 qemu pci virtio evidence))
      (depends-on . (WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME))
      (origin . wsm-os-lisp)
-     (context . "Completed locally 2026-09-01. Unchanged WSM fixture recognizes virtio vendor 0x1af4 (6900) and modern block device 0x1042 (4162). Canonical my-lisp oracle=t, hosted generated target=t, and bounded QEMU emitted DRIVER stage=identity value=t execution=wsm. Generated manifest pins CML 1266c83 and object sha256 1b35451ee9ce4db304cc2cedc9fa0d275827625a7cb1d7dec5f2c78cf9cbbb27. Claim boundary: device logic only; no PCI configuration access occurred.")
+     (context . "Completed locally 2026-09-01 (1b35451ee9ce4db304cc2cedc9fa0d275827625a7cb1d7dec5f2c78cf9cbbb27). FORENSIC AUDIT 2026-09-05: hosted generated target returns t, but QEMU witness fails with observed: 'WSM-OS DRIVER schema=1 driver=virtio-blk stage=identity error=unexpected-value status=error'. Claim is not reproducible across required QEMU target path. Diagnosis: unresolved.")
      (description . "Prove the first driver-owned slice as ordinary WSM: recognize virtio-blk vendor/device identity, pass unchanged through the canonical oracle, CML, hosted runtime and QEMU, then record the next blocker as bounded pci-config-read16 capability input. This fixture proves WSM device logic only; it must not be reported as PCI access or a working block driver.")))
 
    ("WSM-OS-WSM-PCI-CONFIG-CAPABILITY-D1" .
@@ -218,7 +218,7 @@
      (capabilities . (wsm cml wsm-os x86_64 qemu pci capability-abi evidence))
      (depends-on . (WSM-OS-WSM-PCI-IDENTITY-D0))
      (origin . wsm-os-lisp)
-     (context . "Completed 2026-09-01. ABI v2 adds opaque capability values and only two target-profile calls: pci-config-capability and bounded pci-config-read16. The unchanged positive WSM fixture read QEMU q35 BDF 00:05.0 through PCI mechanism 1 and recognized modern virtio-blk 1af4:1042; hosted returned t and QEMU emitted DRIVER stage=pci-config value=t execution=wsm. A second unchanged WSM fixture requested device 32 and both hosted and QEMU emitted structured ABI source=1346586883 value=14. QEMU used a disposable raw disk at addr=5 with disable-legacy=on. This proves bounded PCI configuration observation, not enumeration, BAR/MMIO access, DMA, virtqueues, block I/O, physical hardware or durability. Next observed driver blocker: discover a matching BDF without hard-coding 00:05.0.")
+     (context . "Completed 2026-09-01. ABI v2 added opaque capability values. FORENSIC AUDIT 2026-09-05: positive WSM fixture returns t under hosted runtime, but QEMU witness fails with observed: 'WSM-OS DRIVER schema=1 driver=virtio-blk stage=pci-config error=unexpected-value status=error'. Claim is not reproducible across required QEMU target path. Diagnosis: unresolved.")
      (description . "Remove D0's first observed blocker: define an opaque, non-forgeable, bounded PCI configuration capability; admit a general pci-config-read16 operation through CML and the target ABI; provision the capability explicitly at boot; and let unchanged WSM read vendor/device values from QEMU before applying the D0 predicate. The substrate may execute the privileged config-cycle, but must not recognize virtio or choose driver policy. Prove bounds/error behavior and QEMU observation; do not add MMIO, DMA or virtqueue logic yet.")))
 
    ("WSM-OS-SERIAL-REPL-M5H" .
@@ -273,7 +273,7 @@
 
    ("WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME" .
     ((priority . 9.9)
-     (done . nil)
+     (done . t)
      (capabilities . (wsm-os runtime x86_64 closures environments qemu conformance))
      (origin . wsm-os-lisp)
      (context . "Completed 2026-09-01 in ba899a7 on runtime foundation 4f5f727 and CML 1266c83. Closure tag 5 points only into a bounded 16-byte-aligned closure arena; image-local definition ID and owned WSM environment are bounds-checked; foreign/malformed pointers and OOM fail closed. Target/runtime 12/12 PASS, oracle=(A B), hosted=(A B), QEMU boot transcript=(A B) execution=escaping-closure; all artifact manifests/capsules verify against the pinned SHA.")
