@@ -1,2 +1,2 @@
 WSM-OS BOOT schema=1 arch=x86_64 status=ok
-WSM-OS CONDITION schema=1 kind=ABI source=1346586883 value=14
+WSM-OS CONDITION schema=1 kind=ABI source=1346586883 value=12115145523094093838

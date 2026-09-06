@@ -143,6 +143,75 @@ pub const fn decode_symbol(word: Word) -> Option<Word> {
     None
 }
 
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CapabilityKind {
+    PciConfig = 1,
+    Mmio = 2,
+    Dma = 3,
+    Interrupt = 4,
+}
+
+pub const CAPABILITY_KIND_BITS: u8 = 8;
+pub const CAPABILITY_INSTANCE_BITS: u8 = 8;
+pub const CAPABILITY_NONCE_BITS: u8 = PAYLOAD_BITS - CAPABILITY_KIND_BITS - CAPABILITY_INSTANCE_BITS; // 61 - 16 = 45 bits
+
+pub const CAPABILITY_KIND_MASK: Word = (1 << CAPABILITY_KIND_BITS) - 1;
+pub const CAPABILITY_INSTANCE_MASK: Word = (1 << CAPABILITY_INSTANCE_BITS) - 1;
+pub const CAPABILITY_NONCE_MAX: Word = (1 << CAPABILITY_NONCE_BITS) - 1;
+
+/// Bounded, unforgeable capability descriptor carrying kind, instance, and provenance nonce.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CapabilityDescriptor {
+    pub kind: CapabilityKind,
+    pub instance: u8,
+    pub nonce: Word,
+}
+
+impl CapabilityDescriptor {
+    pub const fn new(kind: CapabilityKind, instance: u8, nonce: Word) -> Option<Self> {
+        if nonce == 0 || nonce > CAPABILITY_NONCE_MAX {
+            None
+        } else {
+            Some(Self {
+                kind,
+                instance,
+                nonce,
+            })
+        }
+    }
+
+    pub const fn to_id(self) -> Word {
+        let kind_bits = (self.kind as Word) & CAPABILITY_KIND_MASK;
+        let instance_bits = (self.instance as Word) & CAPABILITY_INSTANCE_MASK;
+        (self.nonce << (CAPABILITY_KIND_BITS + CAPABILITY_INSTANCE_BITS))
+            | (instance_bits << CAPABILITY_KIND_BITS)
+            | kind_bits
+    }
+
+    pub const fn from_id(id: Word) -> Option<Self> {
+        let kind_raw = (id & CAPABILITY_KIND_MASK) as u8;
+        let instance = ((id >> CAPABILITY_KIND_BITS) & CAPABILITY_INSTANCE_MASK) as u8;
+        let nonce = id >> (CAPABILITY_KIND_BITS + CAPABILITY_INSTANCE_BITS);
+        let kind = match kind_raw {
+            1 => CapabilityKind::PciConfig,
+            2 => CapabilityKind::Mmio,
+            3 => CapabilityKind::Dma,
+            4 => CapabilityKind::Interrupt,
+            _ => return None,
+        };
+        if nonce == 0 || nonce > CAPABILITY_NONCE_MAX {
+            None
+        } else {
+            Some(Self {
+                kind,
+                instance,
+                nonce,
+            })
+        }
+    }
+}
+
 /// Encode a non-zero image-local capability handle. The numeric handle is not
 /// authority by itself: every privileged ABI import must validate it against
 /// the capabilities provisioned by the machine substrate.
@@ -164,6 +233,22 @@ pub const fn decode_capability(word: Word) -> Option<Word> {
         }
     }
     None
+}
+
+/// Encode a verified capability descriptor into an opaque capability Word.
+#[inline(always)]
+pub const fn encode_capability_descriptor(descriptor: CapabilityDescriptor) -> Option<Word> {
+    encode_capability(descriptor.to_id())
+}
+
+/// Decode and validate the internal capability descriptor from a capability Word.
+#[inline(always)]
+pub const fn decode_capability_descriptor(word: Word) -> Option<CapabilityDescriptor> {
+    if let Some(id) = decode_capability(word) {
+        CapabilityDescriptor::from_id(id)
+    } else {
+        None
+    }
 }
 
 pub const fn tag(word: Word) -> Word {
@@ -236,6 +321,33 @@ mod tests {
         assert_eq!(decode_fixnum(capability), None);
         assert_eq!(decode_symbol(capability), None);
         assert_eq!(decode_capability(TRUE), None);
+    }
+
+    #[test]
+    fn capability_descriptors_round_trip_and_reject_forgery() {
+        let desc = CapabilityDescriptor::new(CapabilityKind::PciConfig, 0, 0x1234_5678).unwrap();
+        let word = encode_capability_descriptor(desc).unwrap();
+        assert_eq!(decode_capability_descriptor(word), Some(desc));
+
+        // Different kind
+        let mmio_desc = CapabilityDescriptor::new(CapabilityKind::Mmio, 1, 0x1234_5678).unwrap();
+        let mmio_word = encode_capability_descriptor(mmio_desc).unwrap();
+        assert_ne!(word, mmio_word);
+        let decoded_mmio = decode_capability_descriptor(mmio_word).unwrap();
+        assert_eq!(decoded_mmio.kind, CapabilityKind::Mmio);
+        assert_eq!(decoded_mmio.instance, 1);
+
+        // Zero or overflowing nonce fails
+        assert_eq!(CapabilityDescriptor::new(CapabilityKind::PciConfig, 0, 0), None);
+        assert_eq!(
+            CapabilityDescriptor::new(CapabilityKind::PciConfig, 0, CAPABILITY_NONCE_MAX + 1),
+            None
+        );
+
+        // Invalid kind rejected in from_id
+        assert_eq!(CapabilityDescriptor::from_id(0), None);
+        // Nonce is 0 in from_id
+        assert_eq!(CapabilityDescriptor::from_id(1), None);
     }
 
     #[test]

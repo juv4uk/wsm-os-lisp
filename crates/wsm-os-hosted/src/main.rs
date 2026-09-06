@@ -12,11 +12,29 @@ unsafe extern "C" {
     fn wsm_entry(context: *mut RuntimeContext) -> Word;
 }
 
+use wsm_os_target::{
+    decode_capability_descriptor, encode_capability_descriptor, CapabilityDescriptor,
+    CapabilityKind,
+};
+
 const PCI_CONFIG_CAPABILITY_ID: Word = 1;
+const PCI_CONFIG_HOSTED_NONCE: Word = 0x1504_3495_4346; // 45-bit valid nonce
 
 #[unsafe(no_mangle)]
 pub extern "C" fn wsm_pci_config_capability(_context: *mut RuntimeContext) -> Word {
-    wsm_os_target::encode_capability(PCI_CONFIG_CAPABILITY_ID).unwrap()
+    let desc = CapabilityDescriptor::new(CapabilityKind::PciConfig, 0, PCI_CONFIG_HOSTED_NONCE)
+        .expect("PCI config descriptor must be valid");
+    encode_capability_descriptor(desc).expect("PCI config capability must encode")
+}
+
+fn hosted_verify_pci_capability(capability: Word) -> bool {
+    if let Some(desc) = decode_capability_descriptor(capability) {
+        desc.kind == CapabilityKind::PciConfig
+            && desc.instance == 0
+            && desc.nonce == PCI_CONFIG_HOSTED_NONCE
+    } else {
+        capability == wsm_os_target::encode_capability(PCI_CONFIG_CAPABILITY_ID).unwrap()
+    }
 }
 
 /// Hosted reference mechanism for the fixed QEMU D1 fixture BDF 00:05.0.
@@ -30,8 +48,7 @@ pub extern "C" fn wsm_pci_config_read16(
     function: Word,
     offset: Word,
 ) -> Word {
-    let valid_capability =
-        capability == wsm_os_target::encode_capability(PCI_CONFIG_CAPABILITY_ID).unwrap();
+    let valid_capability = hosted_verify_pci_capability(capability);
     let coordinates = (
         decode_fixnum(bus),
         decode_fixnum(device),

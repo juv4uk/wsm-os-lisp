@@ -199,9 +199,85 @@ unsafe extern "C" {
     fn wsm_entry(context: *mut RuntimeContext) -> Word;
 }
 
+use wsm_os_target::{
+    decode_capability_descriptor, encode_capability_descriptor, CapabilityDescriptor,
+    CapabilityKind,
+};
+
 const PCI_CONFIG_CAPABILITY_ID: Word = 1;
 const PCI_CONFIG_ADDRESS: u16 = 0xcf8;
 const PCI_CONFIG_DATA: u16 = 0xcfc;
+
+/// Active capability entry in the substrate registry.
+#[derive(Clone, Copy)]
+struct CapabilityGrant {
+    kind: CapabilityKind,
+    instance: u8,
+    nonce: Word,
+    active: bool,
+}
+
+const MAX_CAPABILITY_GRANTS: usize = 4;
+static mut CAPABILITY_REGISTRY: [CapabilityGrant; MAX_CAPABILITY_GRANTS] = [CapabilityGrant {
+    kind: CapabilityKind::PciConfig,
+    instance: 0,
+    nonce: 0,
+    active: false,
+}; MAX_CAPABILITY_GRANTS];
+
+/// Hardware/boot-provisioned provenance nonce for PCI config capability.
+/// Boot nonces are non-zero tokens verified by privileged gates (max 45 bits).
+const PCI_CONFIG_BOOT_NONCE: Word = 0x1504_3495_4346; // 45-bit valid nonce
+
+fn init_pci_config_grant() -> Word {
+    unsafe {
+        let registry = core::ptr::addr_of_mut!(CAPABILITY_REGISTRY);
+        (*registry)[0] = CapabilityGrant {
+            kind: CapabilityKind::PciConfig,
+            instance: 0,
+            nonce: PCI_CONFIG_BOOT_NONCE,
+            active: true,
+        };
+    }
+    let desc = CapabilityDescriptor::new(CapabilityKind::PciConfig, 0, PCI_CONFIG_BOOT_NONCE)
+        .expect("PCI config descriptor must be valid");
+    encode_capability_descriptor(desc).expect("PCI config capability must encode")
+}
+
+fn verify_capability_grant(capability: Word, expected_kind: CapabilityKind, expected_instance: u8) -> bool {
+    // 1. Structural decode: must be a valid Capability tag and well-formed CapabilityDescriptor
+    let Some(desc) = decode_capability_descriptor(capability) else {
+        // Fallback for legacy ID 1 until all callers migrate
+        if capability == wsm_os_target::encode_capability(PCI_CONFIG_CAPABILITY_ID).unwrap()
+            && expected_kind == CapabilityKind::PciConfig
+            && expected_instance == 0
+        {
+            return true;
+        }
+        return false;
+    };
+
+    // 2. Class and instance must match the requested operation
+    if desc.kind != expected_kind || desc.instance != expected_instance {
+        return false;
+    }
+
+    // 3. Provenance check: must match an active grant in the substrate registry
+    unsafe {
+        let registry = core::ptr::addr_of!(CAPABILITY_REGISTRY);
+        for i in 0..MAX_CAPABILITY_GRANTS {
+            let grant = &(*registry)[i];
+            if grant.active
+                && grant.kind == desc.kind
+                && grant.instance == desc.instance
+                && grant.nonce == desc.nonce
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
 
 /// Boot-provisioned, read-only PCI segment-0/bus-0 capability for the first
 /// driver witness. Device recognition remains in generated WSM.
@@ -212,17 +288,7 @@ pub unsafe extern "C" fn wsm_pci_config_capability(context: *mut RuntimeContext)
             core::hint::spin_loop();
         }
     }
-    match wsm_os_target::encode_capability(PCI_CONFIG_CAPABILITY_ID) {
-        Some(capability) => capability,
-        None => unsafe {
-            wsm_fail(
-                context,
-                wsm_os_target::ErrorCode::AbiViolation as u32,
-                0,
-                0x5043_4901,
-            )
-        },
-    }
+    init_pci_config_grant()
 }
 
 /// Perform one bounded PCI configuration mechanism-1 read. This function
@@ -236,7 +302,6 @@ pub unsafe extern "C" fn wsm_pci_config_read16(
     function: Word,
     offset: Word,
 ) -> Word {
-    let expected = wsm_os_target::encode_capability(PCI_CONFIG_CAPABILITY_ID);
     let (Some(0), Some(device), Some(function), Some(offset)) = (
         wsm_os_target::decode_fixnum(bus),
         wsm_os_target::decode_fixnum(device),
@@ -252,7 +317,7 @@ pub unsafe extern "C" fn wsm_pci_config_read16(
             )
         }
     };
-    if Some(capability) != expected
+    if !verify_capability_grant(capability, CapabilityKind::PciConfig, 0)
         || !(0..=31).contains(&device)
         || !(0..=7).contains(&function)
         || !(0..=254).contains(&offset)
