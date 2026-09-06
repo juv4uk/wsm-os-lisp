@@ -1,6 +1,6 @@
 {
-  "assembly_digest": "edac7ed3507695453b3c451632a2e2e0368074cb9107fe58cb804987eab27d56",
-  "cml_sha": "655c4c34e4912b550ffac96d0dee245093671384",
+  "assembly_digest": "fe60595baf1923306d8606935682db3c8ab2e26858c7aebb77a0868054b9f267",
+  "cml_sha": "7adfd0b8ae7bbc092af861c80b3cea433e2eba58",
   "digest_algorithm": "sha256",
   "exported": [
     "wsm_entry"
@@ -17,7 +17,7 @@
     "wsm_pci_config_capability",
     "wsm_pci_config_read16"
   ],
-  "object_digest": "e116acafe07b7ad1cb8b647f2227a6dfa413c81bdc047b6094bce4d6cae3bec3",
+  "object_digest": "800d3a6322c8781cec323abb2939e803d8f082d2ec3a6e1200fc8e6cfdb56979",
   "schema": "wsm-d1-pci-config-capability-fixture-artifact-manifest",
   "schema_version": 2,
   "source_file_digest": "2f9ef1d1d9c8a662e20b318402976fa2e1e13c6806b809cb3f2c6784095d8976",

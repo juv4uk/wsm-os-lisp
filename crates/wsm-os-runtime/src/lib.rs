@@ -117,7 +117,7 @@ fn release_arena(addr: usize) {
 }
 
 const _: () = assert!(RESULT_REGISTER.as_bytes()[0] == b'r');
-const _: () = assert!(RUNTIME_IMPORTS.len() == 11);
+const _: () = assert!(RUNTIME_IMPORTS.len() == 14);
 
 pub type FailureHandler = extern "C" fn(context: *const RuntimeContext, code: u32) -> !;
 

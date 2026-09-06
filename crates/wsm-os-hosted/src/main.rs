@@ -73,6 +73,113 @@ pub extern "C" fn wsm_pci_config_read16(
     wsm_os_target::encode_fixnum(value).unwrap()
 }
 
+// ---------------------------------------------------------------------------
+// Hosted MMIO mocks — simulate virtio-blk COMMON_CFG for d2 fixture
+// ---------------------------------------------------------------------------
+
+use std::sync::atomic::{AtomicU32, Ordering};
+
+/// Simulated device status register (COMMON_CFG_STATUS at offset 20 = 0x14).
+static MOCK_DEVICE_STATUS: AtomicU32 = AtomicU32::new(0);
+
+const MMIO_HOSTED_NONCE: Word = 0x1A04_9512_4347; // 45-bit valid nonce (max 0x1FFF_FFFF_FFFF)
+
+#[unsafe(no_mangle)]
+pub extern "C" fn wsm_mmio_capability(_context: *mut RuntimeContext) -> Word {
+    let desc = CapabilityDescriptor::new(CapabilityKind::Mmio, 0, MMIO_HOSTED_NONCE)
+        .expect("MMIO descriptor must be valid");
+    encode_capability_descriptor(desc).expect("MMIO capability must encode")
+}
+
+fn hosted_verify_mmio_capability(capability: Word) -> bool {
+    if let Some(desc) = decode_capability_descriptor(capability) {
+        desc.kind == CapabilityKind::Mmio
+            && desc.instance == 0
+            && desc.nonce == MMIO_HOSTED_NONCE
+    } else {
+        false
+    }
+}
+
+/// Hosted 32-bit MMIO read — returns simulated register value.
+#[unsafe(no_mangle)]
+pub extern "C" fn wsm_mmio_read32(
+    context: *mut RuntimeContext,
+    capability: Word,
+    offset: Word,
+) -> Word {
+    let Some(offset) = wsm_os_target::decode_fixnum(offset) else {
+        unsafe {
+            wsm_fail(
+                context,
+                wsm_os_target::ErrorCode::AbiViolation as u32,
+                capability,
+                0x4D494F01,
+            )
+        }
+    };
+    if !hosted_verify_mmio_capability(capability)
+        || !(0..=4095).contains(&offset)
+        || offset % 4 != 0
+    {
+        unsafe {
+            wsm_fail(
+                context,
+                wsm_os_target::ErrorCode::AbiViolation as u32,
+                capability,
+                0x4D494F02,
+            )
+        }
+    }
+    // Offset 20 (0x14) = COMMON_CFG_STATUS; other offsets read as 0
+    let value: u32 = if offset == 20 {
+        MOCK_DEVICE_STATUS.load(Ordering::SeqCst)
+    } else {
+        0
+    };
+    wsm_os_target::encode_fixnum(value as i64).unwrap()
+}
+
+/// Hosted 32-bit MMIO write — stores to simulated register.
+#[unsafe(no_mangle)]
+pub extern "C" fn wsm_mmio_write32(
+    context: *mut RuntimeContext,
+    capability: Word,
+    offset: Word,
+    value: Word,
+) -> Word {
+    let (Some(offset), Some(value)) = (
+        wsm_os_target::decode_fixnum(offset),
+        wsm_os_target::decode_fixnum(value),
+    ) else {
+        unsafe {
+            wsm_fail(
+                context,
+                wsm_os_target::ErrorCode::AbiViolation as u32,
+                capability,
+                0x4D494F04,
+            )
+        }
+    };
+    if !hosted_verify_mmio_capability(capability)
+        || !(0..=4095).contains(&offset)
+        || offset % 4 != 0
+    {
+        unsafe {
+            wsm_fail(
+                context,
+                wsm_os_target::ErrorCode::AbiViolation as u32,
+                capability,
+                0x4D494F05,
+            )
+        }
+    }
+    if offset == 20 {
+        MOCK_DEVICE_STATUS.store(value as u32, Ordering::SeqCst);
+    }
+    wsm_os_target::NIL
+}
+
 extern "C" fn hosted_failure(context_ptr: *const RuntimeContext, code: u32) -> ! {
     let ctx = unsafe { &*context_ptr };
     let kind_str = match ctx.condition.kind {

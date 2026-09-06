@@ -98,7 +98,7 @@ wsm_entry:
     call wsm_eq
     jmp .Lcond_end_6
 .Lcond_branch_8:
-    movabsq $2, %rax
+    movabsq $18446744073709551612, %rax
     movabsq $1, %rcx
     cmpq %rcx, %rax
     je .Lcond_branch_9

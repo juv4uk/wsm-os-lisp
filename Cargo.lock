@@ -9,6 +9,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
+name = "bit_field"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e4b40c7323adcfc0a41c4b88143ed58346ff65a288fc144329c5c45e05d70c6"
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -80,10 +86,16 @@ checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 [[package]]
 name = "cml"
 version = "0.1.0"
-source = "git+https://github.com/juv4uk/cml.git?rev=655c4c34e4912b550ffac96d0dee245093671384#655c4c34e4912b550ffac96d0dee245093671384"
+source = "git+https://github.com/juv4uk/cml.git?rev=7adfd0b8ae7bbc092af861c80b3cea433e2eba58#7adfd0b8ae7bbc092af861c80b3cea433e2eba58"
 dependencies = [
- "wsm-os-target 0.1.0 (git+https://github.com/juv4uk/wsm-os.git?rev=a6b92cd17113faca6bf9e4b7e9b460169d6d6671)",
+ "wsm-os-target 0.1.0 (git+https://github.com/juv4uk/wsm-os-lisp.git?rev=a6b92cd17113faca6bf9e4b7e9b460169d6d6671)",
 ]
+
+[[package]]
+name = "const_fn"
+version = "0.4.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "413d67b29ef1021b4d60f4aa1e925ca031751e213832b4b1d588fae623c05c60"
 
 [[package]]
 name = "cpufeatures"
@@ -457,6 +469,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
+name = "volatile"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "442887c63f2c839b346c192d047a7c87e73d0689c9157b00b53dcc27dd5ea793"
+
+[[package]]
 name = "wasm-bindgen"
 version = "0.2.127"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -553,6 +571,7 @@ dependencies = [
  "bootloader_api",
  "wsm-os-runtime",
  "wsm-os-target 0.1.0",
+ "x86_64",
 ]
 
 [[package]]
@@ -569,11 +588,24 @@ version = "0.1.0"
 [[package]]
 name = "wsm-os-target"
 version = "0.1.0"
-source = "git+https://github.com/juv4uk/wsm-os.git?rev=a6b92cd17113faca6bf9e4b7e9b460169d6d6671#a6b92cd17113faca6bf9e4b7e9b460169d6d6671"
+source = "git+https://github.com/juv4uk/wsm-os-lisp.git?rev=a6b92cd17113faca6bf9e4b7e9b460169d6d6671#a6b92cd17113faca6bf9e4b7e9b460169d6d6671"
 
 [[package]]
 name = "wsm-os-virtio"
 version = "0.1.0"
+
+[[package]]
+name = "x86_64"
+version = "0.15.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be4ec631e1a81d50e46c35a4a00322bd076c47491b64c2fb10a7ffa89002c697"
+dependencies = [
+ "bit_field",
+ "bitflags 2.13.1",
+ "const_fn",
+ "rustversion",
+ "volatile",
+]
 
 [[package]]
 name = "zmij"

@@ -197,10 +197,11 @@
 
    ("WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B" .
     ((priority . 9.0)
+     (done . t)
      (capabilities . (wsm cml no-std x86_64 qemu pci virtio block-device capability-abi))
      (depends-on . (WSM-OS-WSM-PCI-CONFIG-CAPABILITY-D1))
      (origin . wsm-os-lisp)
-     (context . "Owner amended ADR-003 on 2026-09-01: production device logic belongs in compiled WSM over a minimal capability ABI. Rust may remain bootstrap/reference/test code. QEMU already attaches a separate virtio-blk disk; the guest still lacks a real capability path to it.")
+     (context . "D2 milestone completed 2026-09-07: WSM virtio-blk MMIO status negotiation via bounded capability. Fixture d2-virtio-blk-status-fixture: WSM writes ACKNOWLEDGE (1) to common-cfg STATUS register (offset 20), reads back, eq-compares. Kernel walks PCI cap list for BDF 00:05.0 to find common-cfg BAR; uses bootloader physical_memory_offset (map-physical-memory enabled via BOOTLOADER_CONFIG) for BAR virtual address. QEMU 3/3: d1-pci-config-capability, d1-pci-config-bounds, d2-virtio-blk-status all pass.")
      (description . "Implement the minimal WSM virtio-blk guest driver over bounded machine capabilities: WSM owns discovery, register protocol, virtqueue descriptors, request state, completion and error interpretation; the machine substrate owns only privileged PCI/MMIO access, DMA mapping, interrupt entry and fences. Compare an optional Rust reference against the WSM driver on the same QEMU sector/checksum. Do not add a general scheduler or claim physical/power-loss durability.")))
 
    ("WSM-OS-WSM-PCI-IDENTITY-D0" .

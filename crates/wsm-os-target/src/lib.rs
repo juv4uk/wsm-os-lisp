@@ -87,6 +87,9 @@ pub const RUNTIME_IMPORTS: &[&str] = &[
     "wsm_closure_environment",
     "wsm_pci_config_capability",
     "wsm_pci_config_read16",
+    "wsm_mmio_capability",
+    "wsm_mmio_read32",
+    "wsm_mmio_write32",
     "wsm_fail",
 ];
 
@@ -103,7 +106,7 @@ pub enum ErrorCode {
 pub const MY_LISP_CONTRACT: &str = "3.0";
 pub const MY_LISP_SHA: &str = "667b587394dc8d3fc8dadff7c925e5bce68ed887";
 pub const CML_CLAIMED_CONTRACT: &str = "2.0";
-pub const CML_SHA: &str = "655c4c34e4912b550ffac96d0dee245093671384";
+pub const CML_SHA: &str = "7adfd0b8ae7bbc092af861c80b3cea433e2eba58";
 pub const FIRST_FIXTURE_SOURCE: &str = "(cons (quote A) (quote B))";
 pub const FIRST_FIXTURE_EXPECTED: &str = "(A . B)";
 

@@ -37,3 +37,4 @@ truncate -s 1M "$data_disk"
 
 run_fixture d1-pci-config-capability-fixture
 run_fixture d1-pci-config-bounds-fixture
+run_fixture d2-virtio-blk-status-fixture

@@ -1,0 +1,2 @@
+WSM-OS BOOT schema=1 arch=x86_64 status=ok
+WSM-OS DRIVER schema=1 driver=virtio-blk stage=mmio-status value=t execution=wsm status=ok

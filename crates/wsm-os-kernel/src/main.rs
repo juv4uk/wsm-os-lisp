@@ -1,7 +1,16 @@
 #![no_std]
 #![no_main]
 
-use bootloader_api::{entry_point, BootInfo};
+use bootloader_api::config::Mapping;
+use bootloader_api::{BootloaderConfig, entry_point, BootInfo};
+
+pub static BOOTLOADER_CONFIG: BootloaderConfig = {
+    let mut config = BootloaderConfig::new_default();
+    config.mappings.physical_memory = Some(Mapping::Dynamic);
+    config
+};
+
+entry_point!(kernel_main, config = &BOOTLOADER_CONFIG);
 use core::arch::asm;
 use core::mem::MaybeUninit;
 use core::panic::PanicInfo;
@@ -11,9 +20,17 @@ use wsm_os_target::{decode_symbol, ClosureDescriptor, Word};
 mod fs_records;
 mod guest_block;
 
-entry_point!(kernel_main);
 
-fn kernel_main(_boot_info: &'static mut BootInfo) -> ! {
+fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    // Store the physical-memory offset provided by the bootloader so that
+    // MMIO physical addresses (from PCI BARs) can be translated to virtual
+    // addresses accessible under the kernel's page tables.
+    unsafe {
+        PHYS_MEM_OFFSET = boot_info
+            .physical_memory_offset
+            .into_option()
+            .unwrap_or(0);
+    }
     serial_init();
     serial_write(b"WSM-OS BOOT schema=1 arch=x86_64 status=ok\n");
 
@@ -140,6 +157,18 @@ fn kernel_main(_boot_info: &'static mut BootInfo) -> ! {
         // A bounded capability violation must have trapped through wsm_fail.
         serial_write(b"WSM-OS DRIVER schema=1 driver=virtio-blk stage=pci-config error=missing-condition status=error\n");
         qemu_exit(0x12)
+    } else if fixture_name == "d2-virtio-blk-status-fixture" {
+        if result == wsm_os_target::CANONICAL_T || result == wsm_os_target::TRUE {
+            serial_write(
+                b"WSM-OS DRIVER schema=1 driver=virtio-blk stage=mmio-status value=t execution=wsm status=ok\n",
+            );
+            qemu_exit(0x10)
+        } else {
+            serial_write(
+                b"WSM-OS DRIVER schema=1 driver=virtio-blk stage=mmio-status error=unexpected-value status=error\n",
+            );
+            qemu_exit(0x12)
+        }
     } else {
         if is_first_fixture_result(result, &context) {
             serial_write(b"WSM-OS RESULT schema=1 value=(A . B) status=ok\n");
@@ -224,6 +253,14 @@ static mut CAPABILITY_REGISTRY: [CapabilityGrant; MAX_CAPABILITY_GRANTS] = [Capa
     nonce: 0,
     active: false,
 }; MAX_CAPABILITY_GRANTS];
+
+/// Physical memory offset from bootloader (virtual = PHYS_MEM_OFFSET + physical).
+/// Zero means identity-mapping (physical == virtual), which is safe as a fallback.
+static mut PHYS_MEM_OFFSET: u64 = 0;
+
+/// Physical base address of the virtio-blk VirtIO common-config MMIO region.
+/// Resolved once by walking the PCI capability list for BDF 00:05.0.
+static mut MMIO_COMMON_CFG_PHYS: u64 = 0;
 
 /// Hardware/boot-provisioned provenance nonce for PCI config capability.
 /// Boot nonces are non-zero tokens verified by privileged gates (max 45 bits).
@@ -350,6 +387,181 @@ pub unsafe extern "C" fn wsm_pci_config_read16(
             )
         },
     }
+}
+
+// ---------------------------------------------------------------------------
+// MMIO substrate — VirtIO common-config discovery and bounded register access
+// ---------------------------------------------------------------------------
+
+/// Raw 32-bit PCI config read (mechanism only; not exposed to WSM).
+fn raw_pci_read32(dev: u32, offset: u32) -> u32 {
+    let address = 0x8000_0000_u32 | (dev << 11) | (offset & 0xFC);
+    unsafe { outl(PCI_CONFIG_ADDRESS, address) };
+    unsafe { inl(PCI_CONFIG_DATA) }
+}
+
+/// Resolve the physical base address of a PCI BAR (supports 32-bit and 64-bit).
+fn raw_bar_phys(dev: u32, bar_num: u8) -> u64 {
+    let bar_offset = 0x10 + (bar_num as u32) * 4;
+    let bar_low = raw_pci_read32(dev, bar_offset);
+    if bar_low & 0x01 != 0 {
+        return 0; // I/O BAR — skip
+    }
+    let base_low = (bar_low & 0xFFFF_FFF0) as u64;
+    let is_64bit = ((bar_low >> 1) & 0x3) == 2;
+    if is_64bit {
+        let bar_high = raw_pci_read32(dev, bar_offset + 4);
+        base_low | ((bar_high as u64) << 32)
+    } else {
+        base_low
+    }
+}
+
+/// Walk the VirtIO PCI capability list for BDF 00:05.0 to find the
+/// COMMON_CFG region (cfg_type = 1) and cache its physical address.
+/// Substrate mechanism; never called from WSM.
+fn init_mmio_common_cfg() {
+    const VIRTIO_DEV: u32 = 5; // BDF 00:05.0
+
+    // PCI status register bit 4: Capabilities List present
+    let cmd_status = raw_pci_read32(VIRTIO_DEV, 0x04);
+    if (cmd_status >> 16) as u16 & 0x10 == 0 {
+        return; // no capability list
+    }
+
+    // Capabilities pointer is at PCI config offset 0x34 (byte 0 of the dword)
+    let cap_ptr_raw = raw_pci_read32(VIRTIO_DEV, 0x34);
+    let mut cap_offset = (cap_ptr_raw & 0xFC) as u32;
+
+    let mut iters = 0_u32;
+    while cap_offset >= 0x40 && cap_offset < 0x100 && iters < 32 {
+        iters += 1;
+
+        // Dword at cap_offset:
+        //   byte 0 = cap_id
+        //   byte 1 = cap_next
+        //   byte 2 = cap_len
+        //   byte 3 = cfg_type  (VirtIO-specific)
+        let dw0 = raw_pci_read32(VIRTIO_DEV, cap_offset);
+        let cap_id = (dw0 & 0xFF) as u8;
+        let cap_next = ((dw0 >> 8) & 0xFC) as u32;
+        let cfg_type = (dw0 >> 24) as u8;
+
+        if cap_id == 0x09 && cfg_type == 1 {
+            // VIRTIO_PCI_CAP_COMMON_CFG: byte 4 = bar, bytes 8-11 = offset_in_bar
+            let dw1 = raw_pci_read32(VIRTIO_DEV, cap_offset + 4);
+            let bar_num = (dw1 & 0xFF) as u8;
+            let offset_in_bar = raw_pci_read32(VIRTIO_DEV, cap_offset + 8);
+            let bar_phys = raw_bar_phys(VIRTIO_DEV, bar_num);
+            if bar_phys != 0 {
+                unsafe {
+                    MMIO_COMMON_CFG_PHYS = bar_phys + offset_in_bar as u64;
+                }
+                return;
+            }
+        }
+
+        if cap_next == 0 {
+            break;
+        }
+        cap_offset = cap_next;
+    }
+
+    // Fallback: try BAR4 directly (QEMU modern virtio-blk typical layout)
+    let fallback = raw_bar_phys(VIRTIO_DEV, 4);
+    if fallback != 0 {
+        unsafe { MMIO_COMMON_CFG_PHYS = fallback; }
+    }
+}
+
+/// Boot nonce for MMIO capability (45-bit valid range).
+const MMIO_BOOT_NONCE: Word = 0x1A04_9512_4347; // 45-bit valid nonce (max 0x1FFF_FFFF_FFFF)
+
+fn init_mmio_grant() -> Word {
+    init_mmio_common_cfg();
+    unsafe {
+        let registry = core::ptr::addr_of_mut!(CAPABILITY_REGISTRY);
+        (*registry)[1] = CapabilityGrant {
+            kind: CapabilityKind::Mmio,
+            instance: 0,
+            nonce: MMIO_BOOT_NONCE,
+            active: true,
+        };
+    }
+    let desc = CapabilityDescriptor::new(CapabilityKind::Mmio, 0, MMIO_BOOT_NONCE)
+        .expect("MMIO descriptor must be valid");
+    encode_capability_descriptor(desc).expect("MMIO capability must encode")
+}
+
+/// Provision an MMIO capability for the virtio-blk common-config region.
+/// Mechanism: reads BAR4 from PCI config, caches physical address.
+/// Policy (which registers to access) stays in WSM.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wsm_mmio_capability(context: *mut RuntimeContext) -> Word {
+    if context.is_null() {
+        loop {
+            core::hint::spin_loop();
+        }
+    }
+    init_mmio_grant()
+}
+
+/// Bounded 32-bit MMIO register read. Offset is a non-negative fixnum
+/// (byte offset within the common-config region, max 4095).
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wsm_mmio_read32(
+    context: *mut RuntimeContext,
+    capability: Word,
+    offset: Word,
+) -> Word {
+    let Some(offset) = wsm_os_target::decode_fixnum(offset) else {
+        unsafe { wsm_fail(context, wsm_os_target::ErrorCode::AbiViolation as u32, capability, 0x4D494F01) }
+    };
+    if !verify_capability_grant(capability, CapabilityKind::Mmio, 0)
+        || !(0..=4095).contains(&offset)
+        || offset % 4 != 0
+    {
+        unsafe { wsm_fail(context, wsm_os_target::ErrorCode::AbiViolation as u32, capability, 0x4D494F02) }
+    }
+    let phys_base = unsafe { MMIO_COMMON_CFG_PHYS };
+    if phys_base == 0 {
+        unsafe { wsm_fail(context, wsm_os_target::ErrorCode::AbiViolation as u32, capability, 0x4D494F03) }
+    }
+    let virt_addr = unsafe { PHYS_MEM_OFFSET } + phys_base + offset as u64;
+    // SAFETY: capability verified, offset bounded, address resolved from bootloader mapping
+    let value = unsafe { (virt_addr as *const u32).read_volatile() };
+    wsm_os_target::encode_fixnum(value as i64).expect("32-bit MMIO read must fit in fixnum")
+}
+
+/// Bounded 32-bit MMIO register write. Offset and value are non-negative fixnums.
+/// Returns NIL on success.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wsm_mmio_write32(
+    context: *mut RuntimeContext,
+    capability: Word,
+    offset: Word,
+    value: Word,
+) -> Word {
+    let (Some(offset), Some(value)) = (
+        wsm_os_target::decode_fixnum(offset),
+        wsm_os_target::decode_fixnum(value),
+    ) else {
+        unsafe { wsm_fail(context, wsm_os_target::ErrorCode::AbiViolation as u32, capability, 0x4D494F04) }
+    };
+    if !verify_capability_grant(capability, CapabilityKind::Mmio, 0)
+        || !(0..=4095).contains(&offset)
+        || offset % 4 != 0
+    {
+        unsafe { wsm_fail(context, wsm_os_target::ErrorCode::AbiViolation as u32, capability, 0x4D494F05) }
+    }
+    let phys_base = unsafe { MMIO_COMMON_CFG_PHYS };
+    if phys_base == 0 {
+        unsafe { wsm_fail(context, wsm_os_target::ErrorCode::AbiViolation as u32, capability, 0x4D494F06) }
+    }
+    let virt_addr = unsafe { PHYS_MEM_OFFSET } + phys_base + offset as u64;
+    // SAFETY: capability verified, offset bounded, address resolved from bootloader mapping
+    unsafe { (virt_addr as *mut u32).write_volatile(value as u32) };
+    wsm_os_target::NIL
 }
 
 extern "C" fn kernel_failure(context_ptr: *const RuntimeContext, _code: u32) -> ! {
