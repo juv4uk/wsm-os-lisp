@@ -8,4 +8,4 @@ build = "build.rs"
 
 [dependencies]
 wsm-os-runtime = { path = "../wsm-os-runtime" }
-wsm-os-target = { path = "../wsm-os-target" }
+wsm-os-target = { git = "https://github.com/juv4uk/wsm-target-contract.git", rev = "90fa2cf324d05d8a7baafcac620eb5360f05e5b3" }

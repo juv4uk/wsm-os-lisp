@@ -12,6 +12,11 @@ const ASSEMBLER_FAMILY: &str = "gnu-as";
 const OBJECT_CANONICALIZER: &str = "gnu-objcopy-remove-note-gnu-property";
 const TARGET_TRIPLE: &str = "x86_64-unknown-none";
 const OBJECT_FORMAT: &str = "elf64-x86-64";
+const MY_LISP_CONTRACT: &str = "3.0";
+const MY_LISP_REVISION: &str = "667b587394dc8d3fc8dadff7c925e5bce68ed887";
+const CML_SUPPORTED_CONTRACT: &str = "2.0";
+const CML_REVISION: &str = "73bff61e9515c7afdf2bdb981d6851b2061c21b4";
+const FIRST_FIXTURE_SOURCE: &str = "(cons (quote A) (quote B))";
 
 fn sha256(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
@@ -41,8 +46,7 @@ fn canonical_source(root: &Path, fixture_name: &str) -> (PathBuf, Vec<u8>, Strin
     let semantic = text.strip_suffix('\n').unwrap_or(text);
     if fixture_name == "fixture" {
         assert_eq!(
-            semantic,
-            wsm_os_target::FIRST_FIXTURE_SOURCE,
+            semantic, FIRST_FIXTURE_SOURCE,
             "committed fixture.wsm must equal the target-contract fixture"
         );
     }
@@ -127,14 +131,12 @@ fn build_metadata(
     assembly: &Path,
     object: &Path,
 ) -> (Value, Value) {
-    let root = repository_root();
-    let contract_path = root.join("target-contract.wsm");
     let (exports, imports, entry_start, entry_size) = inspect_symbols(object);
     let source_file_digest = sha256(source_bytes);
     let semantic_source_digest = sha256(semantic_source.as_bytes());
     let assembly_digest = file_sha256(assembly);
     let object_digest = file_sha256(object);
-    let target_contract_digest = file_sha256(&contract_path);
+    let target_contract_digest = sha256(wsm_os_target::CONTRACT_PROJECTION.as_bytes());
     let symbols = symbol_table();
     let literals = literal_table();
     let symbol_table_digest = compact_digest(&symbols);
@@ -147,10 +149,10 @@ fn build_metadata(
         "entry": wsm_os_target::ENTRY_SYMBOL,
         "target_abi_schema": wsm_os_target::CONTRACT_SCHEMA,
         "target_abi_version": wsm_os_target::CONTRACT_VERSION,
-        "my_lisp_contract": wsm_os_target::MY_LISP_CONTRACT,
-        "my_lisp_revision": wsm_os_target::MY_LISP_SHA,
-        "cml_supported_contract": wsm_os_target::CML_CLAIMED_CONTRACT,
-        "cml_revision": wsm_os_target::CML_SHA
+        "my_lisp_contract": MY_LISP_CONTRACT,
+        "my_lisp_revision": MY_LISP_REVISION,
+        "cml_supported_contract": CML_SUPPORTED_CONTRACT,
+        "cml_revision": CML_REVISION
     });
     let definition_id = format!("sha256:{}", compact_digest(&identity_material));
 
@@ -160,7 +162,7 @@ fn build_metadata(
         "digest_algorithm": "sha256",
         "source_semantic_digest": semantic_source_digest,
         "source_file_digest": source_file_digest,
-        "cml_sha": wsm_os_target::CML_SHA,
+        "cml_sha": CML_REVISION,
         "target_contract_digest": target_contract_digest,
         "assembly_digest": assembly_digest,
         "object_digest": object_digest,
@@ -188,12 +190,12 @@ fn build_metadata(
         },
         "contracts": {
             "my_lisp": {
-                "contract": wsm_os_target::MY_LISP_CONTRACT,
-                "revision": wsm_os_target::MY_LISP_SHA
+                "contract": MY_LISP_CONTRACT,
+                "revision": MY_LISP_REVISION
             },
             "cml": {
-                "supported_contract": wsm_os_target::CML_CLAIMED_CONTRACT,
-                "revision": wsm_os_target::CML_SHA
+                "supported_contract": CML_SUPPORTED_CONTRACT,
+                "revision": CML_REVISION
             },
             "target_abi": {
                 "schema": wsm_os_target::CONTRACT_SCHEMA,
@@ -304,7 +306,7 @@ fn verify(dir: &Path, fixture_name: &str) {
     let source_text = std::str::from_utf8(&source_bytes).expect("fixture source must be UTF-8");
     let semantic_source = source_text.strip_suffix('\n').unwrap_or(source_text);
     if fixture_name == "fixture" {
-        assert_eq!(semantic_source, wsm_os_target::FIRST_FIXTURE_SOURCE);
+        assert_eq!(semantic_source, FIRST_FIXTURE_SOURCE);
     }
     let (manifest, capsule) = build_metadata(
         fixture_name,

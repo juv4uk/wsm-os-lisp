@@ -1,9 +1,10 @@
 # wsm-os x86_64 target ABI v1
 
-The source of truth is the dependency-free `no_std` crate
-`crates/wsm-os-target`. [`target-contract.wsm`](../target-contract.wsm) is a
-generated projection checked byte-for-byte by the crate tests. CML should
-consume the crate rather than retype numeric tags.
+The source of truth is the dependency-free `no_std`
+[`wsm-os-target`](https://github.com/juv4uk/wsm-target-contract) crate in the
+neutral `wsm-target-contract` repository. Its `target-contract.wsm` is a
+generated projection checked byte-for-byte by crate tests. CML and this
+runtime consume that package rather than carrying separate numeric copies.
 
 ## Value word
 
@@ -100,10 +101,12 @@ target semantics also change.
 
 # wsm-os x86_64 цільовий ABI версія 1 (Ukrainian)
 
-Джерелом істини є крейт `crates/wsm-os-target`, що не має жодних залежностей
-(`no_std`). Файл [`target-contract.wsm`](../target-contract.wsm) — це згенерована
-проекція, яка байт-у-байт перевіряється тестами крейту. CML повинен
-використовувати цей крейт, а не переписувати числові теги вручну.
+Джерелом істини є крейт
+[`wsm-os-target`](https://github.com/juv4uk/wsm-target-contract), що не має
+жодних залежностей (`no_std`) і живе в нейтральному репозиторії
+`wsm-target-contract`. Його `target-contract.wsm` — це згенерована проекція,
+яка байт-у-байт перевіряється тестами крейту. CML і цей рантайм споживають
+той самий package, а не носять окремі числові копії.
 
 ## Слово значення (Value word)
 

@@ -6,7 +6,6 @@ members = [
     "crates/wsm-os-hosted",
     "crates/wsm-os-image",
     "crates/wsm-os-runtime",
-    "crates/wsm-os-target",
     "crates/wsm-os-kernel",
     "crates/wsm-os-fs-parser",
     "crates/wsm-os-virtio",

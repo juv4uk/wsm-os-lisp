@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cml = { git = "https://github.com/juv4uk/cml.git", rev = "7adfd0b8ae7bbc092af861c80b3cea433e2eba58" }
-wsm-os-target = { path = "../wsm-os-target" }
+cml = { git = "https://github.com/juv4uk/cml.git", rev = "73bff61e9515c7afdf2bdb981d6851b2061c21b4" }
+wsm-os-target = { git = "https://github.com/juv4uk/wsm-target-contract.git", rev = "90fa2cf324d05d8a7baafcac620eb5360f05e5b3" }
 sha2 = "0.10.8"
 hex = "0.4.3"
 serde_json = "1.0.122"

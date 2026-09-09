@@ -86,9 +86,9 @@ checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 [[package]]
 name = "cml"
 version = "0.1.0"
-source = "git+https://github.com/juv4uk/cml.git?rev=7adfd0b8ae7bbc092af861c80b3cea433e2eba58#7adfd0b8ae7bbc092af861c80b3cea433e2eba58"
+source = "git+https://github.com/juv4uk/cml.git?rev=73bff61e9515c7afdf2bdb981d6851b2061c21b4#73bff61e9515c7afdf2bdb981d6851b2061c21b4"
 dependencies = [
- "wsm-os-target 0.1.0 (git+https://github.com/juv4uk/wsm-os-lisp.git?rev=a6b92cd17113faca6bf9e4b7e9b460169d6d6671)",
+ "wsm-os-target",
 ]
 
 [[package]]
@@ -280,7 +280,7 @@ dependencies = [
  "hex",
  "serde_json",
  "sha2",
- "wsm-os-target 0.1.0",
+ "wsm-os-target",
 ]
 
 [[package]]
@@ -554,7 +554,7 @@ name = "wsm-os-hosted"
 version = "0.1.0"
 dependencies = [
  "wsm-os-runtime",
- "wsm-os-target 0.1.0",
+ "wsm-os-target",
 ]
 
 [[package]]
@@ -570,7 +570,7 @@ version = "0.1.0"
 dependencies = [
  "bootloader_api",
  "wsm-os-runtime",
- "wsm-os-target 0.1.0",
+ "wsm-os-target",
  "x86_64",
 ]
 
@@ -578,17 +578,13 @@ dependencies = [
 name = "wsm-os-runtime"
 version = "0.1.0"
 dependencies = [
- "wsm-os-target 0.1.0",
+ "wsm-os-target",
 ]
 
 [[package]]
 name = "wsm-os-target"
 version = "0.1.0"
-
-[[package]]
-name = "wsm-os-target"
-version = "0.1.0"
-source = "git+https://github.com/juv4uk/wsm-os-lisp.git?rev=a6b92cd17113faca6bf9e4b7e9b460169d6d6671#a6b92cd17113faca6bf9e4b7e9b460169d6d6671"
+source = "git+https://github.com/juv4uk/wsm-target-contract.git?rev=90fa2cf324d05d8a7baafcac620eb5360f05e5b3#90fa2cf324d05d8a7baafcac620eb5360f05e5b3"
 
 [[package]]
 name = "wsm-os-virtio"

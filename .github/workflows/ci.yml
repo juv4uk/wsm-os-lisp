@@ -19,8 +19,8 @@ jobs:
           rustc --version --verbose
       - name: Check formatting
         run: cargo fmt --check
-      - name: Check no_std target library
-        run: cargo check -p wsm-os-target --lib
+      - name: Check target ABI consumer
+        run: cargo check -p wsm-os-runtime --lib
       - name: Check runtime on the bare-metal target
         run: cargo check -p wsm-os-runtime --lib --target x86_64-unknown-none
       - name: Prove runtime core has no host imports
@@ -41,8 +41,8 @@ jobs:
           OVMF_VARS: /usr/share/OVMF/OVMF_VARS_4M.fd
           WSM_OS_QEMU_TIMEOUT: 20
         run: scripts/run-qemu-uefi.sh target/wsm-os-uefi.img
-      - name: Verify CML SHA provenance chain
-        run: scripts/check-cml-sha.sh
+      - name: Verify CML fixture provenance
+        run: scripts/check-cml-provenance.sh
       - name: Verify deterministic definition capsule
         run: scripts/check-definition-capsule.sh
       - name: Run ABI and projection tests
