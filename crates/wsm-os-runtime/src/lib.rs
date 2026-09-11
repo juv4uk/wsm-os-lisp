@@ -556,10 +556,7 @@ mod tests {
             admitted_error_code(ErrorCode::OutOfMemory as u32),
             ErrorCode::OutOfMemory
         );
-        assert_eq!(
-            admitted_error_code(ErrorCode::Type as u32),
-            ErrorCode::Type
-        );
+        assert_eq!(admitted_error_code(ErrorCode::Type as u32), ErrorCode::Type);
         assert_eq!(
             admitted_error_code(ErrorCode::InvalidSymbol as u32),
             ErrorCode::InvalidSymbol
