@@ -1,6 +1,9 @@
+use cml::ir::{Ir, Quoted};
 use cml::x86_freestanding::X86FreestandingBackend;
+use cml::x86_freestanding_metadata::X86SymbolMetadata;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
+use std::collections::BTreeSet;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -15,7 +18,7 @@ const OBJECT_FORMAT: &str = "elf64-x86-64";
 const MY_LISP_CONTRACT: &str = "3.0";
 const MY_LISP_REVISION: &str = "667b587394dc8d3fc8dadff7c925e5bce68ed887";
 const CML_SUPPORTED_CONTRACT: &str = "2.0";
-const CML_REVISION: &str = "73bff61e9515c7afdf2bdb981d6851b2061c21b4";
+const CML_REVISION: &str = "8fd013478703baec72a6957e7cba49ff2b6f64d2";
 const FIRST_FIXTURE_SOURCE: &str = "(cons (quote A) (quote B))";
 
 fn sha256(data: &[u8]) -> String {
@@ -110,24 +113,111 @@ fn inspect_symbols(object: &Path) -> (Vec<String>, Vec<String>, u64, u64) {
     )
 }
 
-fn symbol_table() -> Value {
-    json!([
-        {"id": 1, "name": "A", "encoded_word": wsm_os_target::encode_symbol(1).unwrap()},
-        {"id": 2, "name": "B", "encoded_word": wsm_os_target::encode_symbol(2).unwrap()}
-    ])
+fn symbol_table(symbols: &[X86SymbolMetadata]) -> Value {
+    Value::Array(
+        symbols
+            .iter()
+            .map(|symbol| {
+                json!({
+                    "id": symbol.id,
+                    "name": symbol.name,
+                    "encoded_word": symbol.encoded_word
+                })
+            })
+            .collect(),
+    )
 }
 
-fn literal_table() -> Value {
-    json!([
-        {"kind": "symbol", "symbol_id": 1, "encoded_word": wsm_os_target::encode_symbol(1).unwrap()},
-        {"kind": "symbol", "symbol_id": 2, "encoded_word": wsm_os_target::encode_symbol(2).unwrap()}
-    ])
+fn collect_quoted_symbol_names(quoted: &Quoted, names: &mut BTreeSet<String>) {
+    match quoted {
+        Quoted::Sym(name) => {
+            names.insert(name.to_uppercase());
+        }
+        Quoted::List(values) => {
+            for value in values {
+                collect_quoted_symbol_names(value, names);
+            }
+        }
+        Quoted::DottedList(values, tail) => {
+            for value in values {
+                collect_quoted_symbol_names(value, names);
+            }
+            collect_quoted_symbol_names(tail, names);
+        }
+        Quoted::Int(_)
+        | Quoted::Float(_)
+        | Quoted::Rational(_, _)
+        | Quoted::Str(_)
+        | Quoted::Nil => {}
+    }
+}
+
+fn collect_program_quoted_symbol_names(ir: &Ir, names: &mut BTreeSet<String>) {
+    match ir {
+        Ir::Quote(value) => collect_quoted_symbol_names(value, names),
+        Ir::Lambda { body, .. } => collect_program_quoted_symbol_names(body, names),
+        Ir::App { func, args } => {
+            collect_program_quoted_symbol_names(func, names);
+            for arg in args {
+                collect_program_quoted_symbol_names(arg, names);
+            }
+        }
+        Ir::Cond { branches } => {
+            for (test, body) in branches {
+                collect_program_quoted_symbol_names(test, names);
+                collect_program_quoted_symbol_names(body, names);
+            }
+        }
+        Ir::Let { bindings, body } => {
+            for (_, value) in bindings {
+                collect_program_quoted_symbol_names(value, names);
+            }
+            collect_program_quoted_symbol_names(body, names);
+        }
+        Ir::Def { value, .. } => collect_program_quoted_symbol_names(value, names),
+        Ir::Prim { args, .. } | Ir::TailSelfCall { args } => {
+            for arg in args {
+                collect_program_quoted_symbol_names(arg, names);
+            }
+        }
+        Ir::Int(_)
+        | Ir::Float(_)
+        | Ir::Rational(_, _)
+        | Ir::String(_)
+        | Ir::Buffer(_)
+        | Ir::Nil
+        | Ir::True
+        | Ir::Var(_)
+        | Ir::Builtin(_) => {}
+    }
+}
+
+fn literal_table(program: &[Ir], symbols: &[X86SymbolMetadata]) -> Value {
+    let mut quoted_names = BTreeSet::new();
+    for expression in program {
+        collect_program_quoted_symbol_names(expression, &mut quoted_names);
+    }
+    Value::Array(
+        symbols
+            .iter()
+            .filter(|symbol| quoted_names.contains(&symbol.name))
+            .map(|symbol| {
+                json!({
+                    "kind": "symbol",
+                    "symbol_id": symbol.id,
+                    "encoded_word": symbol.encoded_word
+                })
+            })
+            .collect(),
+    )
 }
 
 fn build_metadata(
     fixture_name: &str,
     source_bytes: &[u8],
     semantic_source: &str,
+    program: &[Ir],
+    compiler_symbols: &[X86SymbolMetadata],
     assembly: &Path,
     object: &Path,
 ) -> (Value, Value) {
@@ -137,8 +227,8 @@ fn build_metadata(
     let assembly_digest = file_sha256(assembly);
     let object_digest = file_sha256(object);
     let target_contract_digest = sha256(wsm_os_target::CONTRACT_PROJECTION.as_bytes());
-    let symbols = symbol_table();
-    let literals = literal_table();
+    let symbols = symbol_table(compiler_symbols);
+    let literals = literal_table(program, compiler_symbols);
     let symbol_table_digest = compact_digest(&symbols);
     let literal_table_digest = compact_digest(&literals);
 
@@ -224,6 +314,7 @@ fn build_metadata(
             "entries": literals
         },
         "symbol_table": {
+            "authority": "cml-x86-freestanding-metadata",
             "digest": symbol_table_digest,
             "entries": symbols
         },
@@ -251,6 +342,19 @@ fn write_json(path: &Path, value: &Value) {
         .unwrap_or_else(|error| panic!("failed to write {}: {error}", path.display()));
 }
 
+fn compile_with_metadata(semantic_source: &str) -> (Vec<Ir>, cml::x86_freestanding_metadata::X86CompiledProgram) {
+    let exprs = cml::parser::parse(semantic_source).expect("fixture must parse");
+    let program = cml::lower::lower_program_with_tail_calls(&exprs).expect("fixture must lower");
+    let compiled = X86FreestandingBackend::new()
+        .compile_program_with_metadata(&program)
+        .expect("fixture must compile for x86_64-freestanding");
+    assert!(
+        compiled.validate_symbol_metadata(),
+        "CML symbol metadata must validate before artifact generation"
+    );
+    (program, compiled)
+}
+
 fn generate(output_dir: &Path, fixture_name: &str) {
     fs::create_dir_all(output_dir).expect("output directory must be creatable");
     let root = repository_root();
@@ -260,13 +364,9 @@ fn generate(output_dir: &Path, fixture_name: &str) {
         fs::write(&output_source, &source_bytes).expect("fixture source copy must succeed");
     }
 
-    let exprs = cml::parser::parse(&semantic_source).expect("fixture must parse");
-    let program = cml::lower::lower_program_with_tail_calls(&exprs).expect("fixture must lower");
-    let assembly_text = X86FreestandingBackend::new()
-        .compile_program(&program)
-        .expect("fixture must compile for x86_64-freestanding");
+    let (program, compiled) = compile_with_metadata(&semantic_source);
     let assembly = output_dir.join(format!("{}.s", fixture_name));
-    fs::write(&assembly, assembly_text).expect("assembly write must succeed");
+    fs::write(&assembly, &compiled.assembly).expect("assembly write must succeed");
 
     let object = output_dir.join(format!("{}.o", fixture_name));
     let status = Command::new("as")
@@ -287,6 +387,8 @@ fn generate(output_dir: &Path, fixture_name: &str) {
         fixture_name,
         &source_bytes,
         &semantic_source,
+        &program,
+        &compiled.symbols,
         &assembly,
         &object,
     );
@@ -308,11 +410,23 @@ fn verify(dir: &Path, fixture_name: &str) {
     if fixture_name == "fixture" {
         assert_eq!(semantic_source, FIRST_FIXTURE_SOURCE);
     }
+
+    let (program, compiled) = compile_with_metadata(semantic_source);
+    let assembly_path = dir.join(format!("{}.s", fixture_name));
+    let committed_assembly =
+        fs::read_to_string(&assembly_path).expect("fixture assembly must exist and be UTF-8");
+    assert_eq!(
+        committed_assembly, compiled.assembly,
+        "fixture assembly no longer matches pinned CML output"
+    );
+
     let (manifest, capsule) = build_metadata(
         fixture_name,
         &source_bytes,
         semantic_source,
-        &dir.join(format!("{}.s", fixture_name)),
+        &program,
+        &compiled.symbols,
+        &assembly_path,
         &dir.join(format!("{}.o", fixture_name)),
     );
     let committed_manifest: Value = serde_json::from_slice(
