@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+lock_file="contracts/my-lisp/compiler-corpus.lock.my"
+observation_lane="m5c-tail-call-fixture"
+
+fail() {
+  printf 'SHARED-ORACLE-FAIL: %s\n' "$1" >&2
+  exit 1
+}
+
+[[ -f "$lock_file" ]] || fail "missing $lock_file"
+
+readarray -t lock_values < <(python3 - "$lock_file" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+text = Path(sys.argv[1]).read_text(encoding="utf-8")
+revision = re.search(r'\(revision\s+"([0-9a-f]{40})"\)', text)
+ordinal = re.search(r'\(compiler-corpus-ordinal\s+(\d+)\)', text)
+path = re.search(r'\(path\s+([^\s\)]+)\)', text)
+repository = re.search(r'\(repository\s+([^\s\)]+)\)', text)
+if not all((revision, ordinal, path, repository)):
+    raise SystemExit("invalid compiler-corpus lock")
+print(repository.group(1))
+print(path.group(1))
+print(revision.group(1))
+print(ordinal.group(1))
+PY
+)
+
+repository=${lock_values[0]}
+corpus_path=${lock_values[1]}
+revision=${lock_values[2]}
+ordinal=${lock_values[3]}
+
+work_dir=$(mktemp -d)
+backup_dir="$work_dir/original"
+generated_dir="$work_dir/generated"
+mkdir -p "$backup_dir" "$generated_dir"
+
+restore() {
+  for ext in wsm s o; do
+    if [[ -f "$backup_dir/$observation_lane.$ext" ]]; then
+      cp "$backup_dir/$observation_lane.$ext" "artifacts/$observation_lane.$ext"
+    fi
+  done
+  rm -rf "$work_dir"
+}
+trap restore EXIT
+
+for ext in wsm s o; do
+  [[ -f "artifacts/$observation_lane.$ext" ]] \
+    || fail "missing committed observation-lane artifact artifacts/$observation_lane.$ext"
+  cp "artifacts/$observation_lane.$ext" "$backup_dir/$observation_lane.$ext"
+done
+
+corpus_file="$work_dir/conformance.my"
+if [[ -n "${MY_LISP_CORPUS_FILE:-}" ]]; then
+  cp "$MY_LISP_CORPUS_FILE" "$corpus_file"
+else
+  raw_url="https://raw.githubusercontent.com/$repository/$revision/$corpus_path"
+  curl --fail --silent --show-error --location "$raw_url" -o "$corpus_file" \
+    || fail "cannot fetch pinned oracle corpus $repository@$revision:$corpus_path"
+fi
+
+source_file="$work_dir/source.wsm"
+expected_file="$work_dir/expected.txt"
+record_file="$work_dir/record.txt"
+python3 - "$corpus_file" "$ordinal" "$source_file" "$expected_file" "$record_file" <<'PY'
+import ast
+import re
+import sys
+from pathlib import Path
+
+corpus, ordinal, source_out, expected_out, record_out = sys.argv[1:]
+ordinal = int(ordinal)
+records = [
+    line.strip()
+    for line in Path(corpus).read_text(encoding="utf-8").splitlines()
+    if line.lstrip().startswith("((") and "(compiler-corpus . t)" in line
+]
+if ordinal >= len(records):
+    raise SystemExit(f"compiler-corpus ordinal {ordinal} out of range ({len(records)} records)")
+record = records[ordinal]
+
+def string_field(name):
+    match = re.search(rf'\({re.escape(name)}\s+\.\s+("(?:\\.|[^"\\])*")\)', record)
+    return ast.literal_eval(match.group(1)) if match else None
+
+expr = string_field("expr")
+expected = string_field("expected")
+error = string_field("error")
+if expr is None:
+    raise SystemExit("selected compiler-corpus record has no expr")
+if expected is None or error is not None:
+    raise SystemExit("first bare-metal shared slice requires a value-producing record")
+
+Path(source_out).write_text(expr + "\n", encoding="utf-8")
+Path(expected_out).write_text(expected + "\n", encoding="utf-8")
+Path(record_out).write_text(record + "\n", encoding="utf-8")
+PY
+
+expected=$(tr -d '\r\n' < "$expected_file")
+[[ -n "$expected" ]] || fail "empty oracle observation"
+
+# The first shared slice deliberately uses the already-proven canonical-t
+# target observation lane. This is a capability boundary, not a local expected
+# value: source and expected were both extracted from the pinned upstream row.
+# Other result shapes stay explicit unsupported until a generic serializer is
+# admitted rather than guessed here.
+if [[ "$expected" != "t" ]]; then
+  fail "selected upstream fixture is outside the first canonical-t target observation slice"
+fi
+
+cp "$source_file" "artifacts/$observation_lane.wsm"
+WSM_FIXTURE="$observation_lane" cargo run --quiet -p m4-generator -- --output-dir "$generated_dir"
+cp "$generated_dir/$observation_lane.s" "artifacts/$observation_lane.s"
+cp "$generated_dir/$observation_lane.o" "artifacts/$observation_lane.o"
+
+assert_equal() {
+  [[ "$1" == "$2" ]]
+}
+
+hosted=$(WSM_FIXTURE="$observation_lane" cargo run --quiet -p wsm-os-hosted)
+assert_equal "$expected" "$hosted" \
+  || fail "hosted observation '$hosted' differs from pinned oracle '$expected'"
+
+# Exercise the same comparator with a deliberate in-memory corruption. The
+# gate must reject it while the overall test remains green.
+if assert_equal "${expected}__deliberate_mutation__" "$hosted"; then
+  fail "deliberately mutated expectation was accepted"
+fi
+printf '%s\n' 'SHARED-ORACLE-MUTATION-DETECTED: deliberately wrong expected value rejected.'
+
+WSM_FIXTURE="$observation_lane" cargo build --quiet -p wsm-os-kernel --target x86_64-unknown-none
+image="$work_dir/shared-oracle-uefi.img"
+cargo run --quiet -p wsm-os-image -- \
+  target/x86_64-unknown-none/debug/wsm-os-kernel \
+  "$image"
+[[ -s "$image" ]] || fail "shared-oracle UEFI image was not produced"
+
+qemu_expected="$work_dir/qemu-expected.txt"
+printf 'WSM-OS BOOT schema=1 arch=x86_64 status=ok\nWSM-OS RESULT schema=1 value=%s status=ok\n' \
+  "$expected" > "$qemu_expected"
+
+qemu_output=$(WSM_QEMU_TRANSCRIPT="$qemu_expected" scripts/run-qemu-uefi.sh "$image")
+qemu_value=$(printf '%s\n' "$qemu_output" \
+  | sed -n 's/^WSM-OS RESULT schema=1 value=\(.*\) status=ok$/\1/p')
+assert_equal "$expected" "$qemu_value" \
+  || fail "QEMU observation '$qemu_value' differs from pinned oracle '$expected'"
+
+printf 'SHARED-ORACLE-PASS: my-lisp@%s compiler-corpus[%s] oracle=%s hosted=%s qemu=%s\n' \
+  "$revision" "$ordinal" "$expected" "$hosted" "$qemu_value"

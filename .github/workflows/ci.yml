@@ -45,6 +45,12 @@ jobs:
           OVMF_VARS: /usr/share/OVMF/OVMF_VARS_4M.fd
           WSM_OS_QEMU_TIMEOUT: 20
         run: scripts/run-qemu-uefi.sh target/wsm-os-uefi.img
+      - name: Prove pinned my-lisp oracle parity on hosted and QEMU
+        env:
+          OVMF_CODE: /usr/share/OVMF/OVMF_CODE_4M.fd
+          OVMF_VARS: /usr/share/OVMF/OVMF_VARS_4M.fd
+          WSM_OS_QEMU_TIMEOUT: 20
+        run: bash scripts/check-shared-oracle-corpus.sh
       - name: Verify CML fixture provenance
         run: scripts/check-cml-provenance.sh
       - name: Verify deterministic definition capsule

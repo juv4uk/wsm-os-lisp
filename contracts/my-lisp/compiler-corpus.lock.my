@@ -1,0 +1,17 @@
+; Consumer lock for juv4uk/my-lisp#67.
+; This file selects one upstream compiler-corpus record for the first
+; hosted+QEMU shared-parity slice. Source and expected observation are read
+; from the pinned upstream file at test time; they are not copied here.
+(compiler-corpus-lock
+  (source
+    (repository juv4uk/my-lisp)
+    (path tests/fixtures/conformance.my))
+  (revision "4a5dba0d1d61103385406ef2821d76661442621c")
+  ; Zero-based among records carrying (compiler-corpus . t).
+  ; At this pinned revision ordinal 2 is a value-producing Canon/eq case.
+  ; The test deliberately does not duplicate its expr or expected value here.
+  (selector
+    (compiler-corpus-ordinal 2))
+  (authority
+    (issue 67)
+    (role semantic-oracle)))
