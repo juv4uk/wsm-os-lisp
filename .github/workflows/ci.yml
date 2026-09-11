@@ -8,7 +8,7 @@ on:
 jobs:
   target-abi:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - name: Check repository role authority
@@ -51,6 +51,12 @@ jobs:
           OVMF_VARS: /usr/share/OVMF/OVMF_VARS_4M.fd
           WSM_OS_QEMU_TIMEOUT: 20
         run: bash scripts/check-shared-oracle-corpus.sh
+      - name: Bind shared oracle provenance through QEMU transcript
+        env:
+          OVMF_CODE: /usr/share/OVMF/OVMF_CODE_4M.fd
+          OVMF_VARS: /usr/share/OVMF/OVMF_VARS_4M.fd
+          WSM_OS_QEMU_TIMEOUT: 20
+        run: bash scripts/check-shared-oracle-provenance.sh
       - name: Verify CML fixture provenance
         run: scripts/check-cml-provenance.sh
       - name: Verify deterministic definition capsule
