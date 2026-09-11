@@ -2,7 +2,7 @@
 #![no_main]
 
 use bootloader_api::config::Mapping;
-use bootloader_api::{BootloaderConfig, entry_point, BootInfo};
+use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
 
 pub static BOOTLOADER_CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();
@@ -20,16 +20,12 @@ use wsm_os_target::{decode_symbol, ClosureDescriptor, Word};
 mod fs_records;
 mod guest_block;
 
-
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     // Store the physical-memory offset provided by the bootloader so that
     // MMIO physical addresses (from PCI BARs) can be translated to virtual
     // addresses accessible under the kernel's page tables.
     unsafe {
-        PHYS_MEM_OFFSET = boot_info
-            .physical_memory_offset
-            .into_option()
-            .unwrap_or(0);
+        PHYS_MEM_OFFSET = boot_info.physical_memory_offset.into_option().unwrap_or(0);
     }
     serial_init();
     serial_write(b"WSM-OS BOOT schema=1 arch=x86_64 status=ok\n");
@@ -86,7 +82,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         serial_write(b"WSM-OS RESULT schema=1 error=abi-violation status=error\n");
         qemu_exit(0x12)
     } else if fixture_name == "m5c-tail-call-fixture" {
-        if result == wsm_os_target::TRUE {
+        if result == wsm_os_target::CANONICAL_T {
             serial_write(b"WSM-OS RESULT schema=1 value=t status=ok\n");
             qemu_exit(0x10)
         } else {
@@ -130,7 +126,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
             qemu_exit(0x12)
         }
     } else if fixture_name == "d0-virtio-identity-fixture" {
-        if result == wsm_os_target::CANONICAL_T || result == wsm_os_target::TRUE {
+        if result == wsm_os_target::CANONICAL_T {
             serial_write(
                 b"WSM-OS DRIVER schema=1 driver=virtio-blk stage=identity value=t execution=wsm status=ok\n",
             );
@@ -142,7 +138,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
             qemu_exit(0x12)
         }
     } else if fixture_name == "d1-pci-config-capability-fixture" {
-        if result == wsm_os_target::CANONICAL_T || result == wsm_os_target::TRUE {
+        if result == wsm_os_target::CANONICAL_T {
             serial_write(
                 b"WSM-OS DRIVER schema=1 driver=virtio-blk stage=pci-config value=t execution=wsm status=ok\n",
             );
@@ -158,7 +154,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         serial_write(b"WSM-OS DRIVER schema=1 driver=virtio-blk stage=pci-config error=missing-condition status=error\n");
         qemu_exit(0x12)
     } else if fixture_name == "d2-virtio-blk-status-fixture" {
-        if result == wsm_os_target::CANONICAL_T || result == wsm_os_target::TRUE {
+        if result == wsm_os_target::CANONICAL_T {
             serial_write(
                 b"WSM-OS DRIVER schema=1 driver=virtio-blk stage=mmio-status value=t execution=wsm status=ok\n",
             );
@@ -233,7 +229,6 @@ use wsm_os_target::{
     CapabilityKind,
 };
 
-const PCI_CONFIG_CAPABILITY_ID: Word = 1;
 const PCI_CONFIG_ADDRESS: u16 = 0xcf8;
 const PCI_CONFIG_DATA: u16 = 0xcfc;
 
@@ -252,7 +247,8 @@ static mut CAPABILITY_REGISTRY: [CapabilityGrant; MAX_CAPABILITY_GRANTS] = [Capa
     instance: 0,
     nonce: 0,
     active: false,
-}; MAX_CAPABILITY_GRANTS];
+};
+    MAX_CAPABILITY_GRANTS];
 
 /// Physical memory offset from bootloader (virtual = PHYS_MEM_OFFSET + physical).
 /// Zero means identity-mapping (physical == virtual), which is safe as a fallback.
@@ -281,25 +277,22 @@ fn init_pci_config_grant() -> Word {
     encode_capability_descriptor(desc).expect("PCI config capability must encode")
 }
 
-fn verify_capability_grant(capability: Word, expected_kind: CapabilityKind, expected_instance: u8) -> bool {
-    // 1. Structural decode: must be a valid Capability tag and well-formed CapabilityDescriptor
+fn verify_capability_grant(
+    capability: Word,
+    expected_kind: CapabilityKind,
+    expected_instance: u8,
+) -> bool {
+    // Structural decode: a capability must carry the current descriptor
+    // shape. Legacy numeric IDs are representation history, not authority.
     let Some(desc) = decode_capability_descriptor(capability) else {
-        // Fallback for legacy ID 1 until all callers migrate
-        if capability == wsm_os_target::encode_capability(PCI_CONFIG_CAPABILITY_ID).unwrap()
-            && expected_kind == CapabilityKind::PciConfig
-            && expected_instance == 0
-        {
-            return true;
-        }
         return false;
     };
 
-    // 2. Class and instance must match the requested operation
     if desc.kind != expected_kind || desc.instance != expected_instance {
         return false;
     }
 
-    // 3. Provenance check: must match an active grant in the substrate registry
+    // Provenance check: descriptor must match an active substrate-issued grant.
     unsafe {
         let registry = core::ptr::addr_of!(CAPABILITY_REGISTRY);
         for i in 0..MAX_CAPABILITY_GRANTS {
@@ -470,7 +463,9 @@ fn init_mmio_common_cfg() {
     // Fallback: try BAR4 directly (QEMU modern virtio-blk typical layout)
     let fallback = raw_bar_phys(VIRTIO_DEV, 4);
     if fallback != 0 {
-        unsafe { MMIO_COMMON_CFG_PHYS = fallback; }
+        unsafe {
+            MMIO_COMMON_CFG_PHYS = fallback;
+        }
     }
 }
 
@@ -515,17 +510,38 @@ pub unsafe extern "C" fn wsm_mmio_read32(
     offset: Word,
 ) -> Word {
     let Some(offset) = wsm_os_target::decode_fixnum(offset) else {
-        unsafe { wsm_fail(context, wsm_os_target::ErrorCode::AbiViolation as u32, capability, 0x4D494F01) }
+        unsafe {
+            wsm_fail(
+                context,
+                wsm_os_target::ErrorCode::AbiViolation as u32,
+                capability,
+                0x4D494F01,
+            )
+        }
     };
     if !verify_capability_grant(capability, CapabilityKind::Mmio, 0)
         || !(0..=4095).contains(&offset)
         || offset % 4 != 0
     {
-        unsafe { wsm_fail(context, wsm_os_target::ErrorCode::AbiViolation as u32, capability, 0x4D494F02) }
+        unsafe {
+            wsm_fail(
+                context,
+                wsm_os_target::ErrorCode::AbiViolation as u32,
+                capability,
+                0x4D494F02,
+            )
+        }
     }
     let phys_base = unsafe { MMIO_COMMON_CFG_PHYS };
     if phys_base == 0 {
-        unsafe { wsm_fail(context, wsm_os_target::ErrorCode::AbiViolation as u32, capability, 0x4D494F03) }
+        unsafe {
+            wsm_fail(
+                context,
+                wsm_os_target::ErrorCode::AbiViolation as u32,
+                capability,
+                0x4D494F03,
+            )
+        }
     }
     let virt_addr = unsafe { PHYS_MEM_OFFSET } + phys_base + offset as u64;
     // SAFETY: capability verified, offset bounded, address resolved from bootloader mapping
@@ -546,17 +562,38 @@ pub unsafe extern "C" fn wsm_mmio_write32(
         wsm_os_target::decode_fixnum(offset),
         wsm_os_target::decode_fixnum(value),
     ) else {
-        unsafe { wsm_fail(context, wsm_os_target::ErrorCode::AbiViolation as u32, capability, 0x4D494F04) }
+        unsafe {
+            wsm_fail(
+                context,
+                wsm_os_target::ErrorCode::AbiViolation as u32,
+                capability,
+                0x4D494F04,
+            )
+        }
     };
     if !verify_capability_grant(capability, CapabilityKind::Mmio, 0)
         || !(0..=4095).contains(&offset)
         || offset % 4 != 0
     {
-        unsafe { wsm_fail(context, wsm_os_target::ErrorCode::AbiViolation as u32, capability, 0x4D494F05) }
+        unsafe {
+            wsm_fail(
+                context,
+                wsm_os_target::ErrorCode::AbiViolation as u32,
+                capability,
+                0x4D494F05,
+            )
+        }
     }
     let phys_base = unsafe { MMIO_COMMON_CFG_PHYS };
     if phys_base == 0 {
-        unsafe { wsm_fail(context, wsm_os_target::ErrorCode::AbiViolation as u32, capability, 0x4D494F06) }
+        unsafe {
+            wsm_fail(
+                context,
+                wsm_os_target::ErrorCode::AbiViolation as u32,
+                capability,
+                0x4D494F06,
+            )
+        }
     }
     let virt_addr = unsafe { PHYS_MEM_OFFSET } + phys_base + offset as u64;
     // SAFETY: capability verified, offset bounded, address resolved from bootloader mapping
@@ -571,6 +608,7 @@ extern "C" fn kernel_failure(context_ptr: *const RuntimeContext, _code: u32) -> 
         2 => b"TYPE",
         3 => b"SYMBOL",
         4 => b"ABI",
+        5 => b"NUMERIC_OVERFLOW",
         _ => b"UNKNOWN",
     };
     serial_write(b"WSM-OS CONDITION schema=1 kind=");
@@ -632,8 +670,7 @@ fn is_m5a_fixture_result(value: Word, context: &RuntimeContext) -> bool {
     let Ok(cell) = context.cell(value) else {
         return false;
     };
-    wsm_os_target::decode_fixnum(cell.car) == Some(40)
-        && (cell.cdr == wsm_os_target::CANONICAL_T || cell.cdr == wsm_os_target::TRUE)
+    wsm_os_target::decode_fixnum(cell.car) == Some(40) && cell.cdr == wsm_os_target::CANONICAL_T
 }
 
 fn is_m5b_success_fixture_result(value: Word, context: &RuntimeContext) -> bool {
@@ -699,7 +736,9 @@ fn repl_fixture() -> ! {
                     serial_write_signed_decimal(n);
                     serial_write(b"\n> ");
                 } else {
-                    serial_write(b"WSM-OS CONDITION schema=1 kind=NUMERIC_OVERFLOW source=repl value=");
+                    serial_write(
+                        b"WSM-OS CONDITION schema=1 kind=NUMERIC_OVERFLOW source=repl value=",
+                    );
                     serial_write(input);
                     serial_write(b"\n> ");
                 }

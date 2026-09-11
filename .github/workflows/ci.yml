@@ -13,6 +13,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check repository role authority
         run: bash scripts/check-role-authority.sh
+      - name: Check semantic authority
+        run: bash scripts/check-semantic-authority.sh
       - name: Install pinned Rust toolchain
         run: |
           rustup toolchain install nightly-2026-07-27 --profile minimal \

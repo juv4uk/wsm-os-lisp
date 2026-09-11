@@ -1,7 +1,9 @@
 use std::mem::MaybeUninit;
 
 use wsm_os_runtime::{ConsCell, RuntimeContext, wsm_fail};
-use wsm_os_target::{ClosureDescriptor, FIRST_FIXTURE_SOURCE, Word, decode_fixnum, decode_symbol};
+use wsm_os_target::{ClosureDescriptor, Word, decode_fixnum, decode_symbol};
+
+const FIRST_FIXTURE_SOURCE: &str = "(cons (quote A) (quote B))";
 
 core::arch::global_asm!(
     include_str!(concat!(env!("OUT_DIR"), "/fixture.s")),
@@ -13,11 +15,10 @@ unsafe extern "C" {
 }
 
 use wsm_os_target::{
-    decode_capability_descriptor, encode_capability_descriptor, CapabilityDescriptor,
-    CapabilityKind,
+    CapabilityDescriptor, CapabilityKind, decode_capability_descriptor,
+    encode_capability_descriptor,
 };
 
-const PCI_CONFIG_CAPABILITY_ID: Word = 1;
 const PCI_CONFIG_HOSTED_NONCE: Word = 0x1504_3495_4346; // 45-bit valid nonce
 
 #[unsafe(no_mangle)]
@@ -28,13 +29,11 @@ pub extern "C" fn wsm_pci_config_capability(_context: *mut RuntimeContext) -> Wo
 }
 
 fn hosted_verify_pci_capability(capability: Word) -> bool {
-    if let Some(desc) = decode_capability_descriptor(capability) {
+    decode_capability_descriptor(capability).is_some_and(|desc| {
         desc.kind == CapabilityKind::PciConfig
             && desc.instance == 0
             && desc.nonce == PCI_CONFIG_HOSTED_NONCE
-    } else {
-        capability == wsm_os_target::encode_capability(PCI_CONFIG_CAPABILITY_ID).unwrap()
-    }
+    })
 }
 
 /// Hosted reference mechanism for the fixed QEMU D1 fixture BDF 00:05.0.
@@ -92,13 +91,9 @@ pub extern "C" fn wsm_mmio_capability(_context: *mut RuntimeContext) -> Word {
 }
 
 fn hosted_verify_mmio_capability(capability: Word) -> bool {
-    if let Some(desc) = decode_capability_descriptor(capability) {
-        desc.kind == CapabilityKind::Mmio
-            && desc.instance == 0
-            && desc.nonce == MMIO_HOSTED_NONCE
-    } else {
-        false
-    }
+    decode_capability_descriptor(capability).is_some_and(|desc| {
+        desc.kind == CapabilityKind::Mmio && desc.instance == 0 && desc.nonce == MMIO_HOSTED_NONCE
+    })
 }
 
 /// Hosted 32-bit MMIO read — returns simulated register value.
@@ -187,6 +182,7 @@ extern "C" fn hosted_failure(context_ptr: *const RuntimeContext, code: u32) -> !
         2 => "TYPE",
         3 => "SYMBOL",
         4 => "ABI",
+        5 => "NUMERIC_OVERFLOW",
         _ => "UNKNOWN",
     };
     eprintln!(
@@ -201,18 +197,9 @@ fn render(value: Word, context: &RuntimeContext) -> Result<String, &'static str>
         return Ok("()".to_string());
     }
     if value == wsm_os_target::TRUE {
-        return Ok("t".to_string());
+        return Err("legacy true tag is not admitted semantic truth");
     }
-    // 2026-09-02: wsm-os-runtime's eq/atom no longer produce Tag::True (a
-    // manufactured primitive canonical WSM never had) -- they produce
-    // canonical Symbol("t"), encoded with the reserved SYMBOL_ID_MAX
-    // sentinel id (see wsm-os-runtime::CANONICAL_T's own comment for why a
-    // sentinel, not a proven-unique id, given wsm-os-target's per-program
-    // symbol interning). Render it the same way the old TAG_TRUE case was
-    // rendered, before falling through to this fixture's own hardcoded
-    // per-program symbol table (which never registered this id, since it
-    // is not a symbol *this* compiled program itself interned).
-    if let Some(wsm_os_target::SYMBOL_ID_MAX) = decode_symbol(value) {
+    if value == wsm_os_target::CANONICAL_T {
         return Ok("t".to_string());
     }
     if let Some(integer) = decode_fixnum(value) {
@@ -271,4 +258,35 @@ fn main() {
         "{}",
         render(result, &context).expect("generated result must render")
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    extern "C" fn unexpected_failure(_context: *const RuntimeContext, _code: u32) -> ! {
+        panic!("unexpected hosted failure")
+    }
+
+    #[test]
+    fn legacy_true_tag_is_not_rendered_as_language_t() {
+        let mut heap = [MaybeUninit::<ConsCell>::uninit(); 1];
+        let runtime =
+            unsafe { RuntimeContext::new(heap.as_mut_ptr(), heap.len(), unexpected_failure) };
+        assert_eq!(
+            render(wsm_os_target::CANONICAL_T, &runtime),
+            Ok("t".to_string())
+        );
+        assert_eq!(
+            render(wsm_os_target::TRUE, &runtime),
+            Err("legacy true tag is not admitted semantic truth")
+        );
+    }
+
+    #[test]
+    fn legacy_numeric_capability_id_is_not_authority() {
+        let legacy = wsm_os_target::encode_capability(1).unwrap();
+        assert!(!hosted_verify_pci_capability(legacy));
+        assert!(!hosted_verify_mmio_capability(legacy));
+    }
 }
