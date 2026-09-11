@@ -58,8 +58,49 @@ else
   raw_status="different-before-gpt-canonicalization"
 fi
 
-cmp -s "$canonical_a" "$canonical_b" \
-  || fail "same kernel differs outside audited GPT identity/CRC variance"
+if ! cmp -s "$canonical_a" "$canonical_b"; then
+  python3 - "$canonical_a" "$canonical_b" "$report_a" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+a_path, b_path, report_path = map(Path, sys.argv[1:])
+a = a_path.read_bytes()
+b = b_path.read_bytes()
+report = json.loads(report_path.read_text(encoding="utf-8"))
+limit = min(len(a), len(b))
+diffs = [index for index in range(limit) if a[index] != b[index]]
+if len(a) != len(b):
+    diffs.extend(range(limit, max(len(a), len(b))))
+
+ranges = []
+if diffs:
+    start = previous = diffs[0]
+    for index in diffs[1:]:
+        if index != previous + 1:
+            ranges.append((start, previous))
+            start = index
+        previous = index
+    ranges.append((start, previous))
+
+partition_start = int(report["first_partition_lba"]) * int(report["sector_size"])
+print(
+    f"UEFI-REPRODUCIBILITY-DIFF: bytes={len(diffs)} ranges={len(ranges)} "
+    f"image_size_a={len(a)} image_size_b={len(b)} first_partition_offset={partition_start}"
+)
+for start, end in ranges[:64]:
+    region = "efi-partition" if start >= partition_start else "pre-partition"
+    a_sample = a[start : min(end + 1, start + 16)].hex()
+    b_sample = b[start : min(end + 1, start + 16)].hex()
+    print(
+        f"UEFI-REPRODUCIBILITY-DIFF-RANGE: start={start} end={end} "
+        f"length={end - start + 1} region={region} a={a_sample} b={b_sample}"
+    )
+if len(ranges) > 64:
+    print(f"UEFI-REPRODUCIBILITY-DIFF-RANGE: omitted={len(ranges) - 64}")
+PY
+  fail "same kernel differs outside audited GPT identity/CRC variance"
+fi
 printf 'UEFI-REPRODUCIBILITY-CANONICAL-PASS: repeated image build matches after GPT identity canonicalization.\n'
 
 # Prove the allowance cannot hide a payload change. Flip one byte well inside
