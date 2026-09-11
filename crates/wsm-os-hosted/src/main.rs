@@ -1,7 +1,7 @@
 use std::mem::MaybeUninit;
 
-use wsm_os_runtime::{wsm_fail, ConsCell, RuntimeContext};
-use wsm_os_target::{decode_fixnum, decode_symbol, ClosureDescriptor, FIRST_FIXTURE_SOURCE, Word};
+use wsm_os_runtime::{ConsCell, RuntimeContext, wsm_fail};
+use wsm_os_target::{ClosureDescriptor, FIRST_FIXTURE_SOURCE, Word, decode_fixnum, decode_symbol};
 
 core::arch::global_asm!(
     include_str!(concat!(env!("OUT_DIR"), "/fixture.s")),
@@ -13,8 +13,8 @@ unsafe extern "C" {
 }
 
 use wsm_os_target::{
-    decode_capability_descriptor, encode_capability_descriptor, CapabilityDescriptor,
-    CapabilityKind,
+    CapabilityDescriptor, CapabilityKind, decode_capability_descriptor,
+    encode_capability_descriptor,
 };
 
 const PCI_CONFIG_HOSTED_NONCE: Word = 0x1504_3495_4346; // 45-bit valid nonce
@@ -90,9 +90,7 @@ pub extern "C" fn wsm_mmio_capability(_context: *mut RuntimeContext) -> Word {
 
 fn hosted_verify_mmio_capability(capability: Word) -> bool {
     decode_capability_descriptor(capability).is_some_and(|desc| {
-        desc.kind == CapabilityKind::Mmio
-            && desc.instance == 0
-            && desc.nonce == MMIO_HOSTED_NONCE
+        desc.kind == CapabilityKind::Mmio && desc.instance == 0 && desc.nonce == MMIO_HOSTED_NONCE
     })
 }
 
@@ -271,8 +269,12 @@ mod tests {
     #[test]
     fn legacy_true_tag_is_not_rendered_as_language_t() {
         let mut heap = [MaybeUninit::<ConsCell>::uninit(); 1];
-        let runtime = unsafe { RuntimeContext::new(heap.as_mut_ptr(), heap.len(), unexpected_failure) };
-        assert_eq!(render(wsm_os_target::CANONICAL_T, &runtime), Ok("t".to_string()));
+        let runtime =
+            unsafe { RuntimeContext::new(heap.as_mut_ptr(), heap.len(), unexpected_failure) };
+        assert_eq!(
+            render(wsm_os_target::CANONICAL_T, &runtime),
+            Ok("t".to_string())
+        );
         assert_eq!(
             render(wsm_os_target::TRUE, &runtime),
             Err("legacy true tag is not admitted semantic truth")
