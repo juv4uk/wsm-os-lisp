@@ -1,7 +1,17 @@
 # ADR-001: compiler-first WSM machine path
 
-**Status:** ACCEPTED  
+**Status:** ACCEPTED, owner-amended 2026-09-11  
 **Date:** 2026-08-29
+
+> [!IMPORTANT]
+> **Post-rename authority note (2026-09-11):** this ADR was accepted before
+> the repository was renamed from `wsm-os` to `wsm-os-lisp`. Every reference
+> to `wsm-os` in the historical decision text below means **this repository in
+> its former name**, i.e. today's `wsm-os-lisp`. The later independent
+> `juv4uk/wsm-os` repository is a separate physical-platform research lab for
+> `juv4uk/wsm`; it does not inherit this ADR's target ABI, runtime, boot-image,
+> or QEMU-evidence authority. Current machine-readable ownership is in
+> [`repo.my`](../repo.my).
 
 ## Decision
 
@@ -157,8 +167,18 @@ manual assembly edits.
 ---
 # ADR-001: компілятор-перший шлях WSM-машини (Ukrainian)
 
-**Статус:** ACCEPTED  
+**Статус:** ACCEPTED, змінено власником 2026-09-11  
 **Дата:** 2026-08-29
+
+> [!IMPORTANT]
+> **Примітка про перейменування (2026-09-11):** цей ADR було прийнято до
+> перейменування репозиторію з `wsm-os` на `wsm-os-lisp`. Усі згадки
+> `wsm-os` в історичному тексті рішення нижче означають **цей репозиторій під
+> його старою назвою**, тобто теперішній `wsm-os-lisp`. Пізніший незалежний
+> `juv4uk/wsm-os` — окрема лабораторія дослідження фізичної платформи для
+> `juv4uk/wsm`; він не успадковує authority цього ADR над target ABI,
+> runtime, boot-образом чи QEMU-доказами. Поточний machine-readable розподіл
+> authority записаний у [`repo.my`](../repo.my).
 
 ## Рішення
 

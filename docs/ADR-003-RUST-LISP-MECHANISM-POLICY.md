@@ -2,8 +2,19 @@
 *ADR-003: Машинний механізм внизу, логіка WSM нагорі*
 
 **Date/Дата**: 2026-08-31
-**Status/Статус**: Accepted, owner-amended 2026-09-01 / Прийнято, змінено власником 2026-09-01
+**Status/Статус**: Accepted, owner-amended 2026-09-11 / Прийнято, змінено власником 2026-09-11
 **Context/Контекст**: The ecosystem requires a clear capability and architectural boundary between the underlying execution layer and the high-level orchestration/semantic layer. We need to ratify the division of responsibilities to avoid overlapping abstractions. / Екосистемі потрібна чітка межа можливостей та архітектури між базовим рівнем виконання та високорівневим рівнем оркестрації/семантики. Нам потрібно затвердити розподіл обов'язків, щоб уникнути дублювання абстракцій.
+
+> [!IMPORTANT]
+> **Repository-role amendment / Уточнення ролі репозиторію (2026-09-11):**
+> this ADR governs the machine-mechanism boundary implemented by
+> `wsm-os-lisp`, the bare-metal control target for the `my-lisp` lineage.
+> The separate `juv4uk/wsm-os` repository owns physical-platform research for
+> `juv4uk/wsm`; it does not own the ABI/runtime/boot-image described here.
+> / Цей ADR керує межею машинного механізму, реалізованою в `wsm-os-lisp` —
+> контрольному bare-metal таргеті лінії `my-lisp`. Окремий `juv4uk/wsm-os`
+> володіє дослідженням фізичної платформи для `juv4uk/wsm` і не володіє
+> ABI/runtime/boot-образом, описаними тут.
 
 ## 1. The Core Split / Базовий розподіл
 
@@ -68,9 +79,9 @@ existence does not make them bare-metal language primitives.
 
 ## 3. Binding to Existing Contracts / Зв'язок із наявними контрактами
 
-This mechanism-policy split anchors to existing wsm-os foundations:
-*Цей розподіл механізм-політика спирається на наявні фундаменти wsm-os:*
-- **TARGET-ABI.md**: The `wsm-os` ABI remains the strict C-compatible or standard scalar interface. Lisp compiles down to interactions through this ABI.
+This mechanism-policy split anchors to existing `wsm-os-lisp` foundations:
+*Цей розподіл механізм-політика спирається на наявні фундаменти `wsm-os-lisp`:*
+- **TARGET-ABI.md**: The `wsm-os-lisp` ABI remains the strict C-compatible or standard scalar interface. Lisp compiles down to interactions through this ABI.
 - **CML IR**: WSM program and driver logic are admitted and lowered by CML;
   target capability calls become versioned ABI imports rather than hidden
   Rust driver calls.
@@ -109,11 +120,15 @@ pure WSM device logic
 
 Rust reference success is evidence about the device protocol, not evidence
 that the WSM production driver works. QEMU and physical hardware remain
-distinct claims.
+distinct claims. A later physical run may graduate evidence for an already
+pinned `wsm-os-lisp` artifact; new physical-platform research itself belongs
+to the separate `wsm-os` lab.
 
 *Успіх Rust reference є evidence щодо протоколу пристрою, але не доказом
 роботи production-драйвера WSM. QEMU та фізичне залізо лишаються різними
-твердженнями.*
+твердженнями. Пізніший фізичний запуск може підвищити клас доказу вже
+зафіксованого артефакту `wsm-os-lisp`; саме нове дослідження фізичної
+платформи належить окремій лабораторії `wsm-os`.*
 
 ## 6. Rust+Python vs Rust+Lisp Decision / Порівняння Rust+Python та Rust+Lisp
 
