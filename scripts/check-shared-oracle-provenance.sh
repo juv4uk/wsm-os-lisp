@@ -138,9 +138,15 @@ WSM_FIXTURE="$observation_lane" cargo build --quiet -p wsm-os-kernel --target x8
 kernel="target/x86_64-unknown-none/debug/wsm-os-kernel"
 [[ -s "$kernel" ]] || fail "kernel artifact missing"
 
-image="$work_dir/shared-oracle-provenance.img"
-cargo run --quiet -p wsm-os-image -- "$kernel" "$image"
-[[ -s "$image" ]] || fail "UEFI image missing"
+image_a="$work_dir/shared-oracle-provenance-a.img"
+image_b="$work_dir/shared-oracle-provenance-b.img"
+cargo run --quiet -p wsm-os-image -- "$kernel" "$image_a"
+cargo run --quiet -p wsm-os-image -- "$kernel" "$image_b"
+[[ -s "$image_a" && -s "$image_b" ]] || fail "UEFI image rebuild omitted an output"
+cmp -s "$image_a" "$image_b" \
+  || fail "same pinned kernel did not rebuild a byte-identical UEFI image"
+printf 'SHARED-PROVENANCE-IMAGE-DETERMINISM-PASS: repeated UEFI image build is byte-identical.\n'
+image="$image_a"
 
 qemu_expected="$work_dir/qemu-expected.txt"
 printf 'WSM-OS BOOT schema=1 arch=x86_64 status=ok\nWSM-OS RESULT schema=1 value=%s status=ok\n' \
@@ -237,6 +243,7 @@ record = {
         "target_abi_version": capsule["contracts"]["target_abi"]["version"],
         "kernel_sha256": kernel_sha,
         "uefi_image_sha256": image_sha,
+        "uefi_image_rebuild": "byte-identical",
     },
     "observation": {
         "hosted_sha256": hosted_sha,
