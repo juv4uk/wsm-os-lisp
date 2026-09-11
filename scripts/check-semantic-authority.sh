@@ -45,6 +45,17 @@ forbid_literal "$hosted" 'PCI_CONFIG_CAPABILITY_ID'
 require_literal "$kernel" 'Legacy numeric IDs are representation history, not authority.'
 require_literal "$hosted" 'legacy_numeric_capability_id_is_not_authority'
 
+# Generated target code may report only the closed ErrorCode vocabulary from
+# the neutral target contract. A raw u32 must never become a new condition kind
+# merely because a backend passed it to wsm_fail; unknown codes collapse to
+# the already-ratified ABI-violation class.
+forbid_literal "$runtime" 'context.condition.kind = error_code;'
+forbid_literal "$runtime" '(context.failure_handler)(context as *const RuntimeContext, error_code)'
+require_literal "$runtime" 'const fn admitted_error_code(error_code: u32) -> ErrorCode'
+require_literal "$runtime" 'let admitted_code = admitted_error_code(error_code) as u32;'
+require_literal "$runtime" 'external_error_code_vocabulary_fails_closed'
+require_literal "$runtime" 'admitted_error_code(777), ErrorCode::AbiViolation'
+
 # Exact numeric semantics must not silently acquire a floating-point escape
 # hatch in the semantic runtime or boot validation path.
 if grep -REn '\bas f(32|64)\b|\bf(32|64)::|\bf(32|64)\b' \
@@ -52,4 +63,4 @@ if grep -REn '\bas f(32|64)\b|\bf(32|64)::|\bf(32|64)\b' \
   fail 'float use found in exact semantic runtime/boot path'
 fi
 
-printf '%s\n' 'SEMANTIC-AUTHORITY-PASS: canonical truth, nonce capabilities and exact numeric boundary fail closed.'
+printf '%s\n' 'SEMANTIC-AUTHORITY-PASS: canonical truth, closed errors, nonce capabilities and exact numeric boundary fail closed.'
