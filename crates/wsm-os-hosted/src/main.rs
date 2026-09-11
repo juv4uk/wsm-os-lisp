@@ -1,7 +1,9 @@
 use std::mem::MaybeUninit;
 
 use wsm_os_runtime::{ConsCell, RuntimeContext, wsm_fail};
-use wsm_os_target::{ClosureDescriptor, FIRST_FIXTURE_SOURCE, Word, decode_fixnum, decode_symbol};
+use wsm_os_target::{ClosureDescriptor, Word, decode_fixnum, decode_symbol};
+
+const FIRST_FIXTURE_SOURCE: &str = "(cons (quote A) (quote B))";
 
 core::arch::global_asm!(
     include_str!(concat!(env!("OUT_DIR"), "/fixture.s")),
