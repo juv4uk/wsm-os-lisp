@@ -82,11 +82,13 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         serial_write(b"WSM-OS RESULT schema=1 error=abi-violation status=error\n");
         qemu_exit(0x12)
     } else if fixture_name == "m5c-tail-call-fixture" {
-        if result == wsm_os_target::CANONICAL_T {
-            serial_write(b"WSM-OS RESULT schema=1 value=t status=ok\n");
+        // The shared-oracle lane is an observer, not an expected-value oracle.
+        // It serializes only already-ratified bounded target representations;
+        // the upstream my-lisp corpus owns the expected semantic value.
+        if emit_bounded_oracle_observation(result) {
             qemu_exit(0x10)
         } else {
-            serial_write(b"WSM-OS RESULT schema=1 error=abi-violation status=error\n");
+            serial_write(b"WSM-OS RESULT schema=1 error=unsupported-observation status=error\n");
             qemu_exit(0x12)
         }
     } else if fixture_name == "m1-identity-lambda-fixture" {
@@ -638,6 +640,23 @@ fn serial_write_word(mut value: Word) {
     serial_write(unsafe {
         core::slice::from_raw_parts(digits.as_ptr().add(cursor), digits.len() - cursor)
     });
+}
+
+fn emit_bounded_oracle_observation(value: Word) -> bool {
+    if value == wsm_os_target::NIL {
+        serial_write(b"WSM-OS RESULT schema=1 value=() status=ok\n");
+        true
+    } else if value == wsm_os_target::CANONICAL_T {
+        serial_write(b"WSM-OS RESULT schema=1 value=t status=ok\n");
+        true
+    } else if let Some(value) = wsm_os_target::decode_fixnum(value) {
+        serial_write(b"WSM-OS RESULT schema=1 value=");
+        serial_write_signed_decimal(value);
+        serial_write(b" status=ok\n");
+        true
+    } else {
+        false
+    }
 }
 
 fn is_first_fixture_result(value: Word, context: &RuntimeContext) -> bool {
