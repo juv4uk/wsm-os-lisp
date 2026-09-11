@@ -57,6 +57,8 @@ jobs:
           OVMF_VARS: /usr/share/OVMF/OVMF_VARS_4M.fd
           WSM_OS_QEMU_TIMEOUT: 20
         run: bash scripts/check-shared-oracle-provenance.sh
+      - name: Prove bounded UEFI image reproducibility
+        run: bash scripts/check-uefi-image-reproducibility.sh
       - name: Verify CML fixture provenance
         run: scripts/check-cml-provenance.sh
       - name: Verify deterministic definition capsule
