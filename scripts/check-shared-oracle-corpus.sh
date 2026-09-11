@@ -163,3 +163,75 @@ PY
 done
 
 printf 'SHARED-ORACLE-SET-PASS: revision=%s cases=%s\n' "$revision" "$passed"
+
+# Every pinned compiler-corpus row must be accounted for, even when the target
+# cannot execute it yet. This is deliberately a capability ledger, not a copy
+# of semantic expected values: classifications are derived from the upstream
+# record shape at CI time. Nothing may silently disappear between "confirmed"
+# and "unsupported".
+python3 - "$corpus_file" "${ordinals[*]}" <<'PY'
+import ast
+import re
+import sys
+from pathlib import Path
+
+corpus, selected_text = sys.argv[1:]
+selected = {int(item) for item in selected_text.split()}
+records = [
+    line.strip()
+    for line in Path(corpus).read_text(encoding="utf-8").splitlines()
+    if line.lstrip().startswith("((") and "(compiler-corpus . t)" in line
+]
+if not records:
+    raise SystemExit("SHARED-ORACLE-COVERAGE-FAIL: pinned compiler corpus is empty")
+if any(index >= len(records) for index in selected):
+    raise SystemExit("SHARED-ORACLE-COVERAGE-FAIL: selected ordinal outside pinned corpus")
+
+def string_field(record, name):
+    match = re.search(rf'\({re.escape(name)}\s+\.\s+("(?:\\.|[^"\\])*")\)', record)
+    return ast.literal_eval(match.group(1)) if match else None
+
+confirmed = 0
+unsupported = 0
+for index, record in enumerate(records):
+    expected = string_field(record, "expected")
+    error = string_field(record, "error")
+    if index in selected:
+        if expected != "t" or error is not None:
+            raise SystemExit(
+                f"SHARED-ORACLE-COVERAGE-FAIL: selected compiler-corpus[{index}] "
+                "does not fit current canonical-t observation capability"
+            )
+        status = "confirmed:end-to-end-canonical-t"
+        confirmed += 1
+    elif error is not None:
+        status = "unsupported:error-observation"
+        unsupported += 1
+    elif expected == "()":
+        status = "unsupported:nil-observation"
+        unsupported += 1
+    elif expected is not None and re.fullmatch(r"[+-]?\d+", expected):
+        status = "unsupported:generic-fixnum-observation"
+        unsupported += 1
+    elif expected is not None and re.fullmatch(r"[+-]?\d+/\d+", expected):
+        status = "unsupported:exact-rational-representation"
+        unsupported += 1
+    elif expected is not None and expected.startswith("("):
+        status = "unsupported:compound-value-observation"
+        unsupported += 1
+    elif expected is not None:
+        status = "unsupported:symbol-or-other-value-observation"
+        unsupported += 1
+    else:
+        raise SystemExit(
+            f"SHARED-ORACLE-COVERAGE-FAIL: compiler-corpus[{index}] has no classified observation"
+        )
+    print(f"SHARED-ORACLE-COVERAGE: compiler-corpus[{index}] status={status}")
+
+if confirmed != len(selected) or confirmed + unsupported != len(records):
+    raise SystemExit("SHARED-ORACLE-COVERAGE-FAIL: coverage accounting is incomplete")
+print(
+    f"SHARED-ORACLE-COVERAGE-PASS: total={len(records)} "
+    f"confirmed={confirmed} explicit-unsupported={unsupported}"
+)
+PY
