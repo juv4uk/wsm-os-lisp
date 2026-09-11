@@ -40,13 +40,22 @@ gpt_version=${image_stack[1]}
 work_dir=$(mktemp -d)
 trap 'rm -rf "$work_dir"' EXIT
 
+# bootloader 0.11.17 derives the FAT volume label from the kernel input file's
+# stem. The provenance bundle stores the exact ELF bytes as `kernel.elf`, but
+# the original image was built from Cargo's `wsm-os-kernel` output path.
+# Recreate that mechanical input identity instead of treating the resulting
+# FAT label as allowable variance.
+rebuild_kernel="$work_dir/wsm-os-kernel"
+cp "$kernel" "$rebuild_kernel"
+cmp -s "$kernel" "$rebuild_kernel" || fail "rebuild kernel copy changed bytes"
+
 image_b="$work_dir/rebuilt.img"
 canonical_a="$bundle/uefi.canonical.img"
 canonical_b="$work_dir/rebuilt.canonical.img"
 report_a="$bundle/uefi-canonicalization.json"
 report_b="$work_dir/rebuilt-canonicalization.json"
 
-cargo run --quiet -p wsm-os-image -- "$kernel" "$image_b"
+cargo run --quiet -p wsm-os-image -- "$rebuild_kernel" "$image_b"
 [[ -s "$image_b" ]] || fail "rebuild did not produce a UEFI image"
 
 python3 "$canonicalizer" "$image_a" "$canonical_a" --report "$report_a"
@@ -99,7 +108,7 @@ for start, end in ranges[:64]:
 if len(ranges) > 64:
     print(f"UEFI-REPRODUCIBILITY-DIFF-RANGE: omitted={len(ranges) - 64}")
 PY
-  fail "same kernel differs outside audited GPT identity/CRC variance"
+  fail "same image-builder inputs differ outside audited GPT identity/CRC variance"
 fi
 printf 'UEFI-REPRODUCIBILITY-CANONICAL-PASS: repeated image build matches after GPT identity canonicalization.\n'
 
@@ -133,13 +142,21 @@ printf 'UEFI-REPRODUCIBILITY-PAYLOAD-TAMPER-DETECTED: non-GPT payload mutation r
 # record produced by check-shared-oracle-provenance.sh.
 python3 - \
   "$record" "$report_a" "$report_b" "$raw_status" \
-  "$bootloader_version" "$gpt_version" <<'PY'
+  "$bootloader_version" "$gpt_version" "wsm-os-kernel" <<'PY'
 import hashlib
 import json
 import sys
 from pathlib import Path
 
-record_path, report_a_path, report_b_path, raw_status, bootloader_version, gpt_version = sys.argv[1:]
+(
+    record_path,
+    report_a_path,
+    report_b_path,
+    raw_status,
+    bootloader_version,
+    gpt_version,
+    kernel_input_basename,
+) = sys.argv[1:]
 record_path = Path(record_path)
 record = json.loads(record_path.read_text(encoding="utf-8"))
 a = json.loads(Path(report_a_path).read_text(encoding="utf-8"))
@@ -171,6 +188,11 @@ record["target"]["uefi_image_rebuild"] = {
     "normalization_schema": a["schema"],
     "normalization_schema_version": a["schema_version"],
     "allowed_variance": expected_allowed,
+    "mechanical_inputs": {
+        "kernel_bytes": "bound-by-kernel-sha256",
+        "kernel_input_basename": kernel_input_basename,
+        "fat_volume_label_derivation": "bootloader derives label from kernel input file stem",
+    },
     "mechanism": {
         "bootloader_version": bootloader_version,
         "gpt_version": gpt_version,
