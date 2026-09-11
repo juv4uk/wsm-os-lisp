@@ -15,7 +15,7 @@ const OBJECT_FORMAT: &str = "elf64-x86-64";
 const MY_LISP_CONTRACT: &str = "3.0";
 const MY_LISP_REVISION: &str = "667b587394dc8d3fc8dadff7c925e5bce68ed887";
 const CML_SUPPORTED_CONTRACT: &str = "2.0";
-const CML_REVISION: &str = "73bff61e9515c7afdf2bdb981d6851b2061c21b4";
+const CML_REVISION: &str = "8fd013478703baec72a6957e7cba49ff2b6f64d2";
 const FIRST_FIXTURE_SOURCE: &str = "(cons (quote A) (quote B))";
 
 fn sha256(data: &[u8]) -> String {
@@ -122,6 +122,41 @@ fn literal_table() -> Value {
         {"kind": "symbol", "symbol_id": 1, "encoded_word": wsm_os_target::encode_symbol(1).unwrap()},
         {"kind": "symbol", "symbol_id": 2, "encoded_word": wsm_os_target::encode_symbol(2).unwrap()}
     ])
+}
+
+fn compiler_symbol_projection(
+    compiled: &cml::x86_freestanding_metadata::X86CompiledProgram,
+) -> Value {
+    assert!(
+        compiled.validate_symbol_metadata(),
+        "CML compiler-owned symbol metadata must validate before export"
+    );
+    let entries: Vec<Value> = compiled
+        .symbols
+        .iter()
+        .map(|symbol| {
+            assert!(
+                symbol.id < wsm_os_target::SYMBOL_ID_MAX,
+                "ordinary symbol ID must stay below canonical-t sentinel"
+            );
+            assert_ne!(
+                symbol.encoded_word,
+                wsm_os_target::CANONICAL_T,
+                "ordinary symbol must never encode as canonical t"
+            );
+            json!({
+                "name": symbol.name,
+                "id": symbol.id,
+                "encoded_word": symbol.encoded_word
+            })
+        })
+        .collect();
+    json!({
+        "schema": "cml-x86-symbol-provenance",
+        "schema_version": 1,
+        "cml_revision": CML_REVISION,
+        "symbols": entries
+    })
 }
 
 fn build_metadata(
@@ -251,6 +286,16 @@ fn write_json(path: &Path, value: &Value) {
         .unwrap_or_else(|error| panic!("failed to write {}: {error}", path.display()));
 }
 
+fn compile_with_symbol_metadata(
+    semantic_source: &str,
+) -> cml::x86_freestanding_metadata::X86CompiledProgram {
+    let exprs = cml::parser::parse(semantic_source).expect("fixture must parse");
+    let program = cml::lower::lower_program_with_tail_calls(&exprs).expect("fixture must lower");
+    X86FreestandingBackend::new()
+        .compile_program_with_metadata(&program)
+        .expect("fixture must compile for x86_64-freestanding with symbol metadata")
+}
+
 fn generate(output_dir: &Path, fixture_name: &str) {
     fs::create_dir_all(output_dir).expect("output directory must be creatable");
     let root = repository_root();
@@ -260,13 +305,14 @@ fn generate(output_dir: &Path, fixture_name: &str) {
         fs::write(&output_source, &source_bytes).expect("fixture source copy must succeed");
     }
 
-    let exprs = cml::parser::parse(&semantic_source).expect("fixture must parse");
-    let program = cml::lower::lower_program_with_tail_calls(&exprs).expect("fixture must lower");
-    let assembly_text = X86FreestandingBackend::new()
-        .compile_program(&program)
-        .expect("fixture must compile for x86_64-freestanding");
+    let compiled = compile_with_symbol_metadata(&semantic_source);
+    let compiler_symbols = compiler_symbol_projection(&compiled);
     let assembly = output_dir.join(format!("{}.s", fixture_name));
-    fs::write(&assembly, assembly_text).expect("assembly write must succeed");
+    fs::write(&assembly, compiled.assembly).expect("assembly write must succeed");
+    write_json(
+        &output_dir.join(format!("{}-compiler-symbols.json", fixture_name)),
+        &compiler_symbols,
+    );
 
     let object = output_dir.join(format!("{}.o", fixture_name));
     let status = Command::new("as")
@@ -308,11 +354,31 @@ fn verify(dir: &Path, fixture_name: &str) {
     if fixture_name == "fixture" {
         assert_eq!(semantic_source, FIRST_FIXTURE_SOURCE);
     }
+
+    let compiled = compile_with_symbol_metadata(semantic_source);
+    let assembly_path = dir.join(format!("{}.s", fixture_name));
+    let committed_assembly =
+        fs::read_to_string(&assembly_path).expect("fixture assembly must exist and be UTF-8");
+    assert_eq!(
+        committed_assembly, compiled.assembly,
+        "CML assembly differs from committed artifact"
+    );
+    let compiler_symbols = compiler_symbol_projection(&compiled);
+    let committed_compiler_symbols: Value = serde_json::from_slice(
+        &fs::read(dir.join(format!("{}-compiler-symbols.json", fixture_name)))
+            .expect("compiler symbol metadata must exist"),
+    )
+    .expect("compiler symbol metadata must be valid JSON");
+    assert_eq!(
+        committed_compiler_symbols, compiler_symbols,
+        "compiler-owned symbol metadata mismatch"
+    );
+
     let (manifest, capsule) = build_metadata(
         fixture_name,
         &source_bytes,
         semantic_source,
-        &dir.join(format!("{}.s", fixture_name)),
+        &assembly_path,
         &dir.join(format!("{}.o", fixture_name)),
     );
     let committed_manifest: Value = serde_json::from_slice(
