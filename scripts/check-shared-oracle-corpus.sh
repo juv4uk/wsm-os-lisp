@@ -18,27 +18,29 @@ from pathlib import Path
 
 text = Path(sys.argv[1]).read_text(encoding="utf-8")
 revision = re.search(r'\(revision\s+"([0-9a-f]{40})"\)', text)
-ordinal = re.search(r'\(compiler-corpus-ordinal\s+(\d+)\)', text)
+ordinals = re.search(r'\(compiler-corpus-ordinals\s+\(([0-9\s]+)\)\)', text)
 path = re.search(r'\(path\s+([^\s\)]+)\)', text)
 repository = re.search(r'\(repository\s+([^\s\)]+)\)', text)
-if not all((revision, ordinal, path, repository)):
+if not all((revision, ordinals, path, repository)):
     raise SystemExit("invalid compiler-corpus lock")
+selected = [item for item in ordinals.group(1).split() if item]
+if not selected:
+    raise SystemExit("compiler-corpus selector is empty")
 print(repository.group(1))
 print(path.group(1))
 print(revision.group(1))
-print(ordinal.group(1))
+print(" ".join(selected))
 PY
 )
 
 repository=${lock_values[0]}
 corpus_path=${lock_values[1]}
 revision=${lock_values[2]}
-ordinal=${lock_values[3]}
+read -r -a ordinals <<< "${lock_values[3]}"
 
 work_dir=$(mktemp -d)
 backup_dir="$work_dir/original"
-generated_dir="$work_dir/generated"
-mkdir -p "$backup_dir" "$generated_dir"
+mkdir -p "$backup_dir"
 
 restore() {
   for ext in wsm s o; do
@@ -65,10 +67,20 @@ else
     || fail "cannot fetch pinned oracle corpus $repository@$revision:$corpus_path"
 fi
 
-source_file="$work_dir/source.wsm"
-expected_file="$work_dir/expected.txt"
-record_file="$work_dir/record.txt"
-python3 - "$corpus_file" "$ordinal" "$source_file" "$expected_file" "$record_file" <<'PY'
+assert_equal() {
+  [[ "$1" == "$2" ]]
+}
+
+passed=0
+for ordinal in "${ordinals[@]}"; do
+  case_dir="$work_dir/case-$ordinal"
+  generated_dir="$case_dir/generated"
+  mkdir -p "$generated_dir"
+  source_file="$case_dir/source.wsm"
+  expected_file="$case_dir/expected.txt"
+  record_file="$case_dir/record.txt"
+
+  python3 - "$corpus_file" "$ordinal" "$source_file" "$expected_file" "$record_file" <<'PY'
 import ast
 import re
 import sys
@@ -95,61 +107,59 @@ error = string_field("error")
 if expr is None:
     raise SystemExit("selected compiler-corpus record has no expr")
 if expected is None or error is not None:
-    raise SystemExit("first bare-metal shared slice requires a value-producing record")
+    raise SystemExit("first bare-metal shared set requires value-producing records")
 
 Path(source_out).write_text(expr + "\n", encoding="utf-8")
 Path(expected_out).write_text(expected + "\n", encoding="utf-8")
 Path(record_out).write_text(record + "\n", encoding="utf-8")
 PY
 
-expected=$(tr -d '\r\n' < "$expected_file")
-[[ -n "$expected" ]] || fail "empty oracle observation"
+  expected=$(tr -d '\r\n' < "$expected_file")
+  [[ -n "$expected" ]] || fail "empty oracle observation for compiler-corpus[$ordinal]"
 
-# The first shared slice deliberately uses the already-proven canonical-t
-# target observation lane. This is a capability boundary, not a local expected
-# value: source and expected were both extracted from the pinned upstream row.
-# Other result shapes stay explicit unsupported until a generic serializer is
-# admitted rather than guessed here.
-if [[ "$expected" != "t" ]]; then
-  fail "selected upstream fixture is outside the first canonical-t target observation slice"
-fi
+  # Current bounded target observation capability admits canonical `t` only.
+  # This is an explicit substrate support boundary, not a copied semantic
+  # expectation: each expected value above was extracted from upstream.
+  if [[ "$expected" != "t" ]]; then
+    fail "compiler-corpus[$ordinal] is outside the current canonical-t target observation slice"
+  fi
 
-cp "$source_file" "artifacts/$observation_lane.wsm"
-WSM_FIXTURE="$observation_lane" cargo run --quiet -p m4-generator -- --output-dir "$generated_dir"
-cp "$generated_dir/$observation_lane.s" "artifacts/$observation_lane.s"
-cp "$generated_dir/$observation_lane.o" "artifacts/$observation_lane.o"
+  cp "$source_file" "artifacts/$observation_lane.wsm"
+  WSM_FIXTURE="$observation_lane" cargo run --quiet -p m4-generator -- --output-dir "$generated_dir"
+  cp "$generated_dir/$observation_lane.s" "artifacts/$observation_lane.s"
+  cp "$generated_dir/$observation_lane.o" "artifacts/$observation_lane.o"
 
-assert_equal() {
-  [[ "$1" == "$2" ]]
-}
+  hosted=$(WSM_FIXTURE="$observation_lane" cargo run --quiet -p wsm-os-hosted)
+  assert_equal "$expected" "$hosted" \
+    || fail "hosted observation '$hosted' differs from pinned oracle '$expected' for compiler-corpus[$ordinal]"
 
-hosted=$(WSM_FIXTURE="$observation_lane" cargo run --quiet -p wsm-os-hosted)
-assert_equal "$expected" "$hosted" \
-  || fail "hosted observation '$hosted' differs from pinned oracle '$expected'"
+  # Exercise the same comparator with deliberate in-memory corruption for
+  # every selected row. The gate must reject it while the overall run stays green.
+  if assert_equal "${expected}__deliberate_mutation__" "$hosted"; then
+    fail "deliberately mutated expectation was accepted for compiler-corpus[$ordinal]"
+  fi
+  printf 'SHARED-ORACLE-MUTATION-DETECTED: compiler-corpus[%s] wrong expected value rejected.\n' "$ordinal"
 
-# Exercise the same comparator with a deliberate in-memory corruption. The
-# gate must reject it while the overall test remains green.
-if assert_equal "${expected}__deliberate_mutation__" "$hosted"; then
-  fail "deliberately mutated expectation was accepted"
-fi
-printf '%s\n' 'SHARED-ORACLE-MUTATION-DETECTED: deliberately wrong expected value rejected.'
+  WSM_FIXTURE="$observation_lane" cargo build --quiet -p wsm-os-kernel --target x86_64-unknown-none
+  image="$case_dir/shared-oracle-uefi.img"
+  cargo run --quiet -p wsm-os-image -- \
+    target/x86_64-unknown-none/debug/wsm-os-kernel \
+    "$image"
+  [[ -s "$image" ]] || fail "shared-oracle UEFI image was not produced for compiler-corpus[$ordinal]"
 
-WSM_FIXTURE="$observation_lane" cargo build --quiet -p wsm-os-kernel --target x86_64-unknown-none
-image="$work_dir/shared-oracle-uefi.img"
-cargo run --quiet -p wsm-os-image -- \
-  target/x86_64-unknown-none/debug/wsm-os-kernel \
-  "$image"
-[[ -s "$image" ]] || fail "shared-oracle UEFI image was not produced"
+  qemu_expected="$case_dir/qemu-expected.txt"
+  printf 'WSM-OS BOOT schema=1 arch=x86_64 status=ok\nWSM-OS RESULT schema=1 value=%s status=ok\n' \
+    "$expected" > "$qemu_expected"
 
-qemu_expected="$work_dir/qemu-expected.txt"
-printf 'WSM-OS BOOT schema=1 arch=x86_64 status=ok\nWSM-OS RESULT schema=1 value=%s status=ok\n' \
-  "$expected" > "$qemu_expected"
+  qemu_output=$(WSM_QEMU_TRANSCRIPT="$qemu_expected" scripts/run-qemu-uefi.sh "$image")
+  qemu_value=$(printf '%s\n' "$qemu_output" \
+    | sed -n 's/^WSM-OS RESULT schema=1 value=\(.*\) status=ok$/\1/p')
+  assert_equal "$expected" "$qemu_value" \
+    || fail "QEMU observation '$qemu_value' differs from pinned oracle '$expected' for compiler-corpus[$ordinal]"
 
-qemu_output=$(WSM_QEMU_TRANSCRIPT="$qemu_expected" scripts/run-qemu-uefi.sh "$image")
-qemu_value=$(printf '%s\n' "$qemu_output" \
-  | sed -n 's/^WSM-OS RESULT schema=1 value=\(.*\) status=ok$/\1/p')
-assert_equal "$expected" "$qemu_value" \
-  || fail "QEMU observation '$qemu_value' differs from pinned oracle '$expected'"
+  printf 'SHARED-ORACLE-PASS: my-lisp@%s compiler-corpus[%s] oracle=%s hosted=%s qemu=%s\n' \
+    "$revision" "$ordinal" "$expected" "$hosted" "$qemu_value"
+  passed=$((passed + 1))
+done
 
-printf 'SHARED-ORACLE-PASS: my-lisp@%s compiler-corpus[%s] oracle=%s hosted=%s qemu=%s\n' \
-  "$revision" "$ordinal" "$expected" "$hosted" "$qemu_value"
+printf 'SHARED-ORACLE-SET-PASS: revision=%s cases=%s\n' "$revision" "$passed"
