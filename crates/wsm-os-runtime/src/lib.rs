@@ -167,6 +167,24 @@ impl RuntimeError {
     }
 }
 
+/// Admit only the error vocabulary ratified by the target contract.
+///
+/// `wsm_fail` is callable by generated target code, so accepting an arbitrary
+/// `u32` here would let a backend manufacture a sixth condition kind and turn
+/// target representation into language semantics. Unknown codes therefore
+/// collapse to the already-ratified `AbiViolation` class instead of extending
+/// the ontology locally.
+const fn admitted_error_code(error_code: u32) -> ErrorCode {
+    match error_code {
+        code if code == ErrorCode::OutOfMemory as u32 => ErrorCode::OutOfMemory,
+        code if code == ErrorCode::Type as u32 => ErrorCode::Type,
+        code if code == ErrorCode::InvalidSymbol as u32 => ErrorCode::InvalidSymbol,
+        code if code == ErrorCode::AbiViolation as u32 => ErrorCode::AbiViolation,
+        code if code == ErrorCode::NumericOverflow as u32 => ErrorCode::NumericOverflow,
+        _ => ErrorCode::AbiViolation,
+    }
+}
+
 impl RuntimeContext {
     /// Create a context over a caller-owned arena.
     ///
@@ -493,10 +511,11 @@ pub unsafe extern "C" fn wsm_fail(
 ) -> ! {
     // SAFETY: guaranteed by this exported function's ABI contract.
     let context = unsafe { context_mut(context) };
-    context.condition.kind = error_code;
+    let admitted_code = admitted_error_code(error_code) as u32;
+    context.condition.kind = admitted_code;
     context.condition.offending_value = offending_value;
     context.condition.source_id = source_id;
-    (context.failure_handler)(context as *const RuntimeContext, error_code)
+    (context.failure_handler)(context as *const RuntimeContext, admitted_code)
 }
 
 #[cfg(test)]
@@ -529,6 +548,31 @@ mod tests {
                 unexpected_failure,
             )
         }
+    }
+
+    #[test]
+    fn external_error_code_vocabulary_fails_closed() {
+        assert_eq!(
+            admitted_error_code(ErrorCode::OutOfMemory as u32),
+            ErrorCode::OutOfMemory
+        );
+        assert_eq!(admitted_error_code(ErrorCode::Type as u32), ErrorCode::Type);
+        assert_eq!(
+            admitted_error_code(ErrorCode::InvalidSymbol as u32),
+            ErrorCode::InvalidSymbol
+        );
+        assert_eq!(
+            admitted_error_code(ErrorCode::AbiViolation as u32),
+            ErrorCode::AbiViolation
+        );
+        assert_eq!(
+            admitted_error_code(ErrorCode::NumericOverflow as u32),
+            ErrorCode::NumericOverflow
+        );
+        assert_eq!(admitted_error_code(0), ErrorCode::AbiViolation);
+        assert_eq!(admitted_error_code(6), ErrorCode::AbiViolation);
+        assert_eq!(admitted_error_code(777), ErrorCode::AbiViolation);
+        assert_eq!(admitted_error_code(u32::MAX), ErrorCode::AbiViolation);
     }
 
     #[test]
