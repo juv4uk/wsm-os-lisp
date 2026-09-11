@@ -71,6 +71,13 @@ assert_equal() {
   [[ "$1" == "$2" ]]
 }
 
+is_bounded_observation() {
+  case "$1" in
+    t|"()") return 0 ;;
+    *) [[ "$1" =~ ^[+-]?[0-9]+$ ]] ;;
+  esac
+}
+
 passed=0
 for ordinal in "${ordinals[@]}"; do
   case_dir="$work_dir/case-$ordinal"
@@ -107,7 +114,7 @@ error = string_field("error")
 if expr is None:
     raise SystemExit("selected compiler-corpus record has no expr")
 if expected is None or error is not None:
-    raise SystemExit("first bare-metal shared set requires value-producing records")
+    raise SystemExit("bounded bare-metal shared set requires value-producing records")
 
 Path(source_out).write_text(expr + "\n", encoding="utf-8")
 Path(expected_out).write_text(expected + "\n", encoding="utf-8")
@@ -116,13 +123,8 @@ PY
 
   expected=$(tr -d '\r\n' < "$expected_file")
   [[ -n "$expected" ]] || fail "empty oracle observation for compiler-corpus[$ordinal]"
-
-  # Current bounded target observation capability admits canonical `t` only.
-  # This is an explicit substrate support boundary, not a copied semantic
-  # expectation: each expected value above was extracted from upstream.
-  if [[ "$expected" != "t" ]]; then
-    fail "compiler-corpus[$ordinal] is outside the current canonical-t target observation slice"
-  fi
+  is_bounded_observation "$expected" \
+    || fail "compiler-corpus[$ordinal] is outside bounded t/NIL/fixnum target observation capability"
 
   cp "$source_file" "artifacts/$observation_lane.wsm"
   WSM_FIXTURE="$observation_lane" cargo run --quiet -p m4-generator -- --output-dir "$generated_dir"
@@ -197,21 +199,31 @@ for index, record in enumerate(records):
     expected = string_field(record, "expected")
     error = string_field(record, "error")
     if index in selected:
-        if expected != "t" or error is not None:
+        if error is not None or expected is None:
             raise SystemExit(
                 f"SHARED-ORACLE-COVERAGE-FAIL: selected compiler-corpus[{index}] "
-                "does not fit current canonical-t observation capability"
+                "is not a value-producing record"
             )
-        status = "confirmed:end-to-end-canonical-t"
+        if expected == "t":
+            status = "confirmed:end-to-end-canonical-t"
+        elif expected == "()":
+            status = "confirmed:end-to-end-nil"
+        elif re.fullmatch(r"[+-]?\d+", expected):
+            status = "confirmed:end-to-end-fixnum"
+        else:
+            raise SystemExit(
+                f"SHARED-ORACLE-COVERAGE-FAIL: selected compiler-corpus[{index}] "
+                "does not fit bounded t/NIL/fixnum observation capability"
+            )
         confirmed += 1
     elif error is not None:
         status = "unsupported:error-observation"
         unsupported += 1
     elif expected == "()":
-        status = "unsupported:nil-observation"
+        status = "unsupported:nil-end-to-end-not-admitted"
         unsupported += 1
     elif expected is not None and re.fullmatch(r"[+-]?\d+", expected):
-        status = "unsupported:generic-fixnum-observation"
+        status = "unsupported:fixnum-end-to-end-not-admitted"
         unsupported += 1
     elif expected is not None and re.fullmatch(r"[+-]?\d+/\d+", expected):
         status = "unsupported:exact-rational-representation"
