@@ -7,12 +7,8 @@
 //! wrappers around this same ABI implementation.
 
 use core::mem::MaybeUninit;
-use wsm_os_target::{
-    ClosureDescriptor, ErrorCode, NIL, RESULT_REGISTER, RUNTIME_IMPORTS, TRUE,
-    Word,
-};
 pub use wsm_os_target::CANONICAL_T;
-
+use wsm_os_target::{ClosureDescriptor, ErrorCode, NIL, RESULT_REGISTER, RUNTIME_IMPORTS, Word};
 
 /// `RuntimeContext::new`/`new_with_closures`'s safety contract requires each
 /// arena to be exclusively owned by exactly one live context. That contract
@@ -352,7 +348,6 @@ impl RuntimeContext {
                 Ok(ValueClass::Cons)
             }
             tag if tag == wsm_os_target::Tag::Nil as Word && value == NIL => Ok(ValueClass::Atom),
-            tag if tag == wsm_os_target::Tag::True as Word && value == TRUE => Ok(ValueClass::Atom),
             tag if tag == wsm_os_target::Tag::Fixnum as Word
                 && wsm_os_target::decode_fixnum(value).is_some() =>
             {
@@ -605,14 +600,17 @@ mod tests {
         let mut heap = [MaybeUninit::uninit(); 1];
         let mut closures = [MaybeUninit::uninit(); 1];
         let mut runtime = context_with_closures(&mut heap, &mut closures);
-        let environment = runtime.cons(TRUE, NIL).unwrap();
+        let environment = runtime.cons(CANONICAL_T, NIL).unwrap();
         let closure = runtime.closure(7, environment).unwrap();
         let descriptor = runtime.closure_descriptor(closure).unwrap();
         assert_eq!(descriptor.definition_id, 7);
         assert_eq!(descriptor.environment_ref, environment);
         assert_eq!(runtime.atom(closure), Ok(CANONICAL_T));
         assert_eq!(runtime.closure(8, NIL), Err(RuntimeError::OutOfMemory));
-        assert_eq!(runtime.closure_descriptor(TRUE), Err(RuntimeError::Type));
+        assert_eq!(
+            runtime.closure_descriptor(wsm_os_target::TRUE),
+            Err(RuntimeError::Type)
+        );
 
         let mut foreign = [MaybeUninit::<ClosureDescriptor>::uninit(); 1];
         let foreign_value = wsm_os_target::encode_closure_pointer(
@@ -630,7 +628,7 @@ mod tests {
         let mut heap = [MaybeUninit::uninit(); 2];
         let mut runtime = context(&mut heap);
         assert!(runtime.cons(NIL, NIL).is_ok());
-        assert!(runtime.cons(TRUE, NIL).is_ok());
+        assert!(runtime.cons(CANONICAL_T, NIL).is_ok());
         assert_eq!(runtime.cons(NIL, NIL), Err(RuntimeError::OutOfMemory));
         assert_eq!(runtime.len(), 2);
     }
@@ -639,11 +637,11 @@ mod tests {
     fn cons_car_cdr_and_atom_share_one_checked_heap() {
         let mut heap = [MaybeUninit::uninit(); 2];
         let mut runtime = context(&mut heap);
-        let pair = runtime.cons(TRUE, NIL).unwrap();
-        assert_eq!(runtime.car(pair), Ok(TRUE));
+        let pair = runtime.cons(CANONICAL_T, NIL).unwrap();
+        assert_eq!(runtime.car(pair), Ok(CANONICAL_T));
         assert_eq!(runtime.cdr(pair), Ok(NIL));
         assert_eq!(runtime.atom(pair), Ok(NIL));
-        assert_eq!(runtime.atom(TRUE), Ok(CANONICAL_T));
+        assert_eq!(runtime.atom(CANONICAL_T), Ok(CANONICAL_T));
         assert_eq!(runtime.car(0), Err(RuntimeError::Type));
 
         let mut foreign_heap = [MaybeUninit::<ConsCell>::uninit(); 1];
@@ -657,13 +655,28 @@ mod tests {
     fn eq_is_atomic_identity_and_rejects_pairs() {
         let mut heap = [MaybeUninit::uninit(); 1];
         let mut runtime = context(&mut heap);
-        assert_eq!(runtime.eq(TRUE, TRUE), Ok(CANONICAL_T));
-        assert_eq!(runtime.eq(TRUE, NIL), Ok(NIL));
+        assert_eq!(runtime.eq(CANONICAL_T, CANONICAL_T), Ok(CANONICAL_T));
+        assert_eq!(runtime.eq(CANONICAL_T, NIL), Ok(NIL));
         let capability = wsm_os_target::encode_capability(1).unwrap();
         assert_eq!(runtime.atom(capability), Ok(CANONICAL_T));
         assert_eq!(runtime.eq(capability, capability), Ok(CANONICAL_T));
-        let pair = runtime.cons(TRUE, NIL).unwrap();
+        let pair = runtime.cons(CANONICAL_T, NIL).unwrap();
         assert_eq!(runtime.eq(pair, pair), Err(RuntimeError::Type));
+    }
+
+    #[test]
+    fn legacy_true_tag_is_not_a_second_semantic_truth() {
+        let mut heap = [MaybeUninit::uninit(); 1];
+        let runtime = context(&mut heap);
+        assert_ne!(wsm_os_target::TRUE, CANONICAL_T);
+        assert_eq!(
+            runtime.atom(wsm_os_target::TRUE),
+            Err(RuntimeError::AbiViolation)
+        );
+        assert_eq!(
+            runtime.eq(wsm_os_target::TRUE, wsm_os_target::TRUE),
+            Err(RuntimeError::AbiViolation)
+        );
     }
 
     #[test]
