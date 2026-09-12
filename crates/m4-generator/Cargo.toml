@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cml = { git = "https://github.com/juv4uk/cml.git", rev = "73bff61e9515c7afdf2bdb981d6851b2061c21b4" }
+cml = { git = "https://github.com/juv4uk/cml.git", rev = "8fd013478703baec72a6957e7cba49ff2b6f64d2" }
 wsm-os-target = { git = "https://github.com/juv4uk/wsm-target-contract.git", rev = "90fa2cf324d05d8a7baafcac620eb5360f05e5b3" }
 sha2 = "0.10.8"
 hex = "0.4.3"
