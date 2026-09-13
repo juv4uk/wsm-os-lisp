@@ -85,7 +85,7 @@
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/d3-mmio-identity-violation-adversarial-fixture.wsm",
+    "path": "artifacts/d3-mmio-identity-violation-adversarial-fixture.lisp",
     "semantic_digest": "83f8db3e30d647b32ee5960f13a6fcf4d62f5140ad77b9aa951c8e7569705be8"
   },
   "symbol_table": {

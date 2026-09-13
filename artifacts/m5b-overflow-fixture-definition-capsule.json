@@ -84,7 +84,7 @@
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/m5b-overflow-fixture.wsm",
+    "path": "artifacts/m5b-overflow-fixture.lisp",
     "semantic_digest": "a03818bc30fe1efd9f094cd12453c35e708c9847382b2eb14baa659344ce8c0b"
   },
   "symbol_table": {

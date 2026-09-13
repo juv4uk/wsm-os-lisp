@@ -87,7 +87,7 @@
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/d2-virtio-blk-status-fixture.wsm",
+    "path": "artifacts/d2-virtio-blk-status-fixture.lisp",
     "semantic_digest": "e398e873e220ec5180bbe95aae38a384ee9da92b15d4409bf5cc5bd4d346d8a8"
   },
   "symbol_table": {

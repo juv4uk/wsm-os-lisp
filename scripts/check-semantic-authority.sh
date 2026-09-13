@@ -4,7 +4,8 @@ set -euo pipefail
 runtime="crates/wsm-os-runtime/src/lib.rs"
 kernel="crates/wsm-os-kernel/src/main.rs"
 hosted="crates/wsm-os-hosted/src/main.rs"
-profile="target-profile.wsm"
+profile="target-profile.lisp"
+[[ -f "$profile" ]] || profile="target-profile.wsm"
 abi_doc="docs/TARGET-ABI.md"
 
 fail() {

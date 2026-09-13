@@ -84,7 +84,7 @@
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/m1-captured-lambda-fixture.wsm",
+    "path": "artifacts/m1-captured-lambda-fixture.lisp",
     "semantic_digest": "fbbd033ce08992e52d2ce1ca3242e4460f9875d694c9affc0306fc238d4705bc"
   },
   "symbol_table": {

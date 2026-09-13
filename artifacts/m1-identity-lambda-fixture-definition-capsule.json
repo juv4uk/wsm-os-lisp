@@ -82,7 +82,7 @@
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/m1-identity-lambda-fixture.wsm",
+    "path": "artifacts/m1-identity-lambda-fixture.lisp",
     "semantic_digest": "bca0e3856ad0063e1290c076c64a6803defdddaf55746fc2660ecd68c8eecfbf"
   },
   "symbol_table": {

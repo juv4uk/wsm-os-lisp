@@ -93,7 +93,7 @@
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/d1-pci-config-capability-fixture.wsm",
+    "path": "artifacts/d1-pci-config-capability-fixture.lisp",
     "semantic_digest": "41b47774fa5780e28805a158c7d9ea702270cd721e86f21ffdc006890103731d"
   },
   "symbol_table": {

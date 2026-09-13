@@ -85,7 +85,7 @@
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/d1-pci-config-bounds-fixture.wsm",
+    "path": "artifacts/d1-pci-config-bounds-fixture.lisp",
     "semantic_digest": "77a73491c9e6d7e3765ec17c155d439b8f9a45877dd300411e297e7a78f4854c"
   },
   "symbol_table": {

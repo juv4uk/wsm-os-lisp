@@ -85,7 +85,7 @@
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/m5c-tail-call-fixture.wsm",
+    "path": "artifacts/m5c-tail-call-fixture.lisp",
     "semantic_digest": "8b3af55c9f85dbf4d7d9839dc6b7e4d75f7e761707292787a6adde06a1977f96"
   },
   "symbol_table": {

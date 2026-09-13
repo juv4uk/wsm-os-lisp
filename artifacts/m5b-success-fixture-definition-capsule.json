@@ -85,7 +85,7 @@
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/m5b-success-fixture.wsm",
+    "path": "artifacts/m5b-success-fixture.lisp",
     "semantic_digest": "2bf0b0b914ccdc20e4e0da11bf341592f484294eed15c19050e3e7dfd72c6a83"
   },
   "symbol_table": {

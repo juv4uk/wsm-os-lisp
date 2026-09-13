@@ -40,14 +40,18 @@ fn repository_root() -> PathBuf {
 }
 
 fn canonical_source(root: &Path, fixture_name: &str) -> (PathBuf, Vec<u8>, String) {
-    let path = root.join(format!("artifacts/{}.wsm", fixture_name));
-    let bytes = fs::read(&path).expect("committed fixture.wsm must exist");
-    let text = std::str::from_utf8(&bytes).expect("fixture.wsm must be UTF-8");
+    let path = if root.join(format!("artifacts/{}.lisp", fixture_name)).exists() {
+        root.join(format!("artifacts/{}.lisp", fixture_name))
+    } else {
+        root.join(format!("artifacts/{}.wsm", fixture_name))
+    };
+    let bytes = fs::read(&path).expect("committed fixture source must exist");
+    let text = std::str::from_utf8(&bytes).expect("fixture source must be UTF-8");
     let semantic = text.strip_suffix('\n').unwrap_or(text);
     if fixture_name == "fixture" {
         assert_eq!(
             semantic, FIRST_FIXTURE_SOURCE,
-            "committed fixture.wsm must equal the target-contract fixture"
+            "committed fixture must equal the target-contract fixture"
         );
     }
     let semantic = semantic.to_owned();
@@ -211,7 +215,7 @@ fn build_metadata(
         "definition_id": definition_id,
         "digest_algorithm": "sha256",
         "source": {
-            "path": format!("artifacts/{}.wsm", fixture_name),
+            "path": format!("artifacts/{}.lisp", fixture_name),
             "file_digest": source_file_digest,
             "semantic_digest": semantic_source_digest,
             "map": [{
@@ -300,7 +304,7 @@ fn generate(output_dir: &Path, fixture_name: &str) {
     fs::create_dir_all(output_dir).expect("output directory must be creatable");
     let root = repository_root();
     let (source_path, source_bytes, semantic_source) = canonical_source(&root, fixture_name);
-    let output_source = output_dir.join(format!("{}.wsm", fixture_name));
+    let output_source = output_dir.join(format!("{}.lisp", fixture_name));
     if source_path != output_source {
         fs::write(&output_source, &source_bytes).expect("fixture source copy must succeed");
     }
@@ -347,8 +351,12 @@ fn generate(output_dir: &Path, fixture_name: &str) {
 }
 
 fn verify(dir: &Path, fixture_name: &str) {
-    let source_bytes =
-        fs::read(dir.join(format!("{}.wsm", fixture_name))).expect("fixture source must exist");
+    let source_path = if dir.join(format!("{}.lisp", fixture_name)).exists() {
+        dir.join(format!("{}.lisp", fixture_name))
+    } else {
+        dir.join(format!("{}.wsm", fixture_name))
+    };
+    let source_bytes = fs::read(&source_path).expect("fixture source must exist");
     let source_text = std::str::from_utf8(&source_bytes).expect("fixture source must be UTF-8");
     let semantic_source = source_text.strip_suffix('\n').unwrap_or(source_text);
     if fixture_name == "fixture" {

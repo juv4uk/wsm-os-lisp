@@ -91,7 +91,7 @@
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/d0-virtio-identity-fixture.wsm",
+    "path": "artifacts/d0-virtio-identity-fixture.lisp",
     "semantic_digest": "07108c9921724337139792b5961227ef5dfcf06f223e642eb12ea3e74271d4a7"
   },
   "symbol_table": {

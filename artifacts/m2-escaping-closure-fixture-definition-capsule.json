@@ -90,7 +90,7 @@
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/m2-escaping-closure-fixture.wsm",
+    "path": "artifacts/m2-escaping-closure-fixture.lisp",
     "semantic_digest": "64dcf3ad8f087405fa56631586136851f1e94bbeaa576864a04528b5357216d8"
   },
   "symbol_table": {

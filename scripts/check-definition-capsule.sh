@@ -9,7 +9,7 @@ trap 'rm -rf "$first" "$second" "$tampered"' EXIT
 cargo run --quiet -p m4-generator -- --output-dir "$first"
 cargo run --quiet -p m4-generator -- --output-dir "$second"
 
-for artifact in fixture.wsm fixture.s fixture.o fixture-manifest.json fixture-definition-capsule.json; do
+for artifact in fixture.lisp fixture.s fixture.o fixture-manifest.json fixture-definition-capsule.json; do
   cmp "$first/$artifact" "$second/$artifact"
   cmp "artifacts/$artifact" "$first/$artifact"
 done

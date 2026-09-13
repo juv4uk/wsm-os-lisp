@@ -84,7 +84,7 @@
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/m1-lexical-lambda-fixture.wsm",
+    "path": "artifacts/m1-lexical-lambda-fixture.lisp",
     "semantic_digest": "6789ab4a576282f7794195b8e24d48f9b1db7061e0bf9fe11772fd9dbd4cd12f"
   },
   "symbol_table": {

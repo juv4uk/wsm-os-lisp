@@ -86,7 +86,7 @@
         "source_start_byte": 0
       }
     ],
-    "path": "artifacts/m5a-fixture.wsm",
+    "path": "artifacts/m5a-fixture.lisp",
     "semantic_digest": "99a8fb455bd6fdf989a54c89a548b2148732cc7ac21d746b84ae4c31d18f1e54"
   },
   "symbol_table": {
