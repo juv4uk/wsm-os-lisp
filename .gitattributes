@@ -1,6 +1,12 @@
 # GitHub Linguist does not know my-lisp or WSM yet. Common Lisp is the
 # temporary syntax/statistics profile for my-lisp source files; this is
 # classification, not a claim of language identity.
+# Canonical source extension: .lisp
+*.lisp linguist-language=Common-Lisp linguist-detectable=true -linguist-vendored -linguist-generated -linguist-documentation
+# Compatibility aliases
 *.wsm linguist-language=Common-Lisp linguist-detectable=true -linguist-vendored -linguist-generated -linguist-documentation
 *.my linguist-language=Common-Lisp linguist-detectable=true -linguist-vendored -linguist-generated -linguist-documentation
-*.lisp linguist-language=Common-Lisp linguist-detectable=true -linguist-vendored -linguist-generated -linguist-documentation
+# Equal-standing Ukrainian Cyrillic extension spellings
+*.всм linguist-language=Common-Lisp linguist-detectable=true -linguist-vendored -linguist-generated -linguist-documentation
+*.мій linguist-language=Common-Lisp linguist-detectable=true -linguist-vendored -linguist-generated -linguist-documentation
+*.лісп linguist-language=Common-Lisp linguist-detectable=true -linguist-vendored -linguist-generated -linguist-documentation
