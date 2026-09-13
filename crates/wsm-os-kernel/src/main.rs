@@ -17,8 +17,11 @@ use core::panic::PanicInfo;
 use wsm_os_runtime::{wsm_fail, ConsCell, RuntimeContext};
 use wsm_os_target::{decode_symbol, ClosureDescriptor, Word};
 
+mod font8x16;
 mod fs_records;
+mod gop_console;
 mod guest_block;
+mod ps2;
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     // Provision physical-memory translation. The bootloader config requests
@@ -71,6 +74,8 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         }
     } else if fixture_name == "repl-fixture" {
         repl_fixture();
+    } else if fixture_name == "gop-repl-fixture" {
+        gop_repl_fixture(boot_info);
     } else if fixture_name == "m5a-fixture" {
         if is_m5a_fixture_result(result, &context) {
             serial_write(b"WSM-OS RESULT schema=1 value=(40 . t) status=ok\n");
@@ -752,6 +757,98 @@ fn serial_write(bytes: &[u8]) {
     }
 }
 
+fn gop_repl_fixture(boot_info: &'static mut BootInfo) -> ! {
+    let Some(fb) = boot_info.framebuffer.as_mut() else {
+        serial_write(b"WSM-OS GOP-REPL schema=1 error=no-framebuffer status=error\n");
+        qemu_exit(0x12)
+    };
+    let mut console = gop_console::GopConsole::new(fb);
+    let info = console.info();
+    serial_write(b"WSM-OS GOP-REPL schema=1 framebuffer=");
+    serial_write_decimal(info.width as u32);
+    serial_write(b"x");
+    serial_write_decimal(info.height as u32);
+    serial_write(b"\n");
+    console.clear();
+    console.write_line(b"WSM-OS GOP-REPL schema=1 status=ready");
+    console.write_line(b"commands: h=help q=quit <fixnum> nil t");
+    console.write_slice(b"> ");
+    let drawn = console.drawn_pixel_count();
+    serial_write(b"WSM-OS GOP-REPL schema=1 pixel-test=");
+    if drawn > 64 {
+        serial_write(b"passed");
+    } else {
+        serial_write(b"failed");
+    }
+    serial_write(b" pixels=");
+    serial_write_decimal(drawn as u32);
+    serial_write(b"\n");
+    if drawn <= 64 {
+        qemu_exit(0x12)
+    }
+    gop_repl_loop(&mut console)
+}
+
+fn gop_repl_loop(console: &mut gop_console::GopConsole) -> ! {
+    let mut line = [0_u8; 64];
+    let mut len: usize = 0;
+    let mut keyboard = ps2::Ps2Keyboard::new();
+    loop {
+        let Some(ascii) = keyboard.poll() else {
+            core::hint::spin_loop();
+            continue;
+        };
+        serial_write(b"WSM-OS GOP-REPL schema=1 event=key ascii=");
+        serial_write_decimal(ascii as u32);
+        serial_write(b"\n");
+        if ascii == b'\r' || ascii == b'\n' {
+            serial_write(b"WSM-OS GOP-REPL schema=1 event=line value=");
+            serial_write(&line[..len]);
+            serial_write(b"\n");
+            console.put_char(b'\n');
+            let input = trim_whitespace(&line[..len]);
+            if input.len() == 1 && input[0] == b'q' {
+                console.write_line(b"WSM-OS GOP-REPL status=bye");
+                serial_write(b"WSM-OS GOP-REPL schema=1 status=bye\n");
+                qemu_exit(0x10)
+            } else if input.len() == 1 && input[0] == b'h' {
+                console.write_line(b"commands: h=help q=quit <fixnum> nil t");
+                console.write_slice(b"> ");
+            } else if bytes_eq(input, b"nil") {
+                console.write_line(b"WSM-OS GOP-REPL value=nil");
+                console.write_slice(b"> ");
+            } else if bytes_eq(input, b"t") {
+                console.write_line(b"WSM-OS GOP-REPL value=t");
+                console.write_slice(b"> ");
+            } else if let Some(n) = parse_i64(input) {
+                if wsm_os_target::encode_fixnum(n).is_some() {
+                    console.write_line(b"WSM-OS GOP-REPL value=");
+                    console.write_line(input);
+                    console.write_slice(b"> ");
+                } else {
+                    console.write_line(b"WSM-OS GOP-REPL condition=NUMERIC_OVERFLOW value=");
+                    console.write_line(input);
+                    console.write_slice(b"> ");
+                }
+            } else if !input.is_empty() {
+                console.write_line(b"WSM-OS GOP-REPL condition=TYPE value=");
+                console.write_line(input);
+                console.write_slice(b"> ");
+            } else {
+                console.write_slice(b"> ");
+            }
+            len = 0;
+        } else if ascii == 8 || ascii == 127 {
+            len = len.saturating_sub(1);
+            console.put_char(8);
+        } else if len < line.len() {
+            line[len] = ascii;
+            len += 1;
+            console.put_char(ascii);
+        }
+    }
+}
+
 fn repl_fixture() -> ! {
     serial_write(b"WSM-OS REPL schema=1 status=ready\n> ");
     let mut line = [0_u8; 64];
@@ -909,7 +1006,7 @@ unsafe fn outb(port: u16, value: u8) {
     asm!("out dx, al", in("dx") port, in("al") value, options(nomem, nostack));
 }
 
-unsafe fn inb(port: u16) -> u8 {
+pub(crate) unsafe fn inb(port: u16) -> u8 {
     let value: u8;
     asm!("in al, dx", in("dx") port, out("al") value, options(nomem, nostack));
     value
