@@ -2,12 +2,12 @@
 
 **Status: aspiration, not a decision or a contract.** This document names the
 architectural ceiling the project is aimed at. It does not authorize any of
-it, does not change scope, and does not add or close any `tasks.my` entry.
+it, does not change scope, and does not add or close any `tasks.lisp` entry.
 Nothing here may be cited as evidence that something works.
 
 The rest of this repository stays exactly as disciplined as before:
 - `README.md` states what the current bounded evidence actually proves.
-- `tasks.my` is the executable, swarm-tracked evidence ladder.
+- `tasks.lisp` is the executable, swarm-tracked evidence ladder.
 - This file states where the project is ultimately headed, and keeps that
   separate from both, on purpose. A large dream is not a defect in a small,
   precise claim — conflating the two is.
@@ -26,7 +26,7 @@ VISION:
   WSM-owned drivers
   GPU compute / CUDA research
 
-CURRENT EVIDENCE (see README.md / tasks.my):
+CURRENT EVIDENCE (see README.md / tasks.lisp):
   closures
   CML x86_64 lowering
   QEMU boot parity
@@ -77,7 +77,7 @@ boot -> memory management -> scheduler -> interrupts -> devices
 `README.md`'s framing should change from *research prototype* to
 *experimental WSM-native operating system* — but only once the evidence for
 each stage above actually exists, one bounded fixture at a time, the same
-way every milestone in `tasks.my` already works.
+way every milestone in `tasks.lisp` already works.
 
 ### 2. Full `my-lisp` on bare metal, in three stages
 
@@ -98,7 +98,7 @@ STAGE 3
 
 Stage 3 is where the Rust implementation stops being load-bearing and becomes
 an **oracle / reference implementation** — kept around for differential
-testing, no longer required for the machine to run. `tasks.my` already names
+testing, no longer required for the machine to run. `tasks.lisp` already names
 this direction (`WSM-OS-CONSTITUTION-READER-META-EVAL`); this section just
 says it out loud as a destination, not only as one more milestone in a list.
 
@@ -151,7 +151,7 @@ without anything resembling the rest of the CUDA API.
 **Corrected 2026-09-01** — the first version of this section understated how
 crowded this picture already is:
 
-- `wsm-os/repo.my` explicitly lists `cuda-runtime` under `non-authorities`.
+- `wsm-os/repo.lisp` explicitly lists `cuda-runtime` under `non-authorities`.
 - There are now **two separate hosted CUDA surfaces**, not one. CML's own
   `gpu-cuda` feature (`src/gpu_cuda.rs`/`gpu_cuda_runtime.rs`, PTX via NVRTC)
   already runs an admitted i32 `map` on real hardware — a GTX 1050 Ti,
@@ -198,12 +198,12 @@ for which Lisp is the way it exists.
 
 **Статус: прагнення, не рішення і не контракт.** Цей документ називає
 архітектурну стелю проєкту. Він нічого не авторизує, не змінює scope і не
-додає й не закриває жоден запис у `tasks.my`. Ніщо звідси не може
+додає й не закриває жоден запис у `tasks.lisp`. Ніщо звідси не може
 цитуватися як доказ того, що щось працює.
 
 Решта репозиторію лишається настільки ж дисциплінованою, як і раніше:
 - `README.md` каже, що саме зараз доводить обмежений доказ.
-- `tasks.my` — виконуваний, відстежуваний роєм ланцюжок доказів.
+- `tasks.lisp` — виконуваний, відстежуваний роєм ланцюжок доказів.
 - Цей файл каже, куди проєкт зрештою прямує, і навмисно тримає це окремо
   від обох. Велика мрія — не хиба маленької точної заявки; плутати їх —
   хиба.
@@ -231,7 +231,7 @@ Lisp environment.
 Формулювання в `README.md` має змінитися з *research prototype* на
 *experimental WSM-native operating system* — але лише коли з'явиться доказ
 для кожного з цих етапів, по одній обмеженій фікстурі за раз, так само як
-уже працює кожна віха в `tasks.my`.
+уже працює кожна віха в `tasks.lisp`.
 
 ### 2. Повний `my-lisp` на bare metal, у три етапи
 
@@ -252,7 +252,7 @@ bootstrap-міст, а не остаточну архітектуру:
 
 На етапі 3 Rust-реалізація перестає бути обов'язковою і стає **oracle /
 референсною реалізацією** — потрібною для диференційного тестування, але
-вже не для роботи машини. `tasks.my` уже називає цей напрямок
+вже не для роботи машини. `tasks.lisp` уже називає цей напрямок
 (`WSM-OS-CONSTITUTION-READER-META-EVAL`); цей розділ лише промовляє це
 вголос як пункт призначення, а не просто чергову віху в списку.
 
@@ -279,7 +279,7 @@ WSM-написаний compute-kernel на bare-metal GPU через CML lowerin
 **Виправлено 2026-09-01** — перша версія цього розділу применшувала, наскільки
 переповнена ця картина насправді:
 
-- `wsm-os/repo.my` явно перелічує `cuda-runtime` серед `non-authorities`.
+- `wsm-os/repo.lisp` явно перелічує `cuda-runtime` серед `non-authorities`.
 - Зараз є **дві окремі hosted-CUDA поверхні**, не одна. Власна фіча CML
   `gpu-cuda` (`src/gpu_cuda.rs`/`gpu_cuda_runtime.rs`, PTX через NVRTC) вже
   виконує допущений i32 `map` на реальному залізі — GTX 1050 Ti, перевірено

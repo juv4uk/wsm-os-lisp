@@ -101,7 +101,7 @@ typedef uintptr_t Value;
 
 Read `/home/agents/ecosystem/AGENTS.md`, the owner profile, resource policy,
 [`docs/ADR-001-COMPILER-FIRST.md`](docs/ADR-001-COMPILER-FIRST.md) and
-[`tasks.my`](tasks.my) before changing code.
+[`tasks.lisp`](tasks.lisp) before changing code.
 
 - `my-lisp` owns language semantics.
 - CML owns parsing, semantic admission, IR and assembly emission.
@@ -115,7 +115,7 @@ Read `/home/agents/ecosystem/AGENTS.md`, the owner profile, resource policy,
 
 Прочитай `/home/agents/ecosystem/AGENTS.md`, профіль власника, resource
 policy, [`docs/ADR-001-COMPILER-FIRST.md`](docs/ADR-001-COMPILER-FIRST.md) і
-[`tasks.my`](tasks.my) перед будь-якою зміною коду.
+[`tasks.lisp`](tasks.lisp) перед будь-якою зміною коду.
 
 - `my-lisp` володіє семантикою мови-джерела.
 - CML володіє синтаксичним розбором, семантичним доступом, IR і асемблерною

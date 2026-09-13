@@ -80,7 +80,7 @@ The privacy-scrubbed physical and WSL target inventory is in
 The compiler-first ownership decision is recorded in
 [docs/ADR-001-COMPILER-FIRST.md](docs/ADR-001-COMPILER-FIRST.md).
 
-Executable swarm work is tracked in [`tasks.my`](tasks.my).
+Executable swarm work is tracked in [`tasks.lisp`](tasks.lisp).
 
 The first machine-readable ABI and its generated WSM projection are documented
 in [`docs/TARGET-ABI.md`](docs/TARGET-ABI.md).
@@ -182,7 +182,7 @@ QEMU x86_64 boot
 Рішення розпочати з побудови компілятора зафіксовано у
 [docs/ADR-001-COMPILER-FIRST.md](docs/ADR-001-COMPILER-FIRST.md).
 
-Робота рою агентів над виконуваними завданнями відстежується у [`tasks.my`](tasks.my).
+Робота рою агентів над виконуваними завданнями відстежується у [`tasks.lisp`](tasks.lisp).
 
 Перший машинно-зчитуваний ABI та його згенерована WSM-проекція задокументовані
 у [`docs/TARGET-ABI.md`](docs/TARGET-ABI.md).

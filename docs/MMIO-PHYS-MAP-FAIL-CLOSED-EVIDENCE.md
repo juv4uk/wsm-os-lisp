@@ -3,7 +3,7 @@
 **Статус:** ПІДТВЕРДЖЕНО (CONFIRMED)
 **Репозиторій:** `wsm-os-lisp`
 **Дата фіксації:** 2026-09-13
-**Задача в tasks.my:** `WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B` (MMIO-статусна частина D2)
+**Задача в tasks.lisp:** `WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B` (MMIO-статусна частина D2)
 
 ---
 

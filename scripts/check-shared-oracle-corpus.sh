@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-lock_file="contracts/my-lisp/compiler-corpus.lock.my"
+lock_file="contracts/my-lisp/compiler-corpus.lock.lisp"
 observation_lane="m5c-tail-call-fixture"
 
 fail() {

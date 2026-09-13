@@ -28,7 +28,7 @@ Bounds-checking без жодного MMU/OS під низом: `cell()`/
 весь час життя контексту") — прозовий обов'язок викликача, а не
 typestate. Нічого не заважає створити другий `RuntimeContext` над тією ж
 ареною. **Заведено як `WSM-OS-RUNTIMECONTEXT-EXCLUSIVE-OWNERSHIP` у
-`tasks.my`.**
+`tasks.lisp`.**
 
 ## Panic/failure шлях, `wsm-os-kernel/src/main.rs` (469 рядків)
 
@@ -58,7 +58,7 @@ runtime condition) — реальна, хоч мінімальна, структ
 `wsm_pci_config_capability`" — достатньо для цієї фікстури, але значно
 тонша гарантія, ніж натякає проза ADR-003, щойно з'явиться друга
 capability. **Заведено як
-`WSM-OS-PCI-CAPABILITY-UNFORGEABILITY-HARDENING` у `tasks.my`.**
+`WSM-OS-PCI-CAPABILITY-UNFORGEABILITY-HARDENING` у `tasks.lisp`.**
 
 ## `wsm-os-target/src/lib.rs` (327 рядків) — чисте джерело істини
 

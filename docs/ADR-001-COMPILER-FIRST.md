@@ -11,7 +11,7 @@
 > `juv4uk/wsm-os` repository is a separate physical-platform research lab for
 > `juv4uk/wsm`; it does not inherit this ADR's target ABI, runtime, boot-image,
 > or QEMU-evidence authority. Current machine-readable ownership is in
-> [`repo.my`](../repo.my).
+> [`repo.lisp`](../repo.lisp).
 
 ## Decision
 
@@ -178,7 +178,7 @@ manual assembly edits.
 > `juv4uk/wsm-os` — окрема лабораторія дослідження фізичної платформи для
 > `juv4uk/wsm`; він не успадковує authority цього ADR над target ABI,
 > runtime, boot-образом чи QEMU-доказами. Поточний machine-readable розподіл
-> authority записаний у [`repo.my`](../repo.my).
+> authority записаний у [`repo.lisp`](../repo.lisp).
 
 ## Рішення
 

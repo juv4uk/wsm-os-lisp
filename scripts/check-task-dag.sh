@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify tasks.my is a trustworthy DAG: a completed (done) task may only
+# Verify tasks.lisp is a trustworthy DAG: a completed (done) task may only
 # depend on predecessors that are themselves completed, explicitly superseded,
 # or marked as an umbrella whose decomposition covers the needed work.
 # Also fail closed on duplicate task IDs and on superseded tasks that do not
@@ -15,7 +15,7 @@
 #   (umbrella . t)                -> UMBRELLA (non-blocking for descendants)
 set -euo pipefail
 
-task_file="tasks.my"
+task_file="tasks.lisp"
 
 python3 - "$task_file" <<'PY'
 import re
@@ -31,7 +31,7 @@ def fail(msg):
 header_re = re.compile(r'^\s*\("([^"]+)"\s*\.\s*(\(\s*)?$', re.M)
 matches = list(header_re.finditer(text))
 if not matches:
-    fail("no task headers found; tasks.my structure unexpected")
+    fail("no task headers found; tasks.lisp structure unexpected")
 
 blocks = []
 for i, m in enumerate(matches):
@@ -111,5 +111,5 @@ for block_id, start_line, seg in blocks:
 if errors:
     fail("\n  ".join(errors))
 
-print("TASK-DAG-PASS: tasks.my DAG is consistent (no DONE task depends on an OPEN predecessor)")
+print("TASK-DAG-PASS: tasks.lisp DAG is consistent (no DONE task depends on an OPEN predecessor)")
 PY

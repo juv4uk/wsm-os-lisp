@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_my="repo.my"
+repo_my="repo.lisp"
 readme="README.md"
 adr1="docs/ADR-001-COMPILER-FIRST.md"
 adr3="docs/ADR-003-RUST-LISP-MECHANISM-POLICY.md"
@@ -25,12 +25,12 @@ forbid_literal() {
   fi
 }
 
-# repo.my is the machine-readable authority root for this repository.
+# repo.lisp is the machine-readable authority root for this repository.
 require_literal "$repo_my" "(role my-lisp-bare-metal-control-target)"
 require_literal "$repo_my" "(authorities target-abi boot-runtime boot-image qemu-execution-evidence physical-parity-ledger)"
 require_literal "$repo_my" "(non-authorities language-semantics cml-ir fpga-isa cuda-runtime physical-platform-research)"
 
-# Human-facing docs must agree with repo.my and distinguish the later clean-slate lab.
+# Human-facing docs must agree with repo.lisp and distinguish the later clean-slate lab.
 require_literal "$readme" '`wsm-os-lisp` owns this lineage'
 require_literal "$readme" '`wsm-os` owns separate physical-platform research'
 forbid_literal "$readme" '`wsm-os` owns boot, platform services, and bare-metal integration evidence.'
@@ -49,7 +49,7 @@ require_literal "$adr3" 'new physical-platform research itself belongs'
 # Semantic authority must remain upstream. Catch the most dangerous accidental grant
 # even if someone edits the exact formatting of the authorities list later.
 if grep -E '^\s*\(authorities[^)]*(language-semantics|cml-ir)' "$repo_my" >/dev/null; then
-  fail "repo.my grants language/compiler semantic authority to wsm-os-lisp"
+  fail "repo.lisp grants language/compiler semantic authority to wsm-os-lisp"
 fi
 
 printf '%s\n' 'ROLE-AUTHORITY-PASS: wsm-os-lisp remains the my-lisp bare-metal control target; wsm-os remains the separate physical-platform lab.'

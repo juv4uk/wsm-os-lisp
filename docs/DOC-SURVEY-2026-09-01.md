@@ -3,8 +3,8 @@
 **Виконавець:** wsl-nidana-1 (ecosystem-координаційна сесія)
 **Метод:** `git log --since=2026-08-28 --name-only --diff-filter=A -- docs/`
 + `--stat` для суттєво змінених файлів. Виключено вже раніше розібране:
-README.md, repo.my, AGENTS.md, ADR-001, ADR-003, target-contract.wsm,
-tasks.my (закриті/відкриті задачі), і сам `docs/VISION.md` (написаний і
+README.md, repo.lisp, AGENTS.md, ADR-001, ADR-003, target-contract.wsm,
+tasks.lisp (закриті/відкриті задачі), і сам `docs/VISION.md` (написаний і
 щойно виправлений у цій сесії).
 
 ## Reproducibility-хребет під усіма "unchanged fixture" твердженнями
@@ -66,7 +66,7 @@ tasks.my (закриті/відкриті задачі), і сам `docs/VISION.
 
 Немає жодного окремого PCI/virtio design-доку — ця архітектура (поточний
 фронтир, WSM-OS-WSM-PCI-CONFIG-CAPABILITY-D1 та далі) зараз живе лише в
-`tasks.my` + commit messages, не в `docs/`.
+`tasks.lisp` + commit messages, не в `docs/`.
 
 ## Не прочитано (стат-нуто, не виявилось суттєвіше за вище)
 

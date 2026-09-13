@@ -3,7 +3,7 @@
 **Статус:** ПІДТВЕРДЖЕНО (CONFIRMED)  
 **Репозиторій:** `wsm-os-lisp`  
 **Дата фіксації:** 2026-09-05  
-**Задача в tasks.my:** `WSM-OS-LISP-RAW-UEFI-HANDOFF-PROBE`  
+**Задача в tasks.lisp:** `WSM-OS-LISP-RAW-UEFI-HANDOFF-PROBE`  
 
 ---
 
