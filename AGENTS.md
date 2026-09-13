@@ -105,22 +105,25 @@ Read `/home/agents/ecosystem/AGENTS.md`, the owner profile, resource policy,
 
 - `my-lisp` owns language semantics.
 - CML owns parsing, semantic admission, IR and assembly emission.
-- `wsm-os` owns its target ABI, runtime, boot image and platform evidence.
+- `wsm-os-lisp` target architecture is strictly Pure Lisp + x86-64 Assembly (ADR-004). RUST = 0 in production target.
+- `wsm-os-lisp` owns its target ABI, minimal assembly primitives, boot image and platform evidence.
 - Claim/complete through the swarm and broadcast pushed SHA on completion.
 - Never write, partition or format a physical disk as part of testing.
 - QEMU/host/physical evidence are distinct states.
 
 ---
-# Зона відповідальності агента wsm-os (Ukrainian)
+# Зона відповідальності агента wsm-os-lisp (Ukrainian)
 
 Прочитай `/home/agents/ecosystem/AGENTS.md`, профіль власника, resource
-policy, [`docs/ADR-001-COMPILER-FIRST.md`](docs/ADR-001-COMPILER-FIRST.md) і
+policy, [`docs/ADR-001-COMPILER-FIRST.md`](docs/ADR-001-COMPILER-FIRST.md),
+[`docs/ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md`](docs/ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md) і
 [`tasks.lisp`](tasks.lisp) перед будь-якою зміною коду.
 
 - `my-lisp` володіє семантикою мови-джерела.
 - CML володіє синтаксичним розбором, семантичним доступом, IR і асемблерною
   емісією.
-- `wsm-os` володіє своїм цільовим ABI, рантаймом, boot-образом і доказами
+- Цільова архітектура `wsm-os-lisp` — виключно чистий Lisp + x86-64 асемблер (ADR-004). RUST = 0 у production target.
+- `wsm-os-lisp` володіє своїм цільовим ABI, мінімальними машинними примітивами, boot-образом і доказами
   платформи.
 - Claim/complete через swarm; після завершення транслюй SHA у шину.
 - Ніколи не записуй, не розбивай і не форматуй фізичний диск у межах

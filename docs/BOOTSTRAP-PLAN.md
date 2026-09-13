@@ -40,15 +40,12 @@ support, and a host-side WSM result does not prove bare-metal execution.
   not treated as a direct bare-metal primitive;
 - physical boot on owner hardware.
 
-## First decision required
+## Core Architecture Decision (Settled: ADR-001 & ADR-004)
 
-Choose between:
-
-1. a small `no_std` semantic-core extraction from my-lisp; or
-2. a CML-compiled WSM subset linked into the boot image.
-
-The decision follows a dependency inventory and one executable spike, not an
-up-front rewrite of my-lisp.
+The architecture is settled by [ADR-001](ADR-001-COMPILER-FIRST.md) and
+[ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md):
+- **Selected**: CML-compiled Lisp forms linked with minimal x86-64 assembly machine primitives.
+- **Rejected & Revoked**: `no_std` Rust interpreter/substrate. Production target has zero Rust.
 
 ---
 
@@ -97,12 +94,9 @@ up-front rewrite of my-lisp.
   CUDA не розглядається як прямий bare-metal примітив;
 - Фізичне завантаження на обладнанні власника.
 
-## Перше необхідне рішення
+## Базове архітектурне рішення (Затверджено: ADR-001 та ADR-004)
 
-Вибрати між:
-
-1. Невеликим виокремленням семантичного ядра з `my-lisp` на базі `no_std`; або
-2. WSM-підмножиною, скомпільованою через `cml` і злінкованою в завантажувальний образ.
-
-Рішення приймається після інвентаризації залежностей та одного виконуваного
-спайку (executable spike), а не шляхом попереднього переписування `my-lisp`.
+Архітектуру остаточно визначено [ADR-001](ADR-001-COMPILER-FIRST.md) та
+[ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md):
+- **Обрано**: Lisp-форми, скомпільовані через `cml` та злінковані з незвідними машинними примітивами на x86-64 асемблері.
+- **Відхилено та скасовано**: `no_std` Rust інтерпретатор/субстрат. У цільовому runtime — нуль Rust.

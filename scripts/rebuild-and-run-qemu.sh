@@ -8,9 +8,6 @@ set -euo pipefail
 # Resolve OVMF via explicit environment first, then Guix discovery
 source "$(dirname "$0")/ovmf-env.sh"
 
-cargo build -p wsm-os-kernel --target x86_64-unknown-none
-cargo run -p wsm-os-image -- \
-  target/x86_64-unknown-none/debug/wsm-os-kernel \
-  target/wsm-os-uefi.img
+"$(dirname "$0")/build-uefi-image.sh" artifacts/fixture.o target/wsm-os-uefi.img
 
 exec "$(dirname "$0")/run-qemu-uefi.sh" target/wsm-os-uefi.img

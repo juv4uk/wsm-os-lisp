@@ -79,33 +79,27 @@ boot -> memory management -> scheduler -> interrupts -> devices
 each stage above actually exists, one bounded fixture at a time, the same
 way every milestone in `tasks.lisp` already works.
 
-### 2. Full `my-lisp` on bare metal, in three stages
+### 2. Full `my-lisp` on bare metal (Pure Lisp + Assembly, ADR-004)
 
-The current architecture is `ASM + a small WSM runtime`, and full `no_std
-my-lisp` is Rust. That is not a contradiction as long as the `no_std` port is
-read as a bootstrap bridge, not the final architecture:
+Per [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md), the target architecture
+is strictly **Lisp + x86-64 Assembly (Zero Rust in production runtime)**:
 
 ```text
-STAGE 1 (current)
-  my-lisp Rust/std -> CML -> ASM + small WSM runtime
-
-STAGE 2
-  my-lisp Rust/no_std -> full WSM semantics on bare metal
-
-STAGE 3
-  minimal ASM -> WSM -> meta-eval/runtime written in WSM -> WSM executes WSM
+Canonical my-lisp (Oracle / Semantic Authority)
+  ↓
+CML (Compiler / Lowering to Assembly)
+  ↓
+x86-64 Assembly + Pinned Target Code
+  ↓
+Tiny Assembly Machine Primitives (CPU, UEFI entry, IRQ, I/O ports, MMIO, paging)
+  ↓
+Bare Metal CPU
 ```
 
-Stage 3 is where the Rust implementation stops being load-bearing and becomes
-an **oracle / reference implementation** — kept around for differential
-testing, no longer required for the machine to run. `tasks.lisp` already names
-this direction (`WSM-OS-CONSTITUTION-READER-META-EVAL`); this section just
-says it out loud as a destination, not only as one more milestone in a list.
-
-The intermediate claim this stage sequence is building toward, worth stating
-precisely once it is actually proven: **the full canonical WSM semantics can
-exist without a host OS.** Only after that can the semantics be migrated,
-piece by piece, out of Rust and into WSM itself.
+Rust does NOT exist in the production runtime, kernel, bootstrap, or drivers.
+The canonical `my-lisp` implementation acts exclusively as an external semantic oracle
+during compiler verification. All target semantics, REPL, filesystem, and driver
+policies live in Lisp; irreducible machine mechanisms live in assembly.
 
 ### 3. Bare-metal GPU / CUDA — a distinct, harder frontier
 
@@ -233,33 +227,27 @@ Lisp environment.
 для кожного з цих етапів, по одній обмеженій фікстурі за раз, так само як
 уже працює кожна віха в `tasks.lisp`.
 
-### 2. Повний `my-lisp` на bare metal, у три етапи
+### 2. Повний `my-lisp` на bare metal (Чистий Lisp + Асемблер, ADR-004)
 
-Поточна архітектура — це `ASM + малий WSM-runtime`, а повний `no_std
-my-lisp` — це Rust. Суперечності немає, якщо `no_std`-порт розглядати як
-bootstrap-міст, а не остаточну архітектуру:
+Згідно з [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md), кінцева
+цільова архітектура — виключно **Lisp + x86-64 асемблер (нуль Rust у production runtime)**:
 
 ```text
-ЕТАП 1 (поточний)
-  my-lisp Rust/std -> CML -> ASM + малий WSM-runtime
-
-ЕТАП 2
-  my-lisp Rust/no_std -> повна WSM-семантика на bare metal
-
-ЕТАП 3
-  мінімальний ASM -> WSM -> meta-eval/runtime, написаний на WSM -> WSM виконує WSM
+Канонічний my-lisp (Оракул / Семантична влада)
+  ↓
+CML (Компілятор / Пониження в асемблер)
+  ↓
+x86-64 асемблер + згенерований таргет-код
+  ↓
+Незвідні машинні примітиви в асемблері (CPU, UEFI entry, IRQ, I/O порти, MMIO, paging)
+  ↓
+Bare Metal CPU
 ```
 
-На етапі 3 Rust-реалізація перестає бути обов'язковою і стає **oracle /
-референсною реалізацією** — потрібною для диференційного тестування, але
-вже не для роботи машини. `tasks.lisp` уже називає цей напрямок
-(`WSM-OS-CONSTITUTION-READER-META-EVAL`); цей розділ лише промовляє це
-вголос як пункт призначення, а не просто чергову віху в списку.
-
-Проміжна заявка, до якої веде ця послідовність етапів, варта точного
-формулювання лише після того, як вона реально буде доведена: **уся
-канонічна семантика WSM здатна існувати без host OS.** Лише після цього її
-можна поступово переносити, шматок за шматком, з Rust у сам WSM.
+Rust НЕ присутній у production runtime, ядрі, bootstrap чи драйверах.
+Канонічна реалізація `my-lisp` виступає виключно зовнішнім семантичним оракулом
+під час перевірки компіляції. Уся семантика таргета, REPL, файлова система та
+політика драйверів живуть у Lisp; незвідні машинні механізми живуть в асемблері.
 
 ### 3. Bare-metal GPU / CUDA — окремий, важчий фронтир
 

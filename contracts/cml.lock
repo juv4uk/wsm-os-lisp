@@ -1,0 +1,3 @@
+;; Pinned CML compiler revision for wsm-os-lisp
+;; Target architecture: Pure Lisp + x86-64 Assembly (ADR-004)
+(cml-revision "6ce577f24083c54b55bf1870396f6b3e1c3d04b9")

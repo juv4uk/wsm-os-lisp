@@ -2,8 +2,17 @@
 *ADR-003: Машинний механізм внизу, логіка WSM нагорі*
 
 **Date/Дата**: 2026-08-31
-**Status/Статус**: Accepted, owner-amended 2026-09-11 / Прийнято, змінено власником 2026-09-11
+**Status/Статус**: SUPERSEDED by ADR-004 (2026-09-14) / ЗАМІНЕНО на ADR-004 (2026-09-14)
 **Context/Контекст**: The ecosystem requires a clear capability and architectural boundary between the underlying execution layer and the high-level orchestration/semantic layer. We need to ratify the division of responsibilities to avoid overlapping abstractions. / Екосистемі потрібна чітка межа можливостей та архітектури між базовим рівнем виконання та високорівневим рівнем оркестрації/семантики. Нам потрібно затвердити розподіл обов'язків, щоб уникнути дублювання абстракцій.
+
+> [!CAUTION]
+> **SUPERSEDED / ЗАМІНЕНО (2026-09-14):**
+> This ADR is superseded by [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md).
+> The owner directive mandates: **LISP + x86-64 ASSEMBLER. RUST = 0.**
+> All provisions permitting a Rust substrate, bootstrap, runtime, or reference driver are revoked.
+> / Цей ADR замінено на [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md).
+> Директива власника встановлює: **LISP + x86-64 ASSEMBLER. RUST = 0.**
+> Усі положення, що дозволяли субстрат, bootstrap, runtime або драйвери на Rust, скасовано.
 
 > [!IMPORTANT]
 > **Repository-role amendment / Уточнення ролі репозиторію (2026-09-11):**

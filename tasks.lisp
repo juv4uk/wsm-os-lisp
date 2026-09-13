@@ -374,5 +374,14 @@
     (origin . wsm-os-lisp)
     (context . "Source inspiration: wsm-os/probe/exit-boundary-probe.c, which demonstrated verified ExitBootServices() crossing + raw 16550 UART logging on real GA-H170-Gaming 3 / i5-6400 hardware without UEFI services. In wsm-os-lisp, this is scoped strictly to proving the freestanding Lisp machine execution path can survive the raw boundary.")
     (done . (t . "Completed 2026-09-05. Proved architectural isolation: under bootloader_api 0.11.17, kernel_main executes strictly post-ExitBootServices with no firmware boot services available; serial I/O is 100% direct register port operations (inb/outb COM1 0x3F8); Lisp execution engine (wsm_entry, cons heap, closure arena, tail calls, VirtIO/PCI capability access) operates autonomously in freestanding x86_64 mode without importing non-Lisp wsm-os architecture. Documented in docs/RAW-UEFI-HANDOFF-EVIDENCE.md."))))
+
+  ("WSM-OS-PURE-LISP-ASSEMBLY-M4" . (
+    (priority . 10.0)
+    (capabilities . (architecture x86_64 assembly uefi lisp zero-rust))
+    (origin . wsm-os-lisp)
+    (context . "2026-09-14: Owner directed architectural shift (ADR-004) to eliminate Rust from target runtime entirely (RUST = 0). C is eliminated as middleman; Lisp lowers directly to x86-64 assembly via CML. Pure assembly runtime (src/runtime.s) and UEFI entry (src/entry.s) replace all Rust crates.")
+    (description . "Enforce ADR-004: zero Rust in production target runtime. Implement freestanding x86-64 assembly runtime and bootloader handoff, pure FAT12 UEFI disk builder, and verify full parity in QEMU.")
+    (done . (t . "Completed 2026-09-14: Removed all Rust crates (9 crates, Cargo manifests, rust-toolchain). Implemented src/runtime.s, src/entry.s, src/drivers.s, scripts/build-uefi-image.sh, scripts/check-no-rust.sh. Verified QEMU boots purely assembled UEFI image with 100% parity value=(A . B) status=ok. All 8 verification checks pass."))))
+
 )))
 

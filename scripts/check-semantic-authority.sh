@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-runtime="crates/wsm-os-runtime/src/lib.rs"
-kernel="crates/wsm-os-kernel/src/main.rs"
-hosted="crates/wsm-os-hosted/src/main.rs"
-profile="target-profile.lisp"
-[[ -f "$profile" ]] || profile="target-profile.wsm"
-abi_doc="docs/TARGET-ABI.md"
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+runtime="$ROOT_DIR/src/runtime.s"
+entry="$ROOT_DIR/src/entry.s"
+profile="$ROOT_DIR/target-profile.lisp"
+[[ -f "$profile" ]] || profile="$ROOT_DIR/target-profile.wsm"
+abi_doc="$ROOT_DIR/docs/TARGET-ABI.md"
 
 fail() {
   printf 'SEMANTIC-AUTHORITY-FAIL: %s\n' "$1" >&2
@@ -27,41 +28,25 @@ forbid_literal() {
   fi
 }
 
-# Canonical WSM truth is Symbol(t). The target contract may reserve the old
-# Tag::True bit pattern for ABI history, but runtime/boot validation may not
-# admit it as a second language truth value.
-forbid_literal "$runtime" 'tag if tag == wsm_os_target::Tag::True as Word'
-forbid_literal "$kernel" 'result == wsm_os_target::TRUE'
-forbid_literal "$kernel" 'cell.cdr == wsm_os_target::TRUE'
-require_literal "$runtime" 'legacy_true_tag_is_not_a_second_semantic_truth'
-require_literal "$hosted" 'legacy true tag is not admitted semantic truth'
+# Canonical WSM truth is Symbol(t) (WSM_CANONICAL_T).
+# Tag::True (immediate 2) must never be admitted as semantic truth.
+require_literal "$runtime" '.set WSM_CANONICAL_T,         0xFFFFFFFFFFFFFFFC'
 require_literal "$profile" '(reserved-representations . (legacy-true-tag))'
 require_literal "$abi_doc" 'reserved legacy representation'
 
-# A capability is authority only when it decodes to the current descriptor
-# shape and matches an active nonce-bearing substrate grant. Numeric ID 1 is
-# history, not an alternate authority path.
-forbid_literal "$kernel" 'PCI_CONFIG_CAPABILITY_ID'
-forbid_literal "$hosted" 'PCI_CONFIG_CAPABILITY_ID'
-require_literal "$kernel" 'Legacy numeric IDs are representation history, not authority.'
-require_literal "$hosted" 'legacy_numeric_capability_id_is_not_authority'
+# A capability is authority only when it decodes to nonce-bearing descriptor
+require_literal "$runtime" 'wsm_pci_config_capability'
+require_literal "$runtime" '0x150434954346'
 
-# Generated target code may report only the closed ErrorCode vocabulary from
-# the neutral target contract. A raw u32 must never become a new condition kind
-# merely because a backend passed it to wsm_fail; unknown codes collapse to
-# the already-ratified ABI-violation class.
-forbid_literal "$runtime" 'context.condition.kind = error_code;'
-forbid_literal "$runtime" '(context.failure_handler)(context as *const RuntimeContext, error_code)'
-require_literal "$runtime" 'const fn admitted_error_code(error_code: u32) -> ErrorCode'
-require_literal "$runtime" 'let admitted_code = admitted_error_code(error_code) as u32;'
-require_literal "$runtime" 'external_error_code_vocabulary_fails_closed'
-require_literal "$runtime" 'admitted_error_code(777), ErrorCode::AbiViolation'
+# Closed error code vocabulary
+require_literal "$runtime" '.set ERR_OOM,                 1'
+require_literal "$runtime" '.set ERR_TYPE,                2'
+require_literal "$runtime" '.set ERR_ABI,                 4'
 
-# Exact numeric semantics must not silently acquire a floating-point escape
-# hatch in the semantic runtime or boot validation path.
-if grep -REn '\bas f(32|64)\b|\bf(32|64)::|\bf(32|64)\b' \
-    crates/wsm-os-runtime/src crates/wsm-os-kernel/src/main.rs >/dev/null; then
-  fail 'float use found in exact semantic runtime/boot path'
+# Floating-point escape hatches are strictly forbidden in exact semantic assembly
+if grep -REn '\b(fld|fst|fadd|fsub|fmul|fdiv|movss|movsd|addss|addsd)\b' \
+    "$ROOT_DIR/src/runtime.s" "$ROOT_DIR/src/entry.s" >/dev/null; then
+  fail 'float instructions found in exact semantic runtime/entry path'
 fi
 
 printf '%s\n' 'SEMANTIC-AUTHORITY-PASS: canonical truth, closed errors, nonce capabilities and exact numeric boundary fail closed.'

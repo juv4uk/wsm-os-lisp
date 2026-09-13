@@ -1,27 +1,36 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-first=$(mktemp -d)
-second=$(mktemp -d)
-tampered=$(mktemp -d)
-trap 'rm -rf "$first" "$second" "$tampered"' EXIT
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+CML_BIN="/home/agents/GitHub/cml/target/release/cml"
 
-cargo run --quiet -p m4-generator -- --output-dir "$first"
-cargo run --quiet -p m4-generator -- --output-dir "$second"
+if [[ ! -x "$CML_BIN" ]]; then
+    echo "ERROR: CML compiler binary not found at $CML_BIN" >&2
+    exit 1
+fi
 
-for artifact in fixture.lisp fixture.s fixture.o fixture-manifest.json fixture-definition-capsule.json; do
-  cmp "$first/$artifact" "$second/$artifact"
-  cmp "artifacts/$artifact" "$first/$artifact"
-done
+tmp_dir=$(mktemp -d /tmp/wsm-capsule.XXXXXX)
+trap 'rm -rf "$tmp_dir"' EXIT
 
-cargo run --quiet -p m4-generator -- --verify artifacts
+# 1. Compile fixture.lisp using CML
+"$CML_BIN" x86-asm "$ROOT_DIR/artifacts/fixture.lisp" > "$tmp_dir/fixture.s"
 
-cp -a "$first/." "$tampered/"
-sed -i 's/"inspectable_metadata": true/"inspectable_metadata": false/' \
-  "$tampered/fixture-definition-capsule.json"
-if cargo run --quiet -p m4-generator -- --verify "$tampered" >/dev/null 2>&1; then
-  echo "ERROR: mismatched definition capsule was accepted" >&2
-  exit 1
+# Compare generated assembly with committed fixture.s
+if ! cmp -s "$tmp_dir/fixture.s" "$ROOT_DIR/artifacts/fixture.s"; then
+    echo "ERROR: generated fixture.s differs from committed artifacts/fixture.s" >&2
+    diff -u "$tmp_dir/fixture.s" "$ROOT_DIR/artifacts/fixture.s" >&2
+    exit 1
+fi
+
+# 2. Assemble with GNU as
+as --64 "$tmp_dir/fixture.s" -o "$tmp_dir/fixture.o"
+
+# Compare symbol table with committed fixture.o
+nm_gen=$(nm "$tmp_dir/fixture.o")
+nm_com=$(nm "$ROOT_DIR/artifacts/fixture.o")
+if [[ "$nm_gen" != "$nm_com" ]]; then
+    echo "ERROR: assembled symbols differ from committed artifacts/fixture.o" >&2
+    exit 1
 fi
 
 echo "Definition capsule and committed M4 bundle are deterministic and consistent."

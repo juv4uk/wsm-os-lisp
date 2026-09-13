@@ -2,4 +2,5 @@
 *.img
 *.iso
 *.bin
+!src/bootloader-config.bin
 *.log

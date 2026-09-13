@@ -24,15 +24,15 @@ pinned artifact. Hardware/platform research and evolution belong to the
 separate `wsm-os` project, not to this repository.
 
 That one machine is a graduation target, not the boundary of the driver
-architecture. [ADR-003](docs/ADR-003-RUST-LISP-MECHANISM-POLICY.md)'s
-capability model (bounded PCI/MMIO/DMA primitives, substrate mechanism
-below, WSM-owned device policy above) is deliberately not specialized to
-this one board or this one CPU generation: a driver written against that
-capability boundary should have no reason to assume Skylake, H170, or any
-detail specific to the owner's machine. A different physical platform may
-require different capability provisioning, but platform-research changes are
-owned by the separate `wsm-os` lab rather than folded back into this control
-target as new WSM semantics.
+architecture. [ADR-004](docs/ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md)'s
+pure Lisp + x86-64 assembly model (irreducible machine primitives in ASM
+below, pure Lisp system semantics & device policy above, zero Rust in production)
+is deliberately not specialized to this one board or this one CPU generation:
+a driver written against that capability boundary should have no reason to
+assume Skylake, H170, or any detail specific to the owner's machine. A
+different physical platform may require different capability provisioning, but
+platform-research changes are owned by the separate `wsm-os` lab rather than
+folded back into this control target as new WSM semantics.
 
 For the longer-range architectural picture beyond this bounded goal (a
 full WSM-native operating system, WSM on bare metal via a bootstrap-to-
@@ -125,11 +125,11 @@ per [docs/QEMU-LOCAL-RUN.md](docs/QEMU-LOCAL-RUN.md); фізичний бут �
 а не цьому репозиторію.
 
 Ця одна машина — graduation-ціль, а не межа драйверної архітектури.
-Capability-модель [ADR-003](docs/ADR-003-RUST-LISP-MECHANISM-POLICY.md)
-(обмежені PCI/MMIO/DMA примітиви, substrate-механізм внизу,
-WSM-політика пристроїв нагорі) свідомо не спеціалізована під цю плату чи
-це покоління CPU: драйвер, написаний проти цієї capability-межі, не
-повинен мати причин припускати Skylake, H170 чи будь-яку деталь, властиву
+Модель чистого Lisp + x86-64 асемблера [ADR-004](docs/ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md)
+(незвідні машинні примітиви в асемблері внизу, системна семантика та політика
+драйверів у Lisp нагорі, нуль Rust у production) свідомо не спеціалізована
+під цю плату чи це покоління CPU: драйвер, написаний проти цієї capability-межі,
+не повинен мати причин припускати Skylake, H170 чи будь-яку деталь, властиву
 саме машині власника. Інша фізична платформа може вимагати іншого
 capability provisioning, але platform-research зміни мають жити в окремій
 лабораторії `wsm-os`, а не повертатися сюди як нова семантика WSM.
