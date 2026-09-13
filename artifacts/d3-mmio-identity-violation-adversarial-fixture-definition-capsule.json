@@ -1,0 +1,106 @@
+{
+  "artifacts": {
+    "assembly": {
+      "digest": "cca7ce46f679b7721f26cd812737d54d9d723f68008133be245bb87ae0cbb872",
+      "path": "artifacts/d3-mmio-identity-violation-adversarial-fixture.s"
+    },
+    "object": {
+      "digest": "449d42f78bb26ce5ae76495ac2831a7638ffa4f716692413f75ab20959fdb048",
+      "path": "artifacts/d3-mmio-identity-violation-adversarial-fixture.o"
+    }
+  },
+  "callers": [],
+  "capabilities": {
+    "hot_replacement": false,
+    "inspectable_metadata": true,
+    "loader": false,
+    "world_image": false
+  },
+  "code": {
+    "end": 112,
+    "entry": "wsm_entry",
+    "exports": [
+      "wsm_entry"
+    ],
+    "range_kind": "object-relative",
+    "section": ".text",
+    "start": 0
+  },
+  "contracts": {
+    "cml": {
+      "revision": "8fd013478703baec72a6957e7cba49ff2b6f64d2",
+      "supported_contract": "2.0"
+    },
+    "my_lisp": {
+      "contract": "3.0",
+      "revision": "667b587394dc8d3fc8dadff7c925e5bce68ed887"
+    },
+    "target_abi": {
+      "digest": "16a16774179edb60656b0027f33631cf62749a4308fb8a28c70022c1c53b3d5a",
+      "schema": "wsm-os-target-v1",
+      "version": 2
+    }
+  },
+  "definition_id": "sha256:00f22edd152d80b6f2c64b40d0455bb3c7e3bf742dcc24c2b0a9fa756ef2bcf9",
+  "dependencies": [],
+  "digest_algorithm": "sha256",
+  "generator": {
+    "assembler_family": "gnu-as",
+    "name": "m4-generator",
+    "object_canonicalizer": "gnu-objcopy-remove-note-gnu-property",
+    "object_format": "elf64-x86-64",
+    "target_triple": "x86_64-unknown-none",
+    "version": "0.1.0"
+  },
+  "imports": [
+    "wsm_mmio_write32",
+    "wsm_pci_config_capability"
+  ],
+  "literal_table": {
+    "digest": "cf1111c59cdf0bfe59e92402308e1a7de85798998f5661635075c0fcaf5bcbd3",
+    "entries": [
+      {
+        "encoded_word": 12,
+        "kind": "symbol",
+        "symbol_id": 1
+      },
+      {
+        "encoded_word": 20,
+        "kind": "symbol",
+        "symbol_id": 2
+      }
+    ]
+  },
+  "schema": "wsm-definition-capsule",
+  "schema_version": 1,
+  "source": {
+    "file_digest": "83f8db3e30d647b32ee5960f13a6fcf4d62f5140ad77b9aa951c8e7569705be8",
+    "map": [
+      {
+        "generated_entry": "wsm_entry",
+        "granularity": "definition",
+        "object_end": 112,
+        "object_start": 0,
+        "source_end_byte": 68,
+        "source_start_byte": 0
+      }
+    ],
+    "path": "artifacts/d3-mmio-identity-violation-adversarial-fixture.wsm",
+    "semantic_digest": "83f8db3e30d647b32ee5960f13a6fcf4d62f5140ad77b9aa951c8e7569705be8"
+  },
+  "symbol_table": {
+    "digest": "709075550658fba7a27743fa8615f155473610852e116273d54f946827b2591e",
+    "entries": [
+      {
+        "encoded_word": 12,
+        "id": 1,
+        "name": "A"
+      },
+      {
+        "encoded_word": 20,
+        "id": 2,
+        "name": "B"
+      }
+    ]
+  }
+}

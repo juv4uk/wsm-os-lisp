@@ -1,0 +1,18 @@
+{
+  "assembly_digest": "cca7ce46f679b7721f26cd812737d54d9d723f68008133be245bb87ae0cbb872",
+  "cml_sha": "8fd013478703baec72a6957e7cba49ff2b6f64d2",
+  "digest_algorithm": "sha256",
+  "exported": [
+    "wsm_entry"
+  ],
+  "imports": [
+    "wsm_mmio_write32",
+    "wsm_pci_config_capability"
+  ],
+  "object_digest": "449d42f78bb26ce5ae76495ac2831a7638ffa4f716692413f75ab20959fdb048",
+  "schema": "wsm-d3-mmio-identity-violation-adversarial-fixture-artifact-manifest",
+  "schema_version": 2,
+  "source_file_digest": "83f8db3e30d647b32ee5960f13a6fcf4d62f5140ad77b9aa951c8e7569705be8",
+  "source_semantic_digest": "83f8db3e30d647b32ee5960f13a6fcf4d62f5140ad77b9aa951c8e7569705be8",
+  "target_contract_digest": "16a16774179edb60656b0027f33631cf62749a4308fb8a28c70022c1c53b3d5a"
+}
