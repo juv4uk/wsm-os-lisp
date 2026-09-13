@@ -15,7 +15,7 @@ const OBJECT_FORMAT: &str = "elf64-x86-64";
 const MY_LISP_CONTRACT: &str = "3.0";
 const MY_LISP_REVISION: &str = "667b587394dc8d3fc8dadff7c925e5bce68ed887";
 const CML_SUPPORTED_CONTRACT: &str = "2.0";
-const CML_REVISION: &str = "8fd013478703baec72a6957e7cba49ff2b6f64d2";
+const CML_REVISION: &str = "6ce577f24083c54b55bf1870396f6b3e1c3d04b9";
 const FIRST_FIXTURE_SOURCE: &str = "(cons (quote A) (quote B))";
 
 fn sha256(data: &[u8]) -> String {

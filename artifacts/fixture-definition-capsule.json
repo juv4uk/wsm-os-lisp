@@ -28,7 +28,7 @@
   },
   "contracts": {
     "cml": {
-      "revision": "8fd013478703baec72a6957e7cba49ff2b6f64d2",
+      "revision": "6ce577f24083c54b55bf1870396f6b3e1c3d04b9",
       "supported_contract": "2.0"
     },
     "my_lisp": {
@@ -41,7 +41,7 @@
       "version": 2
     }
   },
-  "definition_id": "sha256:16aaf6f80e68c4a6278abfab5b88ee977ecc0168367e8810e3405d64c538631c",
+  "definition_id": "sha256:60c6a5d693c99f2097e314d24a34dbe63263ee9aa9c50407ef83b201460f529c",
   "dependencies": [],
   "digest_algorithm": "sha256",
   "generator": {
