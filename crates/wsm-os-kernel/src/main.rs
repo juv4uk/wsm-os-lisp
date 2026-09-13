@@ -7,20 +7,45 @@ use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
 pub static BOOTLOADER_CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();
     config.mappings.physical_memory = Some(Mapping::Dynamic);
+    config.kernel_stack_size = 256 * 1024;
     config
 };
 
 entry_point!(kernel_main, config = &BOOTLOADER_CONFIG);
-use core::arch::asm;
+use core::arch::{asm, global_asm};
 use core::mem::MaybeUninit;
 use core::panic::PanicInfo;
 use wsm_os_runtime::{wsm_fail, ConsCell, RuntimeContext};
 use wsm_os_target::{decode_symbol, ClosureDescriptor, Word};
 
+global_asm!(include_str!("drivers.s"));
+
+extern "C" {
+    pub fn wsm_asm_mouse_init() -> u32;
+    pub fn wsm_asm_ps2_poll() -> i32;
+    pub fn wsm_asm_mouse_update(byte: u8, max_x: u32, max_y: u32) -> u32;
+    pub fn wsm_asm_draw_xor_cursor(
+        fb_ptr: *mut u8,
+        width: u64,
+        height: u64,
+        stride: u64,
+        bpp: u64,
+        cx: u64,
+        cy: u64,
+    );
+    pub fn wsm_asm_pci_read32(bus: u8, dev: u8, func: u8, offset: u8) -> u32;
+    pub fn wsm_asm_rdtsc() -> u64;
+
+    pub static mut wsm_mouse_x: i32;
+    pub static mut wsm_mouse_y: i32;
+    pub static mut wsm_mouse_buttons: i32;
+}
+
 mod font8x16;
 mod fs_records;
 mod gop_console;
 mod guest_block;
+mod lisp_repl;
 mod ps2;
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
@@ -73,9 +98,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
             qemu_exit(0x12)
         }
     } else if fixture_name == "repl-fixture" {
-        repl_fixture();
+        repl_fixture(&mut context);
     } else if fixture_name == "gop-repl-fixture" {
-        gop_repl_fixture(boot_info);
+        gop_repl_fixture(boot_info, &mut context);
     } else if fixture_name == "m5a-fixture" {
         if is_m5a_fixture_result(result, &context) {
             serial_write(b"WSM-OS RESULT schema=1 value=(40 . t) status=ok\n");
@@ -231,8 +256,8 @@ fn fs_fixture_witness(context: &mut RuntimeContext) -> bool {
         && tail_cell.cdr == wsm_os_target::NIL
 }
 
-const HEAP_CAPACITY: usize = 8;
-const CLOSURE_CAPACITY: usize = 4;
+const HEAP_CAPACITY: usize = 4096;
+const CLOSURE_CAPACITY: usize = 256;
 static mut HEAP: [MaybeUninit<ConsCell>; HEAP_CAPACITY] = [MaybeUninit::uninit(); HEAP_CAPACITY];
 static mut CLOSURES: [MaybeUninit<ClosureDescriptor>; CLOSURE_CAPACITY] =
     [MaybeUninit::uninit(); CLOSURE_CAPACITY];
@@ -757,7 +782,7 @@ fn serial_write(bytes: &[u8]) {
     }
 }
 
-fn gop_repl_fixture(boot_info: &'static mut BootInfo) -> ! {
+fn gop_repl_fixture(boot_info: &'static mut BootInfo, context: &mut RuntimeContext) -> ! {
     let Some(fb) = boot_info.framebuffer.as_mut() else {
         serial_write(b"WSM-OS GOP-REPL schema=1 error=no-framebuffer status=error\n");
         qemu_exit(0x12)
@@ -771,7 +796,7 @@ fn gop_repl_fixture(boot_info: &'static mut BootInfo) -> ! {
     serial_write(b"\n");
     console.clear();
     console.write_line(b"WSM-OS GOP-REPL schema=1 status=ready");
-    console.write_line(b"commands: h=help q=quit <fixnum> nil t");
+    console.write_line(b"forms: quote, cons, car, cdr, atom, eq, cond, if, def, lambda, +, -, *");
     console.write_slice(b"> ");
     let drawn = console.drawn_pixel_count();
     serial_write(b"WSM-OS GOP-REPL schema=1 pixel-test=");
@@ -786,72 +811,111 @@ fn gop_repl_fixture(boot_info: &'static mut BootInfo) -> ! {
     if drawn <= 64 {
         qemu_exit(0x12)
     }
-    gop_repl_loop(&mut console)
+    gop_repl_loop(&mut console, context)
 }
 
-fn gop_repl_loop(console: &mut gop_console::GopConsole) -> ! {
-    let mut line = [0_u8; 64];
+fn gop_repl_loop(console: &mut gop_console::GopConsole, context: &mut RuntimeContext) -> ! {
+    let mut line = [0_u8; 256];
     let mut len: usize = 0;
     let mut keyboard = ps2::Ps2Keyboard::new();
+
+    let mouse_ok = ps2::mouse_init();
+    if mouse_ok {
+        serial_write(b"WSM-OS PS2 mouse initialized\n");
+    } else {
+        serial_write(b"WSM-OS PS2 mouse init failed or not present\n");
+    }
+    ps2::mouse_set_bounds(
+        (console.width().saturating_sub(8)) as i32,
+        (console.height().saturating_sub(8)) as i32,
+    );
+    let (cursor_x_i, cursor_y_i) = ps2::mouse_get_pos();
+    let mut cursor_x = cursor_x_i as usize;
+    let mut cursor_y = cursor_y_i as usize;
+    console.draw_xor_cursor(cursor_x, cursor_y);
+
     loop {
-        let Some(ascii) = keyboard.poll() else {
-            core::hint::spin_loop();
-            continue;
-        };
-        serial_write(b"WSM-OS GOP-REPL schema=1 event=key ascii=");
-        serial_write_decimal(ascii as u32);
-        serial_write(b"\n");
-        if ascii == b'\r' || ascii == b'\n' {
-            serial_write(b"WSM-OS GOP-REPL schema=1 event=line value=");
-            serial_write(&line[..len]);
-            serial_write(b"\n");
-            console.put_char(b'\n');
-            let input = trim_whitespace(&line[..len]);
-            if input.len() == 1 && input[0] == b'q' {
-                console.write_line(b"WSM-OS GOP-REPL status=bye");
-                serial_write(b"WSM-OS GOP-REPL schema=1 status=bye\n");
-                qemu_exit(0x10)
-            } else if input.len() == 1 && input[0] == b'h' {
-                console.write_line(b"commands: h=help q=quit <fixnum> nil t");
-                console.write_slice(b"> ");
-            } else if bytes_eq(input, b"nil") {
-                console.write_line(b"WSM-OS GOP-REPL value=nil");
-                console.write_slice(b"> ");
-            } else if bytes_eq(input, b"t") {
-                console.write_line(b"WSM-OS GOP-REPL value=t");
-                console.write_slice(b"> ");
-            } else if let Some(n) = parse_i64(input) {
-                if wsm_os_target::encode_fixnum(n).is_some() {
-                    console.write_line(b"WSM-OS GOP-REPL value=");
-                    console.write_line(input);
-                    console.write_slice(b"> ");
-                } else {
-                    console.write_line(b"WSM-OS GOP-REPL condition=NUMERIC_OVERFLOW value=");
-                    console.write_line(input);
-                    console.write_slice(b"> ");
+        match ps2::poll_raw() {
+            Some(ps2::Ps2RawEvent::Mouse(byte)) => {
+                if let Some(packet) = ps2::mouse_handle_byte(byte) {
+                    let (mx, my) = ps2::mouse_get_pos();
+                    let new_x = mx as usize;
+                    let new_y = my as usize;
+                    if new_x != cursor_x || new_y != cursor_y {
+                        console.draw_xor_cursor(cursor_x, cursor_y);
+                        console.draw_xor_cursor(new_x, new_y);
+                        cursor_x = new_x;
+                        cursor_y = new_y;
+                    }
+                    serial_write(b"WSM-OS GOP-REPL schema=1 event=mouse dx=");
+                    serial_write_decimal(packet.dx.abs() as u32);
+                    serial_write(b" dy=");
+                    serial_write_decimal(packet.dy.abs() as u32);
+                    serial_write(b" btn=");
+                    let bmask = (if packet.btn_left { 1 } else { 0 })
+                        | (if packet.btn_right { 2 } else { 0 })
+                        | (if packet.btn_middle { 4 } else { 0 });
+                    serial_write_decimal(bmask);
+                    serial_write(b"\n");
                 }
-            } else if !input.is_empty() {
-                console.write_line(b"WSM-OS GOP-REPL condition=TYPE value=");
-                console.write_line(input);
-                console.write_slice(b"> ");
-            } else {
-                console.write_slice(b"> ");
             }
-            len = 0;
-        } else if ascii == 8 || ascii == 127 {
-            len = len.saturating_sub(1);
-            console.put_char(8);
-        } else if len < line.len() {
-            line[len] = ascii;
-            len += 1;
-            console.put_char(ascii);
+            Some(ps2::Ps2RawEvent::Keyboard(byte)) => {
+                let Some(ascii) = keyboard.handle_byte(byte) else {
+                    continue;
+                };
+                console.draw_xor_cursor(cursor_x, cursor_y);
+
+                serial_write(b"WSM-OS GOP-REPL schema=1 event=key ascii=");
+                serial_write_decimal(ascii as u32);
+                serial_write(b"\n");
+                if ascii == b'\r' || ascii == b'\n' {
+                    serial_write(b"WSM-OS GOP-REPL schema=1 event=line value=");
+                    serial_write(&line[..len]);
+                    serial_write(b"\n");
+                    console.put_char(b'\n');
+                    let input = trim_whitespace(&line[..len]);
+                    if input.len() == 1 && input[0] == b'q' {
+                        console.write_line(b"WSM-OS GOP-REPL status=bye");
+                        serial_write(b"WSM-OS GOP-REPL schema=1 status=bye\n");
+                        qemu_exit(0x10)
+                    } else if input.len() == 1 && input[0] == b'h' {
+                        console.write_line(b"forms: quote, cons, car, cdr, atom, eq, cond, if, def, lambda, +, -, *, logand, ash, io-in8, ps2-mouse-init, mouse-pos");
+                        console.write_slice(b"> ");
+                    } else if !input.is_empty() {
+                        lisp_repl::repl_eval_and_print(input, context, &mut |bytes| {
+                            console.write_slice(bytes);
+                            serial_write(bytes);
+                        });
+                        console.put_char(b'\n');
+                        console.write_slice(b"> ");
+                        serial_write(b"\n");
+                    } else {
+                        console.write_slice(b"> ");
+                    }
+                    len = 0;
+                } else if ascii == 8 || ascii == 127 {
+                    if len > 0 {
+                        len -= 1;
+                        console.put_char(8);
+                    }
+                } else if len < line.len() {
+                    line[len] = ascii;
+                    len += 1;
+                    console.put_char(ascii);
+                }
+
+                console.draw_xor_cursor(cursor_x, cursor_y);
+            }
+            None => {
+                core::hint::spin_loop();
+            }
         }
     }
 }
 
-fn repl_fixture() -> ! {
+fn repl_fixture(context: &mut RuntimeContext) -> ! {
     serial_write(b"WSM-OS REPL schema=1 status=ready\n> ");
-    let mut line = [0_u8; 64];
+    let mut line = [0_u8; 256];
     let mut len: usize = 0;
     loop {
         if !serial_has_input() {
@@ -866,33 +930,19 @@ fn repl_fixture() -> ! {
                 serial_write(b"WSM-OS REPL status=bye\n");
                 qemu_exit(0x10)
             } else if input.len() == 1 && input[0] == b'h' {
-                serial_write(b"commands: h=help q=quit <fixnum> nil t\n> ");
-            } else if bytes_eq(input, b"nil") {
-                serial_write(b"WSM-OS REPL value=nil\n> ");
-            } else if bytes_eq(input, b"t") {
-                serial_write(b"WSM-OS REPL value=t\n> ");
-            } else if let Some(n) = parse_i64(input) {
-                if let Some(_word) = wsm_os_target::encode_fixnum(n) {
-                    serial_write(b"WSM-OS REPL value=");
-                    serial_write_signed_decimal(n);
-                    serial_write(b"\n> ");
-                } else {
-                    serial_write(
-                        b"WSM-OS CONDITION schema=1 kind=NUMERIC_OVERFLOW source=repl value=",
-                    );
-                    serial_write(input);
-                    serial_write(b"\n> ");
-                }
+                serial_write("WSM-OS REPL commands: h=help q=quit; forms: quote, cons, car, cdr, atom, eq, cond, if, def, lambda, +, -, *, <, >, = (or Ukrainian: як-є, сполучити, перше, решта, атом?, тотожне?, за-умовою, якщо, визначити, лямбда, додати, відняти, помножити)\n> ".as_bytes());
             } else if !input.is_empty() {
-                serial_write(b"WSM-OS CONDITION schema=1 kind=TYPE source=repl value=");
-                serial_write(input);
+                lisp_repl::repl_eval_and_print(input, context, &mut |bytes| serial_write(bytes));
                 serial_write(b"\n> ");
             } else {
                 serial_write(b"> ");
             }
             len = 0;
         } else if byte == 8 || byte == 127 {
-            len = len.saturating_sub(1);
+            if len > 0 {
+                len -= 1;
+                serial_write(b"\x08 \x08");
+            }
         } else if len < line.len() {
             line[len] = byte;
             len += 1;
@@ -919,6 +969,7 @@ fn trim_whitespace(mut slice: &[u8]) -> &[u8] {
     slice
 }
 
+#[allow(dead_code)]
 fn parse_i64(bytes: &[u8]) -> Option<i64> {
     if bytes.is_empty() {
         return None;
@@ -957,6 +1008,7 @@ fn serial_write_signed_decimal(value: i64) {
     }
 }
 
+#[allow(dead_code)]
 fn bytes_eq(left: &[u8], right: &[u8]) -> bool {
     left.len() == right.len() && left.iter().zip(right).all(|(a, b)| a == b)
 }
@@ -1002,7 +1054,7 @@ fn qemu_exit(code: u32) -> ! {
     }
 }
 
-unsafe fn outb(port: u16, value: u8) {
+pub(crate) unsafe fn outb(port: u16, value: u8) {
     asm!("out dx, al", in("dx") port, in("al") value, options(nomem, nostack));
 }
 
@@ -1012,12 +1064,111 @@ pub(crate) unsafe fn inb(port: u16) -> u8 {
     value
 }
 
-unsafe fn outl(port: u16, value: u32) {
+pub(crate) unsafe fn outl(port: u16, value: u32) {
     asm!("out dx, eax", in("dx") port, in("eax") value, options(nomem, nostack));
 }
 
-unsafe fn inl(port: u16) -> u32 {
+pub(crate) unsafe fn inl(port: u16) -> u32 {
     let value: u32;
     asm!("in eax, dx", in("dx") port, out("eax") value, options(nomem, nostack));
     value
+}
+
+pub(crate) unsafe fn rdtsc() -> u64 {
+    let lo: u32;
+    let hi: u32;
+    asm!("rdtsc", out("eax") lo, out("edx") hi, options(nomem, nostack));
+    ((hi as u64) << 32) | (lo as u64)
+}
+
+pub(crate) unsafe fn cpuid(leaf: u32, subleaf: u32) -> (u32, u32, u32, u32) {
+    let eax: u32;
+    let ebx: u32;
+    let ecx: u32;
+    let edx: u32;
+    asm!(
+        "push rbx",
+        "cpuid",
+        "mov {tmp_ebx:e}, ebx",
+        "pop rbx",
+        tmp_ebx = out(reg) ebx,
+        inout("eax") leaf => eax,
+        inout("ecx") subleaf => ecx,
+        out("edx") edx,
+        options(nomem, nostack)
+    );
+    (eax, ebx, ecx, edx)
+}
+
+pub(crate) unsafe fn rdrand() -> Option<u64> {
+    let (_, _, c, _) = cpuid(1, 0);
+    // Check if CPUID.01H:ECX.RDRAND[bit 30] == 1
+    if (c >> 30) & 1 == 0 {
+        return None;
+    }
+    for _ in 0..10 {
+        let val: u64;
+        let ok: u8;
+        asm!(
+            "rdrand {0}",
+            "setc {1}",
+            out(reg) val,
+            out(reg_byte) ok,
+            options(nomem, nostack)
+        );
+        if ok != 0 {
+            return Some(val);
+        }
+    }
+    None
+}
+
+pub(crate) unsafe fn read_cr(reg: u8) -> u64 {
+    let val: u64;
+    match reg {
+        0 => asm!("mov {}, cr0", out(reg) val, options(nomem, nostack)),
+        2 => asm!("mov {}, cr2", out(reg) val, options(nomem, nostack)),
+        3 => asm!("mov {}, cr3", out(reg) val, options(nomem, nostack)),
+        4 => asm!("mov {}, cr4", out(reg) val, options(nomem, nostack)),
+        _ => return 0,
+    }
+    val
+}
+
+pub(crate) unsafe fn read_msr(msr: u32) -> u64 {
+    let lo: u32;
+    let hi: u32;
+    asm!("rdmsr", in("ecx") msr, out("eax") lo, out("edx") hi, options(nomem, nostack));
+    ((hi as u64) << 32) | (lo as u64)
+}
+
+pub(crate) unsafe fn write_msr(msr: u32, val: u64) {
+    let lo = val as u32;
+    let hi = (val >> 32) as u32;
+    asm!("wrmsr", in("ecx") msr, in("eax") lo, in("edx") hi, options(nomem, nostack));
+}
+
+pub(crate) unsafe fn pci_read32(bus: u8, dev: u8, func: u8, offset: u8) -> u32 {
+    let address = (1_u32 << 31)
+        | ((bus as u32) << 16)
+        | (((dev & 0x1F) as u32) << 11)
+        | (((func & 0x07) as u32) << 8)
+        | ((offset & 0xFC) as u32);
+    outl(0xCF8, address);
+    inl(0xCFC)
+}
+
+pub(crate) unsafe fn pci_write32(bus: u8, dev: u8, func: u8, offset: u8, val: u32) {
+    let address = (1_u32 << 31)
+        | ((bus as u32) << 16)
+        | (((dev & 0x1F) as u32) << 11)
+        | (((func & 0x07) as u32) << 8)
+        | ((offset & 0xFC) as u32);
+    outl(0xCF8, address);
+    outl(0xCFC, val);
+}
+
+pub(crate) unsafe fn mem_read64(addr: u64) -> u64 {
+    let ptr = addr as *const u64;
+    core::ptr::read_volatile(ptr)
 }

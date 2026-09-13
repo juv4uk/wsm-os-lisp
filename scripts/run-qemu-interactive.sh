@@ -5,8 +5,8 @@ if [[ $# -ne 1 ]]; then
   echo "usage: $0 <uefi-image>" >&2
   exit 2
 fi
-: "${OVMF_CODE:?set OVMF_CODE}"
-: "${OVMF_VARS:?set OVMF_VARS}"
+# Resolve OVMF via explicit environment first, then Guix discovery
+source "$(dirname "$0")/ovmf-env.sh"
 : "${QEMU_SYSTEM_X86_64:=qemu-system-x86_64}"
 : "${WSM_OS_QEMU_TIMEOUT:=300}"
 

@@ -57,6 +57,76 @@ impl<'a> GopConsole<'a> {
         }
     }
 
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
+    }
+
+    #[allow(dead_code)]
+    pub fn read_pixel(&self, x: usize, y: usize) -> [u8; 3] {
+        let Some(base) = self.pixel_offset(x, y) else {
+            return [0, 0, 0];
+        };
+        if base + 3 > self.buffer.len() {
+            return [0, 0, 0];
+        }
+        match self.pixel_format {
+            PixelFormat::Bgr => [self.buffer[base + 2], self.buffer[base + 1], self.buffer[base]],
+            PixelFormat::Rgb => [self.buffer[base], self.buffer[base + 1], self.buffer[base + 2]],
+            _ => [0, 0, 0],
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn draw_mouse_pointer(&mut self, cx: usize, cy: usize, color: [u8; 3]) {
+        const ARROW: [u8; 8] = [
+            0b10000000,
+            0b11000000,
+            0b11100000,
+            0b11110000,
+            0b11111000,
+            0b11100000,
+            0b10110000,
+            0b00011000,
+        ];
+        for (dy, row) in ARROW.iter().enumerate() {
+            for dx in 0..8 {
+                if (row & (0x80 >> dx)) != 0 {
+                    self.write_pixel(cx + dx, cy + dy, color);
+                }
+            }
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn invert_pixel(&mut self, x: usize, y: usize) {
+        let Some(base) = self.pixel_offset(x, y) else {
+            return;
+        };
+        if base + 2 < self.buffer.len() {
+            self.buffer[base] ^= 0xFF;
+            self.buffer[base + 1] ^= 0xFF;
+            self.buffer[base + 2] ^= 0xFF;
+        }
+    }
+
+    pub fn draw_xor_cursor(&mut self, cx: usize, cy: usize) {
+        unsafe {
+            crate::wsm_asm_draw_xor_cursor(
+                self.buffer.as_mut_ptr(),
+                self.width as u64,
+                self.height as u64,
+                self.stride as u64,
+                self.bytes_per_pixel as u64,
+                cx as u64,
+                cy as u64,
+            );
+        }
+    }
+
     fn pixel_offset(&self, x: usize, y: usize) -> Option<usize> {
         if x >= self.width || y >= self.height {
             return None;

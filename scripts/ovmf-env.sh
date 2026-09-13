@@ -17,6 +17,16 @@ if [[ -z "${OVMF_CODE:-}" || -z "${OVMF_VARS:-}" ]]; then
 fi
 
 if [[ -z "${OVMF_CODE:-}" || -z "${OVMF_VARS:-}" ]]; then
+  for candidate in /gnu/store/*-ovmf-x86-64-*/share/firmware; do
+    if [[ -f "$candidate/ovmf_code_x64.bin" && -f "$candidate/ovmf_vars_x64.bin" ]]; then
+      : "${OVMF_CODE:=$candidate/ovmf_code_x64.bin}"
+      : "${OVMF_VARS:=$candidate/ovmf_vars_x64.bin}"
+      break
+    fi
+  done
+fi
+
+if [[ -z "${OVMF_CODE:-}" || -z "${OVMF_VARS:-}" ]]; then
   echo "ERROR: OVMF firmware not specified and Guix ovmf-x86-64 package not found." >&2
   echo "Please set OVMF_CODE=/path/to/code.bin and OVMF_VARS=/path/to/vars.bin explicitly." >&2
   exit 2
