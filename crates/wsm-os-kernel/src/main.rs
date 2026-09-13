@@ -21,11 +21,21 @@ mod fs_records;
 mod guest_block;
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    // Store the physical-memory offset provided by the bootloader so that
-    // MMIO physical addresses (from PCI BARs) can be translated to virtual
-    // addresses accessible under the kernel's page tables.
+    // Provision physical-memory translation. The bootloader config requests
+    // a dynamic mapping; if it is absent, MMIO paths must fail closed instead
+    // of assuming identity mapping. WSM_OS_FORCE_NO_PHYS_MAP is a deliberate
+    // mutation used by the fail-closed witness to prove the MMIO path refuses
+    // to run without a bootloader-provisioned mapping.
+    let mapping = if option_env!("WSM_OS_FORCE_NO_PHYS_MAP").is_some() {
+        PhysMemMapping::Unavailable
+    } else {
+        match boot_info.physical_memory_offset.into_option() {
+            Some(offset) => PhysMemMapping::Offset(offset),
+            None => PhysMemMapping::Unavailable,
+        }
+    };
     unsafe {
-        PHYS_MEM_OFFSET = boot_info.physical_memory_offset.into_option().unwrap_or(0);
+        PHYS_MEM_MAPPING = mapping;
     }
     serial_init();
     serial_write(b"WSM-OS BOOT schema=1 arch=x86_64 status=ok\n");
@@ -252,9 +262,25 @@ static mut CAPABILITY_REGISTRY: [CapabilityGrant; MAX_CAPABILITY_GRANTS] = [Capa
 };
     MAX_CAPABILITY_GRANTS];
 
-/// Physical memory offset from bootloader (virtual = PHYS_MEM_OFFSET + physical).
-/// Zero means identity-mapping (physical == virtual), which is safe as a fallback.
-static mut PHYS_MEM_OFFSET: u64 = 0;
+/// Physical-memory translation provisioned by the bootloader.
+/// virtual = physical + offset. `Unavailable` means the bootloader did NOT
+/// provide the requested dynamic mapping: any MMIO path must fail closed
+/// instead of assuming identity mapping (offset zero is not proof of a
+/// mapping being present).
+#[derive(Clone, Copy)]
+enum PhysMemMapping {
+    Unavailable,
+    Offset(u64),
+}
+
+static mut PHYS_MEM_MAPPING: PhysMemMapping = PhysMemMapping::Unavailable;
+
+/// MMIO substrate failure codes. Distinct from WSM semantic/runtime
+/// conditions: these are raised by the platform provider itself.
+const MMIO_ERR_MAPPING_UNAVAILABLE_READ: u32 = 0x4D49_4F07;
+const MMIO_ERR_MAPPING_UNAVAILABLE_WRITE: u32 = 0x4D49_4F08;
+const MMIO_ERR_ADDRESS_OVERFLOW_READ: u32 = 0x4D49_4F09;
+const MMIO_ERR_ADDRESS_OVERFLOW_WRITE: u32 = 0x4D49_4F0A;
 
 /// Physical base address of the virtio-blk VirtIO common-config MMIO region.
 /// Resolved once by walking the PCI capability list for BDF 00:05.0.
@@ -503,6 +529,27 @@ pub unsafe extern "C" fn wsm_mmio_capability(context: *mut RuntimeContext) -> Wo
     init_mmio_grant()
 }
 
+/// Translate a physical MMIO address to a virtual address under the
+/// bootloader-provisioned mapping, failing closed (error code) when the
+/// mapping is absent or the addition overflows. Never interprets offset
+/// zero as proof of identity mapping.
+fn translate_mmio_addr(phys_base: u64, byte_offset: u64) -> Result<u64, u32> {
+    let virt_offset = match unsafe { PHYS_MEM_MAPPING } {
+        PhysMemMapping::Offset(offset) => offset,
+        PhysMemMapping::Unavailable => return Err(MMIO_ERR_MAPPING_UNAVAILABLE_READ),
+    };
+    virt_offset
+        .checked_add(phys_base)
+        .and_then(|sum| sum.checked_add(byte_offset))
+        .ok_or(MMIO_ERR_ADDRESS_OVERFLOW_READ)
+}
+
+fn fail_mmio(context: *mut RuntimeContext, capability: Word, code: u32) -> Word {
+    unsafe {
+        wsm_fail(context, wsm_os_target::ErrorCode::AbiViolation as u32, capability, code)
+    }
+}
+
 /// Bounded 32-bit MMIO register read. Offset is a non-negative fixnum
 /// (byte offset within the common-config region, max 4095).
 #[unsafe(no_mangle)]
@@ -512,41 +559,26 @@ pub unsafe extern "C" fn wsm_mmio_read32(
     offset: Word,
 ) -> Word {
     let Some(offset) = wsm_os_target::decode_fixnum(offset) else {
-        unsafe {
-            wsm_fail(
-                context,
-                wsm_os_target::ErrorCode::AbiViolation as u32,
-                capability,
-                0x4D494F01,
-            )
-        }
+        return fail_mmio(context, capability, 0x4D494F01);
     };
     if !verify_capability_grant(capability, CapabilityKind::Mmio, 0)
         || !(0..=4095).contains(&offset)
         || offset % 4 != 0
     {
-        unsafe {
-            wsm_fail(
-                context,
-                wsm_os_target::ErrorCode::AbiViolation as u32,
-                capability,
-                0x4D494F02,
-            )
-        }
+        return fail_mmio(context, capability, 0x4D494F02);
     }
     let phys_base = unsafe { MMIO_COMMON_CFG_PHYS };
     if phys_base == 0 {
-        unsafe {
-            wsm_fail(
-                context,
-                wsm_os_target::ErrorCode::AbiViolation as u32,
-                capability,
-                0x4D494F03,
-            )
-        }
+        return fail_mmio(context, capability, 0x4D494F03);
     }
-    let virt_addr = unsafe { PHYS_MEM_OFFSET } + phys_base + offset as u64;
-    // SAFETY: capability verified, offset bounded, address resolved from bootloader mapping
+    // Fail closed before any volatile access: no bootloader-provisioned
+    // mapping, zero is not identity, and address addition must not overflow.
+    let virt_addr = match translate_mmio_addr(phys_base, offset as u64) {
+        Ok(addr) => addr,
+        Err(code) => return fail_mmio(context, capability, code),
+    };
+    // SAFETY: capability verified, offset bounded, address resolved from the
+    // bootloader-provisioned mapping (unavailable/overflow already rejected).
     let value = unsafe { (virt_addr as *const u32).read_volatile() };
     wsm_os_target::encode_fixnum(value as i64).expect("32-bit MMIO read must fit in fixnum")
 }
@@ -564,41 +596,34 @@ pub unsafe extern "C" fn wsm_mmio_write32(
         wsm_os_target::decode_fixnum(offset),
         wsm_os_target::decode_fixnum(value),
     ) else {
-        unsafe {
-            wsm_fail(
-                context,
-                wsm_os_target::ErrorCode::AbiViolation as u32,
-                capability,
-                0x4D494F04,
-            )
-        }
+        return fail_mmio(context, capability, 0x4D494F04);
     };
     if !verify_capability_grant(capability, CapabilityKind::Mmio, 0)
         || !(0..=4095).contains(&offset)
         || offset % 4 != 0
     {
-        unsafe {
-            wsm_fail(
-                context,
-                wsm_os_target::ErrorCode::AbiViolation as u32,
-                capability,
-                0x4D494F05,
-            )
-        }
+        return fail_mmio(context, capability, 0x4D494F05);
     }
     let phys_base = unsafe { MMIO_COMMON_CFG_PHYS };
     if phys_base == 0 {
-        unsafe {
-            wsm_fail(
-                context,
-                wsm_os_target::ErrorCode::AbiViolation as u32,
-                capability,
-                0x4D494F06,
-            )
-        }
+        return fail_mmio(context, capability, 0x4D494F06);
     }
-    let virt_addr = unsafe { PHYS_MEM_OFFSET } + phys_base + offset as u64;
-    // SAFETY: capability verified, offset bounded, address resolved from bootloader mapping
+    // Fail closed before any volatile access: no bootloader-provisioned
+    // mapping, zero is not identity, and address addition must not overflow.
+    let virt_addr = match translate_mmio_addr(phys_base, offset as u64) {
+        Ok(addr) => addr,
+        Err(code) => {
+            // translate_mmio_addr reports read-pair codes; write reporting
+            // needs the write-pair codes to stay distinct per direction.
+            let write_code = match code {
+                MMIO_ERR_ADDRESS_OVERFLOW_READ => MMIO_ERR_ADDRESS_OVERFLOW_WRITE,
+                _ => MMIO_ERR_MAPPING_UNAVAILABLE_WRITE,
+            };
+            return fail_mmio(context, capability, write_code);
+        }
+    };
+    // SAFETY: capability verified, offset bounded, address resolved from the
+    // bootloader-provisioned mapping (unavailable/overflow already rejected).
     unsafe { (virt_addr as *mut u32).write_volatile(value as u32) };
     wsm_os_target::NIL
 }
