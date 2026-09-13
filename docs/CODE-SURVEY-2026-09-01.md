@@ -1,10 +1,9 @@
-# CODE-SURVEY-2026-09-01 — огляд коду wsm-os
+> [!NOTE]
+> **Історичний документ (Historical Record Note, 2026-09-14, [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md)):**
+> Цей документ фіксує стан коду станом на 2026-09-01. Відповідно до ADR-004, усі переглянуті тут
+> Rust-крейти (`wsm-os-runtime`, `wsm-os-kernel`, `wsm-os-block`, тощо) повністю вилучено з репозиторію.
+> Поточна виробнича архітектура — **Чистий Lisp + x86-64 асемблер (`src/runtime.s`, `src/entry.s`, `src/drivers.s`). RUST = 0.**
 
-**Виконавець:** wsl-nidana-1
-**Метод:** реальне читання `wsm-os-runtime/src/lib.rs`,
-`wsm-os-kernel/src/main.rs` (panic/failure шлях, PCI config read),
-`wsm-os-target/src/lib.rs`, `wsm-os-virtio/src/lib.rs`,
-`wsm-os-block/src/lib.rs`. Не exhaustive.
 
 ## `wsm-os-runtime/src/lib.rs` (493 рядки) — дисциплінований unsafe
 

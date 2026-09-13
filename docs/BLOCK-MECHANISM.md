@@ -1,12 +1,20 @@
 # WSM block mechanism v0 / Механізм блоків WSM v0
 
-`wsm-os-block` is a hosted, file-backed mechanism-only prototype for the
-filesystem roadmap F5. It stores opaque bytes in fixed-size blocks. It does
-not know WSM values, names, roots, journal events, or evaluation.
+> [!IMPORTANT]
+> **Architectural Ratification (2026-09-14, [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md)):**
+> The former `crates/wsm-os-block` Rust implementation has been retired under the zero-Rust directive.
+> Production storage and block mechanisms are implemented directly in Lisp, interfacing
+> with low-level disk/controller registers through pure assembly capability primitives.
+> / Колишню реалізацію `crates/wsm-os-block` на Rust вилучено відповідно до директиви RUST = 0.
+> Механізми збереження та роботи з блоками реалізуються безпосередньо на Lisp, взаємодіючи
+> з регістрами контролерів через чисті асемблерні capability-примітиви.
 
-`wsm-os-block` — hosted прототип механізмного рівня F5 на file-backed medium.
-Він зберігає непрозорі bytes у блоках фіксованого розміру й не знає про
-значення WSM, імена, roots, journal-події чи evaluation.
+`wsm-os-block` was the initial specification for the filesystem roadmap F5.
+It defines fixed-size block storage for opaque bytes.
+
+`wsm-os-block` — початкова специфікація для дорожньої карти файлової системи F5.
+Вона визначає зберігання непрозорих байтів у блоках фіксованого розміру.
+
 
 ## On-block format / Формат блока
 
@@ -33,8 +41,8 @@ the medium allocates a block buffer.
 
 ## API boundary / Межа API
 
-```rust
-read_block(index) -> Result<Vec<u8>, BlockError>
+```text
+read_block(index) -> Result<Block, BlockError>
 write_block(index, bytes) -> Result<(), BlockError>
 flush() -> Result<(), BlockError>
 ```

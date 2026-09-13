@@ -1,5 +1,7 @@
 (specifications->manifest
- '("rust"
-   "cargo"
+ '("binutils"
    "qemu"
-   "lld"))
+   "mtools"
+   "dosfstools"
+   "gptfdisk"))
+

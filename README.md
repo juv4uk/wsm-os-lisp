@@ -6,11 +6,12 @@
 > **DO NOT MODERNIZE INTO `wsm-os`:** `wsm-os` (`juv4uk/wsm-os`) is a separate, independent physical-platform research laboratory for `juv4uk/wsm`. `wsm-os-lisp` owns its existing Lisp-machine target ABI/runtime, UEFI image, QEMU execution evidence, and the parity ledger for that pinned artifact. See `ecosystem/decisions/2026-09-05-my-lisp-execution-quartet-and-wsm-os-lisp-role.md`.
 
 Research and executable prototypes for a WSM-native Lisp machine control target.
+The architecture is strictly **Pure Lisp + x86-64 Assembly (Zero Rust, Zero C in production)** per [ADR-004](docs/ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md).
 
-The project starts with a narrow claim: boot a minimal target, establish a
-typed host boundary, and execute one verified WSM expression. It does not yet
-claim to be an operating system, a `no_std` port of all of my-lisp, or a
-bare-metal CUDA runtime.
+The project starts with a clear, verified baseline: boot on UEFI, establish a
+minimal System V AMD64 assembly runtime (`src/runtime.s`), execute compiled WSM expressions,
+and prove 100% parity against the canonical `my-lisp` oracle in QEMU and on real hardware.
+
 
 ## Goal
 
@@ -104,13 +105,14 @@ This is `QEMU-BOOT-PARITY`, not a physical-hardware claim.
 > `wsm-os-lisp` є **контрольним bare-metal таргетом виконання** для лінії `my-lisp` (`my-lisp` оракул → `cml` lowering → `wsm-os-lisp` автономний UEFI таргет).  
 > **НЕ МОДЕРНІЗУВАТИ В `wsm-os`:** `wsm-os` (`juv4uk/wsm-os`) є окремою незалежною лабораторією дослідження фізичної платформи для `juv4uk/wsm`. `wsm-os-lisp` володіє своїм наявним target ABI/runtime, UEFI-образом, QEMU-доказами виконання та ledger-ом parity для зафіксованого артефакту. Див. `ecosystem/decisions/2026-09-05-my-lisp-execution-quartet-and-wsm-os-lisp-role.md`.
 
-Дослідження та виконувані прототипи контрольного таргета WSM-нативної
-Lisp-машини.
+Дослідження та виконувані прототипи контрольного таргета WSM-нативної Lisp-машини.
+Архітектура є виключно **Чистий Lisp + x86-64 асемблер (нуль Rust, нуль C у production)** згідно з [ADR-004](docs/ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md).
 
-Проєкт починається з вузької мети: завантажити мінімальний таргет, встановити
-типізовану межу хоста та виконати один верифікований WSM-вираз. Наразі він не
-претендує на статус повноцінної операційної системи, порту всього my-lisp на
-базі `no_std`, чи bare-metal середовища для CUDA.
+Проєкт починається з чіткого верифікованого фундаменту: завантаження через UEFI,
+встановлення мінімального асемблерного рантайму System V AMD64 (`src/runtime.s`), виконання
+скомпільованих виразів WSM та доведення 100% відповідності канонічному оракулу `my-lisp`
+у QEMU та на реальному залізі.
+
 
 ## Ціль
 

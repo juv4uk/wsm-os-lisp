@@ -22,6 +22,8 @@ ld -m elf_x86_64 -T "$ROOT_DIR/src/linker.ld" \
   "$BUILD_DIR/runtime.o" \
   "$FIXTURE_OBJ" \
   -o "$BUILD_DIR/kernel-x86_64.elf"
+cp "$BUILD_DIR/kernel-x86_64.elf" "$ROOT_DIR/target/kernel-x86_64"
+
 
 # Create UEFI GPT disk image with FAT12/16 partition
 rm -f "$OUTPUT_IMG"

@@ -1,7 +1,18 @@
 # Ecosystem reuse map
 
-**Observed:** 2026-08-29. Links below pin the inspected commits so future
-changes do not silently strengthen these claims.
+**Observed:** 2026-08-29. Pinned and ratified 2026-09-14 under [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md).
+
+> [!IMPORTANT]
+> **Architectural Ratification (2026-09-14, ADR-004):**
+> Under the pure Lisp + x86-64 assembly architecture:
+> - `my-lisp` acts strictly as an **external reference oracle** during testing; it is **not** imported into the freestanding target as a `no_std` crate.
+> - `cml` compiles WSM forms directly to GNU x86-64 assembly.
+> - `wsm-os-lisp` target runtime is pure assembly (`src/runtime.s`, `src/entry.s`). Production target has **RUST = 0**.
+> / За архітектурою чистого Lisp та x86-64 асемблера:
+> - `my-lisp` виступає виключно як **зовнішній референсний оракул** під час тестів; він **не** імпортується як `no_std` крейт у таргет.
+> - `cml` компілює форми WSM безпосередньо в GNU x86-64 асемблер.
+> - Цільовий рантайм `wsm-os-lisp` — чистий асемблер (`src/runtime.s`, `src/entry.s`). У production target **RUST = 0**.
+
 
 ## Recommended architecture
 

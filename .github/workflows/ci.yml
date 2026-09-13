@@ -1,4 +1,4 @@
-name: wsm-os contracts
+name: wsm-os-lisp contracts
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  target-abi:
+  contracts:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -15,55 +15,25 @@ jobs:
         run: bash scripts/check-role-authority.sh
       - name: Check semantic authority
         run: bash scripts/check-semantic-authority.sh
-      - name: Install pinned Rust toolchain
-        run: |
-          rustup toolchain install nightly-2026-07-27 --profile minimal \
-            --component rustfmt,rust-src,llvm-tools-preview \
-            --target x86_64-unknown-none
-          rustc --version --verbose
-      - name: Check formatting
-        run: cargo fmt --check
-      - name: Check target ABI consumer
-        run: cargo check -p wsm-os-runtime --lib
-      - name: Check runtime on the bare-metal target
-        run: cargo check -p wsm-os-runtime --lib --target x86_64-unknown-none
-      - name: Prove runtime core has no host imports
-        run: scripts/check-runtime-symbols.sh
-      - name: Build bare-metal kernel
-        run: cargo build -p wsm-os-kernel --target x86_64-unknown-none
-      - name: Create UEFI boot image
-        run: |
-          cargo run -p wsm-os-image -- \
-            target/x86_64-unknown-none/debug/wsm-os-kernel \
-            target/wsm-os-uefi.img
-          test -s target/wsm-os-uefi.img
-      - name: Install QEMU and OVMF
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qemu-system-x86 ovmf
-      - name: Prove bounded UEFI serial boot
-        env:
-          OVMF_CODE: /usr/share/OVMF/OVMF_CODE_4M.fd
-          OVMF_VARS: /usr/share/OVMF/OVMF_VARS_4M.fd
-          WSM_OS_QEMU_TIMEOUT: 20
-        run: scripts/run-qemu-uefi.sh target/wsm-os-uefi.img
-      - name: Prove pinned my-lisp oracle parity on hosted and QEMU
-        env:
-          OVMF_CODE: /usr/share/OVMF/OVMF_CODE_4M.fd
-          OVMF_VARS: /usr/share/OVMF/OVMF_VARS_4M.fd
-          WSM_OS_QEMU_TIMEOUT: 20
-        run: bash scripts/check-shared-oracle-corpus.sh
-      - name: Bind shared oracle provenance through QEMU transcript
-        env:
-          OVMF_CODE: /usr/share/OVMF/OVMF_CODE_4M.fd
-          OVMF_VARS: /usr/share/OVMF/OVMF_VARS_4M.fd
-          WSM_OS_QEMU_TIMEOUT: 20
-        run: bash scripts/check-shared-oracle-provenance.sh
-      - name: Prove bounded UEFI image reproducibility
-        run: bash scripts/check-uefi-image-reproducibility.sh
+      - name: Verify zero-Rust boundary (ADR-004)
+        run: bash scripts/check-no-rust.sh
+      - name: Prove pure assembly runtime has no forbidden host imports
+        run: bash scripts/check-runtime-symbols.sh
       - name: Verify CML fixture provenance
-        run: scripts/check-cml-provenance.sh
+        run: bash scripts/check-cml-provenance.sh
       - name: Verify deterministic definition capsule
-        run: scripts/check-definition-capsule.sh
+        run: bash scripts/check-definition-capsule.sh
       - name: Verify task ledger DAG consistency
         run: bash scripts/check-task-dag.sh
-      - name: Run ABI and projection tests
-        run: cargo test --workspace
+      - name: Install build and test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 ovmf mtools dosfstools gdisk binutils
+      - name: Build pure UEFI boot image
+        run: |
+          bash scripts/build-uefi-image.sh artifacts/fixture.o target/wsm-os-uefi.img
+          test -s target/wsm-os-uefi.img
+      - name: Prove bounded UEFI serial boot in QEMU
+        run: bash scripts/rebuild-and-run-qemu.sh
+

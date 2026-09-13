@@ -28,30 +28,30 @@
 ## 1. The Core Split / Базовий розподіл
 
 **Machine substrate (Mechanism / Механізм):**
-Assembly and the tiny target runtime own privileged instructions, interrupt
-entry/exit, page and physical-memory primitives, memory fences, and the
-authenticity and bounds of capabilities. Rust may implement this substrate,
-bootstrap code, a reference driver, or a test harness; Rust is not the
-semantic owner of production device-driver logic.
+Assembly and the tiny target runtime (`src/runtime.s`, `src/entry.s`, `src/drivers.s`)
+own privileged instructions, interrupt entry/exit, page and physical-memory
+primitives, I/O ports (`in`/`out`), memory fences, and capability gating.
+Under ADR-004, Rust is completely eliminated (RUST = 0). The machine substrate is
+written strictly in pure x86-64 assembly.
 
-*Асемблер і малий цільовий runtime володіють привілейованими інструкціями,
-входом/виходом переривань, примітивами сторінок і фізичної пам'яті, memory
-fence, а також справжністю та межами capabilities. Rust може реалізовувати
-цей substrate, bootstrap-код, еталонний драйвер або test harness; Rust не є
-семантичним власником логіки production-драйвера.*
+*Асемблер і мінімальний цільовий runtime (`src/runtime.s`, `src/entry.s`, `src/drivers.s`)
+володіють привілейованими інструкціями, входом/виходом переривань, примітивами
+сторінок і фізичної пам'яті, портами вводу-виводу (`in`/`out`), memory fence та
+перевіркою capabilities. Згідно з ADR-004, Rust повністю вилучено (RUST = 0). Машинний
+субстрат реалізовано виключно на чистому x86-64 асемблері.*
 
 **WSM/Lisp (Semantics, policy and drivers / Семантика, політика і драйвери):**
 WSM owns system meaning and, where the admitted target profile is sufficient,
 device discovery, register protocols, queue/descriptor construction, request
 state machines, retries, timeout policy and error interpretation. A driver is
-ordinary compiled WSM over bounded capabilities; it is not a privileged Rust
-object hidden beneath Lisp policy.
+ordinary compiled WSM over bounded assembly capabilities; there is no hidden
+runtime or foreign daemon beneath Lisp policy.
 
 *WSM володіє сенсом системи, а коли допущеного target-profile достатньо —
 виявленням пристроїв, register-протоколами, побудовою черг/дескрипторів,
 state machine запитів, повторами, timeout-policy та тлумаченням помилок.
-Драйвер є звичайним скомпільованим WSM над bounded capabilities, а не
-привілейованим Rust-об'єктом, прихованим під Lisp-політикою.*
+Драйвер є звичайним скомпільованим WSM над обмеженими асемблерними capabilities;
+під Lisp-політикою немає жодного прихованого чужого демона чи стороннього рантайму.*
 
 ## 2. Capability boundary / Межа capabilities
 
@@ -90,29 +90,28 @@ existence does not make them bare-metal language primitives.
 
 This mechanism-policy split anchors to existing `wsm-os-lisp` foundations:
 *Цей розподіл механізм-політика спирається на наявні фундаменти `wsm-os-lisp`:*
-- **TARGET-ABI.md**: The `wsm-os-lisp` ABI remains the strict C-compatible or standard scalar interface. Lisp compiles down to interactions through this ABI.
+- **TARGET-ABI.md**: The `wsm-os-lisp` ABI remains the strict System V AMD64 scalar interface. Lisp compiles down to interactions through this ABI.
 - **CML IR**: WSM program and driver logic are admitted and lowered by CML;
-  target capability calls become versioned ABI imports rather than hidden
-  Rust driver calls.
-- **ADR-001 / ADR-002 (Boot Image)**: the current Rust/assembly bootstrap remains
-  the boot substrate, while compiled WSM owns admitted driver logic.
+  target capability calls become versioned ABI imports in pure assembly.
+- **ADR-004 (Pure Lisp + Assembly Architecture)**: pure assembly bootstrap (`src/entry.s`,
+  `src/runtime.s`) provides the boot substrate, while compiled WSM owns admitted driver logic. Rust is 0.
 
 ## 4. Explicit Lisp Prohibitions / Явні заборони для Lisp
 
 To guarantee isolation, the WSM/Lisp layer **MAY NOT**:
 *Для гарантування ізоляції, шару WSM/Lisp **СУВОРО ЗАБОРОНЕНО**:*
-1. **Raw Pointers**: Access or manipulate raw memory addresses.
+1. **Raw Pointers**: Access or manipulate raw memory addresses outside verified bounds.
 2. **Unchecked Device Access**: Forge physical addresses or access a device
    outside an opaque, bounded capability issued by the machine substrate.
-3. **Foreign Syscalls**: Execute raw OS syscalls directly bypassing the Rust ABI gate.
+3. **Ambient Side Effects**: Execute unverified low-level instructions bypassing the capability gate.
 
 This does not prohibit WSM drivers. It prohibits ambient authority. The WSM
 driver may perform the allowed register protocol through its capability, while
-the substrate validates width, range, lifetime and ownership.
+the assembly substrate validates width, range, lifetime and ownership.
 
 *Це не забороняє WSM-драйвери. Це забороняє ambient authority. WSM-драйвер
 може виконувати дозволений register-протокол через capability, тоді як
-substrate перевіряє ширину, діапазон, lifetime і ownership.*
+асемблерний субстрат перевіряє ширину, діапазон, lifetime і ownership.*
 
 ## 5. Driver evidence ladder / Сходинка доказів драйвера
 
@@ -120,29 +119,42 @@ substrate перевіряє ширину, діапазон, lifetime і ownersh
 pure WSM device logic
   -> canonical my-lisp oracle
   -> CML admission
-  -> hosted target witness
-  -> Rust/reference driver on the same QEMU device (when useful)
-  -> WSM driver over capability ABI on the same QEMU device
+  -> assembly lowering (src/runtime.s + emitted .s)
+  -> WSM driver over capability ABI on QEMU device
   -> identical sector/checksum observation
   -> later physical-hardware evidence
 ```
 
-Rust reference success is evidence about the device protocol, not evidence
-that the WSM production driver works. QEMU and physical hardware remain
-distinct claims. A later physical run may graduate evidence for an already
-pinned `wsm-os-lisp` artifact; new physical-platform research itself belongs
-to the separate `wsm-os` lab.
+QEMU and physical hardware remain distinct claims. A later physical run may graduate
+evidence for an already pinned `wsm-os-lisp` artifact; new physical-platform research itself belongs to the separate `wsm-os` lab.
 
-*Успіх Rust reference є evidence щодо протоколу пристрою, але не доказом
-роботи production-драйвера WSM. QEMU та фізичне залізо лишаються різними
-твердженнями. Пізніший фізичний запуск може підвищити клас доказу вже
-зафіксованого артефакту `wsm-os-lisp`; саме нове дослідження фізичної
-платформи належить окремій лабораторії `wsm-os`.*
 
-## 6. Rust+Python vs Rust+Lisp Decision / Порівняння Rust+Python та Rust+Lisp
+*QEMU та фізичне залізо лишаються різними твердженнями. Пізніший фізичний запуск
+може підвищити клас доказу вже зафіксованого артефакту `wsm-os-lisp`; саме нове
+дослідження фізичної платформи належить окремій лабораторії `wsm-os`.*
 
-Historically, Python was used for "policy" (orchestration scripts). We have decided to migrate from Rust+Python to Rust+Lisp.
-*Історично Python використовувався для "політики" (оркестраційні скрипти). Ми прийняли рішення перейти від Rust+Python до Rust+Lisp.*
+## 6. Architectural Evolution / Архітектурна еволюція: Lisp + Assembly
 
-- **Why not Python? / Чому не Python?** Python requires a massive background interpreter, struggles with zero-overhead hot reloading of semantic rules, and creates implicit dependencies outside the project tree.
-- **Why Lisp? / Чому Lisp?** Our Lisp (WSM) is directly manageable, compiles to our own CML IR, natively supports `status_at_import` for hot reloading, and acts as a transparent, auditable AST that the Rust daemon can sandbox completely.
+Historically, early exploration considered combinations like Python orchestration,
+then Rust substrates. In accordance with the owner's directive and ADR-004, all
+intermediaries have been eliminated:
+
+```text
+Lisp (WSM)
+  ↓
+CML (Compiler / Lowering)
+  ↓
+x86-64 Assembly (GNU as / ld)
+  ↓
+Bare Metal CPU
+```
+
+- **No C, No Rust:** C is an unnecessary intermediate abstraction, and Rust's toolchain
+  and runtime layers are entirely removed from production.
+- **Why Pure Lisp + Assembly?** Lisp provides an auditable, formally checkable symbolic
+  model for drivers, data, and system logic. Assembly provides exact, cycle-accurate,
+  irreducible machine control. Together they form a complete, freestanding Lisp machine.
+
+*Історично ранні дослідження розглядали комбінації з Python, згодом — субстрати на Rust.
+Відповідно до директиви власника та ADR-004, усіх посередників усунуто: мова — Lisp,
+машинний рівень — чистий x86-64 асемблер. Жодного C чи Rust у production runtime.*

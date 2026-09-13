@@ -12,11 +12,18 @@
 > `juv4uk/wsm`; it does not inherit this ADR's target ABI, runtime, boot-image,
 > or QEMU-evidence authority. Current machine-readable ownership is in
 > [`repo.lisp`](../repo.lisp).
+> 
+> **Architectural Ratification (2026-09-14, [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md)):**
+> The compiler-first path is ratified as the permanent, exclusive execution architecture.
+> Any historical plan for a `no_std` Rust interpreter/kernel is permanently revoked.
+> The target architecture is strictly **Pure Lisp + x86-64 Assembly. RUST = 0.**
 
 ## Decision
 
-Build the first `wsm-os` executable through the existing CML compiler
-pipeline before attempting a full `no_std` port of the Rust interpreter.
+Build the `wsm-os-lisp` executable through the CML compiler pipeline directly
+to x86-64 assembly, linked with the minimal pure assembly runtime (`src/runtime.s`).
+No C and no Rust enter the production target.
+
 
 ```text
 WSM source
@@ -179,11 +186,18 @@ manual assembly edits.
 > `juv4uk/wsm`; він не успадковує authority цього ADR над target ABI,
 > runtime, boot-образом чи QEMU-доказами. Поточний machine-readable розподіл
 > authority записаний у [`repo.lisp`](../repo.lisp).
+> 
+> **Архітектурне затвердження (2026-09-14, [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md)):**
+> Шлях компілятора затверджено як постійну та виключну архітектуру виконання.
+> Будь-які історичні плани щодо порту Rust-інтерпретатора на `no_std` остаточно скасовано.
+> Цільова архітектура — суворо **Чистий Lisp + x86-64 асемблер. RUST = 0.**
 
 ## Рішення
 
-Зібрати перший виконуваний `wsm-os` через наявний конвеєр компілятора CML
-перед спробою повного `no_std`-порту Rust-інтерпретатора.
+Збирати виконуваний `wsm-os-lisp` через конвеєр компілятора CML безпосередньо
+в x86-64 асемблер, злінкований із мінімальним чистим асемблерним рантаймом (`src/runtime.s`).
+Жодного C і жодного Rust у production target.
+
 
 ```text
 WSM source

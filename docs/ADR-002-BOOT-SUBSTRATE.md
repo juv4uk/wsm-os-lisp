@@ -1,9 +1,22 @@
 # ADR-002: Boot Substrate Selection
+*ADR-002: Вибір boot-субстрату*
 
-**Status:** ACCEPTED AND EXECUTABLE
-**Date:** 2026-08-29
+**Status/Статус:** SUPERSEDED by [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md) (2026-09-14) / ЗАМІНЕНО на [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md) (2026-09-14)  
+**Date/Дата:** 2026-08-29
 
-## Context
+> [!CAUTION]
+> **SUPERSEDED / ЗАМІНЕНО (2026-09-14):**
+> This ADR originally selected the Rust-based `bootloader` 0.11.17 crate.
+> Under [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md), Rust is completely
+> eliminated (RUST = 0). The UEFI boot substrate is now pure x86-64 assembly
+> (`src/entry.s`), packaged into a standard FAT12 GPT UEFI disk image via
+> `scripts/build-uefi-image.sh` and `artifacts/bootx64.efi`.
+> / Цей ADR спочатку обирав Rust-крейт `bootloader` 0.11.17.
+> Згідно з [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md), Rust повністю
+> усунуто (RUST = 0). Boot-субстрат UEFI тепер реалізовано на чистому x86-64
+> асемблері (`src/entry.s`), що упаковується у стандартний образ FAT12 GPT UEFI
+> через `scripts/build-uefi-image.sh` та `artifacts/bootx64.efi`.
+
 
 `wsm-os` targets the owner's Gigabyte H170-Gaming 3 through UEFI and uses QEMU
 as the first machine witness. The initial implementation temporarily used

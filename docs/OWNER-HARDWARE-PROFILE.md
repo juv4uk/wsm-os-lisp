@@ -163,8 +163,11 @@ Audio is outside the first release and does not influence the boot substrate.
 | Bare-metal Rust target | not installed |
 | `clang`, `lld`, `nasm`, `xorriso` | not found in the current agent PATH |
 
-These are tool-availability observations, not hardware limitations. M0 must
-choose and provision the minimum reproducible boot toolchain before M1 begins.
+These are tool-availability observations, not hardware limitations.
+Under [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md), bare-metal Rust is
+not used. The production toolchain is GNU `as`, GNU `ld`, `cml`, and standard
+UEFI disk tools (`sgdisk`, `mkfs.vfat`, `mtools`).
+
 
 ## Architecture decisions derived from this profile
 
@@ -383,8 +386,11 @@ Windows повідомляє ці справні аудіо-завершення
 | Bare-metal Rust ціль | не встановлено |
 | `clang`, `lld`, `nasm`, `xorriso` | не знайдено в поточному PATH агента |
 
-Це спостереження доступності інструментів, а не обмеження заліза. M0 має обрати
-й забезпечити мінімальний відтворюваний boot-toolchain до початку M1.
+Це спостереження доступності інструментів, а не обмеження заліза.
+Згідно з [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md), bare-metal Rust
+не використовується. Виробничий ланцюжок складається з GNU `as`, GNU `ld`, `cml`
+та стандартних інструментів підготовки UEFI дисків (`sgdisk`, `mkfs.vfat`, `mtools`).
+
 
 ## Архітектурні рішення, виведені з цього профілю
 

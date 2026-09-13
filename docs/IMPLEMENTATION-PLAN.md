@@ -1,12 +1,14 @@
 # wsm-os implementation plan
 
-**Status:** ACTIVE  
+**Status:** ACTIVE (ratified under [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md))  
 **Target:** x86_64 UEFI/QEMU first  
+**Architecture:** Pure Lisp + x86-64 Assembly. RUST = 0 in production target.  
 **First proof:** one CML-admitted WSM expression boots and produces the same
 canonical result as `my-lisp`.
 
-The concrete target and build constraints are pinned in
-[`OWNER-HARDWARE-PROFILE.md`](OWNER-HARDWARE-PROFILE.md).
+> [!IMPORTANT]
+> **Architectural Ratification (2026-09-14, ADR-004):** The implementation plan executes exclusively on **Pure Lisp + x86-64 Assembly. Zero Rust in production target.** All former Rust crates, Cargo manifests, and `no_std` interpreter port investigations are superseded. The kernel, runtime, and bootloader entry are implemented in freestanding assembly (`src/entry.s`, `src/runtime.s`, `src/drivers.s`). Disk images are built by `scripts/build-uefi-image.sh`.
+
 
 ## Definition of the first release
 
@@ -105,7 +107,7 @@ IR admission -> deterministic .s -> object file
 ### Work
 
 - complete the boot-substrate license/NOTICE decision;
-- create a freestanding kernel crate;
+- create a freestanding assembly kernel (`src/entry.s`, `src/runtime.s`);
 - provide UEFI entry, panic handler and serial writer;
 - boot under QEMU and print exactly one versioned line;
 - terminate through a test-only exit device or bounded timeout;
@@ -224,20 +226,17 @@ proved double regeneration, byte identity with committed artifacts, recomputed
 section validation, deliberate mismatch rejection, hosted parity and QEMU
 parity. The capsule remains inspectable metadata only.
 
-## M6 — decide full interpreter portability
+## M6 — Lisp-native meta-evaluator and live environment
 
-Only after M4 is green, inventory a possible `my-lisp` core reuse:
+Under [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md), full interpreter portability
+does not import a foreign Rust engine. Instead:
 
-- replace eligible `std` containers with `alloc`/`core` imports;
-- make time, stdin and global capability registry optional platform services;
-- test `no_std + alloc` compilation separately from the hosted crate;
-- decide whether the complete evaluator is smaller and safer than continuing
-  the CML AOT subset.
+- The evaluator, reader, and interactive REPL environment are implemented directly
+  in pure Lisp (the WSM meta-evaluator);
+- Lowering to machine code is performed by CML;
+- Irreducible machine mechanisms remain tiny System V AMD64 assembly primitives (`src/runtime.s`);
+- Production target maintains strictly RUST = 0.
 
-This is a measured decision. The project may retain both:
-
-- AOT images for bounded/reproducible programs;
-- an interactive interpreter for a later Lisp-machine environment.
 
 ## Deferred projects
 
@@ -276,13 +275,15 @@ The current critical path is boot-substrate realignment, pinned tool discovery,
 independent oracle evidence and then the first QEMU parity witness. No later
 metadata or language task may be used to bypass that chain.
 
----
-
 # План реалізації (Ukrainian)
 
-Цей документ містить архітектурні рішення, цілі та конкретні етапи для 
-`wsm-os`. Нижче наведено його змістовний підсумок (substantive equivalent) 
-українською мовою.
+**Статус:** АКТИВНИЙ (затверджено за [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md))  
+**Ціль:** x86_64 UEFI/QEMU насамперед  
+**Архітектура:** Чистий Lisp + x86-64 асемблер. RUST = 0 у production target.  
+
+> [!IMPORTANT]
+> **Архітектурне затвердження (2026-09-14, ADR-004):** План реалізується суворо на базі **чистого Lisp та x86-64 асемблера (RUST = 0 у production target).** Усі колишні Rust-крейти, маніфести Cargo та плани щодо порту інтерпретатора на `no_std` скасовано. Ядро, рантайм і точка входу реалізовані на асемблері (`src/entry.s`, `src/runtime.s`, `src/drivers.s`). UEFI-образ будується скриптом `scripts/build-uefi-image.sh`.
+
 
 ## M1 — CML x86_64-freestanding генератор асемблера
 
@@ -363,9 +364,15 @@ IR admission -> детермінований .s -> об'єктний файл
 2. **Семантичний слід (Semantic trace):** словник подій, спільний для оракула, x86, QEMU та FPGA.
 3. **Незмінний простір літералів (Immutable literal-space):** рішення щодо того, чи можуть квотовані графи `cons` знаходитись у read-only секції образу. (Наразі лише з купи).
 
-## M6 — Рішення про повну портативність інтерпретатора
+## M6 — Lisp-нативний мета-інтерпретатор та живе середовище
+ 
+Згідно з [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md), повноцінне середовище виконання
+не імпортує чужий Rust-рушій. Натомість:
+- Інтерпретатор, reader та інтерактивний REPL реалізуються безпосередньо на чистому Lisp (мета-інтерпретатор WSM);
+- Пониження у машинний код виконує компілятор CML;
+- Незвідні машинні механізми залишаються мінімальними асемблерними примітивами (`src/runtime.s`);
+- У цільовому середовищі строго дотримується принцип RUST = 0.
 
-Тільки після успішного M4 слід інвентаризувати можливе повторне використання ядра `my-lisp` (через `alloc`/`core`). Проєкт може зберегти обидва підходи: AOT-образи для обмежених програм і інтерактивний інтерпретатор для повноцінної Lisp-машини.
 
 ## Відкладені проєкти (Deferred)
 

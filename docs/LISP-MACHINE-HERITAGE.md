@@ -18,7 +18,7 @@ Steele і Sussman проектували процесор Scheme-79 прямо �
 
 ## 5. “Typed pointer as opcode-ish information” (WSM semantic dispatch)
 Dispatch починається з 3 бітів:
-```rust
+```text
 match tag(word) {
     Cons   => ...
     Fixnum => ...

@@ -5,6 +5,16 @@
 **Дата фіксації:** 2026-09-13
 **Задача в tasks.lisp:** `WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B` (MMIO-статусна частина D2)
 
+> [!NOTE]
+> **Historical Evidence Note (2026-09-14, [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md)):**
+> This document witnesses the fail-closed MMIO physical mapping principle established on 2026-09-13.
+> Under ADR-004, the fail-closed translation logic and condition codes are implemented directly
+> in pure x86-64 assembly primitives (`src/drivers.s`, `src/runtime.s`), maintaining zero Rust in production.
+> / Цей документ фіксує принцип fail-closed відображення фізичної пам'яті MMIO від 2026-09-13.
+> Відповідно до ADR-004, логіка перевірки та коди умов реалізуються безпосередньо в чистих
+> асемблерних примітивах (`src/drivers.s`, `src/runtime.s`), забезпечуючи нуль Rust у production.
+
+
 ---
 
 ## 1. Проблема / Problem
