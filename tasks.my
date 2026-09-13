@@ -40,6 +40,9 @@
    ("WSM-OS-BOOT-SUBSTRATE-DECISION-M3A" .
     ((priority . 8.0)
      (done . nil)
+     (superseded . t)
+     (superseded-by . (WSM-OS-BOOT-SUBSTRATE-REALIGN-M3A1))
+     (superseded-reason . "Superseded 2026-08-29 by owner-directed M3A1: the ratified UEFI/bootloader v0.11 decision was implemented directly as WSM-OS-BOOT-SUBSTRATE-REALIGN-M3A1 (commit a5797f5) rather than as a standalone substrate survey. The decision task's acceptance was absorbed by that execution; leaving it done=nil with a done successor broke the DAG (issue #30).")
      (capabilities . (research rust x86_64 uefi licensing architecture))
      (depends-on . (WSM-OS-TARGET-ABI-M0))
      (origin . wsm-os-lisp)
@@ -48,6 +51,9 @@
    ("WSM-OS-BOOT-TOOLCHAIN-M3B" .
     ((priority . 8.0)
      (done . nil)
+     (superseded . t)
+     (superseded-by . (WSM-OS-BOOT-TOOLCHAIN-PIN-M3B1))
+     (superseded-reason . "Superseded 2026-08-29 by M3B1: the toolchain provisioning intent became the exact reproducible pin (rust-toolchain.toml nightly-2026-07-27, bootloader/bootloader_api 0.11.17) executed by WSM-OS-BOOT-TOOLCHAIN-PIN-M3B1. The loose survey wording was folded into the pinned-evidence task; leaving it done=nil with a done successor broke the DAG (issue #30).")
      (capabilities . (guix rust qemu x86_64 build ci testing))
      (depends-on . (WSM-OS-BOOT-SUBSTRATE-DECISION-M3A))
      (origin . wsm-os-lisp)
@@ -76,7 +82,7 @@
      (capabilities . (my-lisp cml rust runtime testing provenance proof))
      (depends-on . (WSM-OS-HOST-RUNTIME-PARITY-M2))
      (origin . wsm-os-lisp)
-     (done . nil)
+     (done . (t . "Resolved via independent pinned oracle evidence: contracts/my-lisp/compiler-corpus.lock.my pins juv4uk/my-lisp rev 4a5dba0d (issue 67, ordinals (1 2 8)); scripts/check-shared-oracle-corpus.sh and check-shared-oracle-provenance.sh consume it and run in CI with the frozen WSM-OS fixture through shared and QEMU paths; artifacts/oracle-transcript.txt witnesses canonical (A . B) parity. target-contract CML_SHA reconciled via Cargo.lock cml pin to 8fd01347. See issue #30 reconciliation 2026-09-13."))
      (description . "Replace the self-referential M2 expected-string witness with independent pinned oracle evidence. Run the frozen fixture through the declared my-lisp revision, store or reproducibly generate the canonical value/error transcript and digest, and compare hosted runtime output to that artifact. Reconcile target-contract CML_SHA with the actual CML revision used to generate/link the object. A hardcoded shared expected constant alone is contract conformance, not oracle parity.")))
 
    ("WSM-OS-M2-RUNTIME-IMPORT-ALLOWLIST" .
@@ -139,7 +145,7 @@
      (depends-on . (WSM-OS-CML-X86-FIXNUM-BRANCH-M5A))
      (origin . wsm-os-lisp)
      (description . "Preserve tail position as explicit admitted CML metadata and prove target-level stack safety before general closures. Implement exactly one first-order self-tail-call path whose x86 lowering restores/reuses the current frame and jumps rather than accumulating native calls. Differentially run the pinned 100,000-deep tail-recursion obligation through my-lisp, hosted generated x86 and QEMU; record bounded stack evidence. Non-tail calls, mutual recursion, closures and continuations remain separately unsupported unless explicitly added.")
-     (context . "compiler implementation dd5382f is contained in pinned CML 7424690. A prior wsm-os tail fixture was reverted to restore the frozen M4 witness, so the task remains open until a separate 100,000-deep hosted+QEMU evidence fixture is committed without replacing M4.")))
+     (context . "completed 2026-09-13 per commit 910b765: a separate isolated 100,000-deep recursive tail-call fixture (artifacts/m5c-tail-call-fixture.wsm) was committed without replacing the frozen M4 witness. Compiler implementation dd5382f is contained in pinned CML 7424690. Hosted and QEMU both emitted canonical value=t; QEMU serial transcript proves constant native stack depth at 100k depth without frame accumulation.")))
 
    ("WSM-OS-DEFINITION-CAPSULE-M5D" .
     ((priority . 7.8)
@@ -169,6 +175,7 @@
      (capabilities . (runtime errors debugging architecture contract testing))
      (depends-on . (WSM-OS-DEFINITION-CAPSULE-M5D))
      (origin . wsm-os-lisp)
+     (done . (t . "Implemented and witnessed: structured condition reporting shipped inside the serial REPL (WSM-OS-SERIAL-REPL-M5H, verified 2026-09-05). The freestanding REPL emits 'WSM-OS CONDITION schema=1 kind=...' records for type errors and overflow on the QEMU COM1 transcript (artifacts/m5h-repl-fixture-qemu-serial-transcript.txt); d1-pci-config-bounds fixture additionally witnesses kind=ABI condition serialization. Non-resumable boundary retained: wsm_fail remains a noreturn ABI; no continuation/restart claims. See issue #30 reconciliation 2026-09-13."))
      (description . "Extend the opaque RuntimeContext with a versioned structured condition record while retaining the small noreturn wsm_fail(context, code) boot ABI. Record operation, offending values, definition/source identity and explicit restart-capability IDs; prove deterministic hosted/QEMU serialization for type and OOM failures. Do not claim resumable conditions, capture native continuations or implement arbitrary restart jumps in this task.")))
 
    ("WSM-OS-BLOCK-MECHANISM-F5" .
@@ -238,6 +245,8 @@
      (capabilities . (my-lisp cml x86_64 assembly conformance testing proof))
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4 WSM-OS-CML-TAIL-CALL-PROOF-M5C))
      (origin . wsm-os-lisp)
+     (umbrella . t)
+     (progress-note . "Umbrella task: the conformance ladder was decomposed into independent steps M5A (fixnum/branch, done), M5B (arithmetic, open), M5C (tail-call, done), M5D (definition capsule, done), M5E (semantic trace, open), M5F (immutable literal space, open), M5G (condition record, done), M5H (serial REPL, done). Umbrella stays open until M5B/M5E/M5F close. Feeder tasks F6 and M5H legitimately depend on the umbrella's completed steps; see issue #30 reconciliation 2026-09-13.")
      (description . "Expand conformance one obligation at a time: () truth/branch; fixnum and symbol identity; car/cdr/cons; nested canonical printing; named type/arity/OOM errors; one closure only after environment layout is ratified. Every fixture must match pinned my-lisp through CML admission, hosted runtime and QEMU. Do not broaden to keyboard/disk/network/GUI.")))
 
    ("WSM-OS-MYLISP-NOSTD-DECISION-M6" .

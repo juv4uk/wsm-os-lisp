@@ -63,5 +63,7 @@ jobs:
         run: scripts/check-cml-provenance.sh
       - name: Verify deterministic definition capsule
         run: scripts/check-definition-capsule.sh
+      - name: Verify task ledger DAG consistency
+        run: bash scripts/check-task-dag.sh
       - name: Run ABI and projection tests
         run: cargo test --workspace
