@@ -27,6 +27,19 @@ if [[ -z "${OVMF_CODE:-}" || -z "${OVMF_VARS:-}" ]]; then
 fi
 
 if [[ -z "${OVMF_CODE:-}" || -z "${OVMF_VARS:-}" ]]; then
+  if [[ -f "/usr/share/OVMF/OVMF_CODE.fd" && -f "/usr/share/OVMF/OVMF_VARS.fd" ]]; then
+    : "${OVMF_CODE:=/usr/share/OVMF/OVMF_CODE.fd}"
+    : "${OVMF_VARS:=/usr/share/OVMF/OVMF_VARS.fd}"
+  elif [[ -f "/usr/share/OVMF/OVMF_CODE_4M.fd" && -f "/usr/share/OVMF/OVMF_VARS_4M.fd" ]]; then
+    : "${OVMF_CODE:=/usr/share/OVMF/OVMF_CODE_4M.fd}"
+    : "${OVMF_VARS:=/usr/share/OVMF/OVMF_VARS_4M.fd}"
+  elif [[ -f "/usr/share/edk2/ovmf/OVMF_CODE.fd" && -f "/usr/share/edk2/ovmf/OVMF_VARS.fd" ]]; then
+    : "${OVMF_CODE:=/usr/share/edk2/ovmf/OVMF_CODE.fd}"
+    : "${OVMF_VARS:=/usr/share/edk2/ovmf/OVMF_VARS.fd}"
+  fi
+fi
+
+if [[ -z "${OVMF_CODE:-}" || -z "${OVMF_VARS:-}" ]]; then
   echo "ERROR: OVMF firmware not specified and Guix ovmf-x86-64 package not found." >&2
   echo "Please set OVMF_CODE=/path/to/code.bin and OVMF_VARS=/path/to/vars.bin explicitly." >&2
   exit 2

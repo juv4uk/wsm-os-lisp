@@ -2,10 +2,20 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-CML_BIN="/home/agents/GitHub/cml/target/release/cml"
+CML_BIN="${CML_BIN:-}"
+if [[ -z "$CML_BIN" ]]; then
+    if [[ -x "$ROOT_DIR/../cml/target/release/cml" ]]; then
+        CML_BIN="$ROOT_DIR/../cml/target/release/cml"
+    elif [[ -x "/home/agents/GitHub/cml/target/release/cml" ]]; then
+        CML_BIN="/home/agents/GitHub/cml/target/release/cml"
+    elif command -v cml >/dev/null 2>&1; then
+        CML_BIN="$(command -v cml)"
+    fi
+fi
 
-if [[ ! -x "$CML_BIN" ]]; then
-    echo "ERROR: CML compiler binary not found at $CML_BIN" >&2
+if [[ -z "$CML_BIN" || ! -x "$CML_BIN" ]]; then
+    echo "ERROR: CML compiler binary not found at ${CML_BIN:-<unset>}" >&2
+    echo "Set CML_BIN or build cml at ../cml" >&2
     exit 1
 fi
 

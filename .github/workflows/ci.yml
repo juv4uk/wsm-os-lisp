@@ -21,6 +21,13 @@ jobs:
         run: bash scripts/check-runtime-symbols.sh
       - name: Verify CML fixture provenance
         run: bash scripts/check-cml-provenance.sh
+      - name: Setup external CML compiler toolchain
+        run: |
+          git clone --depth 1 https://github.com/juv4uk/my-lisp.git /tmp/my-lisp
+          git clone --depth 1 https://github.com/juv4uk/cml.git /tmp/cml
+          cd /tmp/cml
+          cargo build --release
+          echo "CML_BIN=/tmp/cml/target/release/cml" >> $GITHUB_ENV
       - name: Verify deterministic definition capsule
         run: bash scripts/check-definition-capsule.sh
       - name: Verify task ledger DAG consistency
