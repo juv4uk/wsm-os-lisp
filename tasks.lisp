@@ -383,5 +383,14 @@
     (description . "Enforce ADR-004: zero Rust in production target runtime. Implement freestanding x86-64 assembly runtime and bootloader handoff, pure FAT12 UEFI disk builder, and verify full parity in QEMU.")
     (done . (t . "Completed 2026-09-14: Removed all Rust crates (9 crates, Cargo manifests, rust-toolchain). Implemented src/runtime.s, src/entry.s, src/drivers.s, scripts/build-uefi-image.sh, scripts/check-no-rust.sh. Verified QEMU boots purely assembled UEFI image with 100% parity value=(A . B) status=ok. All 8 verification checks pass."))))
 
+  ("WSM-OS-LISP-MACHINE-PRIMITIVE-RDTSC" . (
+    (priority . 10.0)
+    (capabilities . (lisp cml machine-primitive rdtsc x86_64 uefi qemu proof))
+    (origin . wsm-os-lisp)
+    (depends-on . (WSM-OS-PURE-LISP-ASSEMBLY-M4))
+    (context . "2026-09-14: Owner directive: Lisp is the sole source of behavior; assembly is physical machine mechanism only. No Rust->ASM or C->ASM translators. Established machine primitive architecture: Canon semantic registry ID 1153 (en: rdtsc, uk: такти-процесора) in my-lisp/lib/surface/semantic-registry.lisp, CML IR Ir::MachinePrim(MachineOp::Rdtsc), direct x86-64 lowering in CML emitting real `rdtsc` instruction, linked into pure freestanding UEFI image. Verified in QEMU: dynamic cycle count returned as canonical WSM fixnum.")
+    (description . "Prove that Lisp can directly invoke a machine x86-64 primitive (rdtsc) without any Rust/C intermediate runtime. Verify end-to-end pipeline: .lisp -> CML -> generated .s (with rdtsc instruction) -> as -> pure freestanding builder -> QEMU -> real returned CPU ticks.")
+    (done . (t . "Completed 2026-09-14: Implemented semantic ID 1153 in my-lisp, Ir::MachinePrim in CML, direct x86 lowering to `rdtsc` + fixnum tag. Built and executed artifacts/rdtsc-fixture.lisp through scripts/rebuild-and-run-rdtsc-qemu.sh. QEMU witness PASS: schema=1 value=27782023910 status=ok. Zero Rust or C runtime in production path."))))
+
 )))
 

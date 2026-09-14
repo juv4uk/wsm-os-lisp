@@ -1,0 +1,2 @@
+(def ticks (rdtsc))
+ticks
