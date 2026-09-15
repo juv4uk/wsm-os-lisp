@@ -414,8 +414,12 @@ wsm_target_provision_mmio:
     testq %r15, %r15
     jz .Lprov_fail_nomap
 
-    # BDF 00:05.0 (virtio-blk in the QEMU fixture). Store dev in %r12d.
-    movl $5, %r12d
+    # Scan bus 0 for virtio-blk (vendor=0x1AF4, class=0x0104).
+    # Returns dev in EAX (device<<3 | function), or 0 if not found.
+    call .Lpci_scan_virtio_blk
+    testl %eax, %eax
+    jz .Lprov_fail_nodev
+    movl %eax, %r12d          # store discovered dev
 
     # ---- PCI status (config offset 0x04) bit 16 (status bit 4): cap list ----
     movl %r12d, %edi
@@ -521,9 +525,13 @@ wsm_target_provision_mmio:
 #   3 = no capabilities list / no COMMON_CFG cap
 #   4 = BAR decode failed (I/O BAR or missing)
 #   5 = BAR phys not covered by physical-memory mapping
+#   6 = virtio-blk device not found on PCI bus
 # Any non-1 value is translated by wsm_mmio_capability into fail-closed.
 .Lprov_fail_nomap:
     movq $2, wsm_mmio_region_valid(%rip)
+    jmp .Lprov_done
+.Lprov_fail_nodev:
+    movq $6, wsm_mmio_region_valid(%rip)
     jmp .Lprov_done
 .Lprov_fail_nocap:
     movq $3, wsm_mmio_region_valid(%rip)
@@ -704,21 +712,130 @@ wsm_mmio_write32:
 
 # ---------------------------------------------------------------------------
 # Internal: raw PCI config read32.
-# In:  EDI = dev (BDF device), ESI = config offset
+# In:  EDI = BDF encoded as (bus<<16) | (dev<<8) | func
+#      ESI = config offset
 # Out: EAX = 32-bit value at 0xCFC
 # ---------------------------------------------------------------------------
 .Lraw_pci_read32:
-    # address = 0x80000000 | (dev << 11) | (offset & 0xFC)
-    movl $0x80000000, %eax
-    andl $0xFF, %edi
-    shll $11, %edi
-    orl %edi, %eax
+    # address = 0x80000000 | (bus<<16) | (dev<<11) | (func<<8) | (offset & 0xFC)
+    movl %edi, %eax
+    andl $0xFF0000, %eax          # bus<<16
+    orl $0x80000000, %eax         # enable bit
+    movl %edi, %edx
+    andl $0xFF00, %edx            # dev<<8
+    shll $3, %edx                 # dev<<11
+    orl %edx, %eax
+    movl %edi, %edx
+    andl $0xFF, %edx              # func
+    shll $8, %edx                 # func<<8
+    orl %edx, %eax
     andl $0xFC, %esi
-    orl %esi, %eax
+    orl %esi, %eax                # offset
     movw $0xCF8, %dx
     outl %eax, %dx
     movw $0xCFC, %dx
     inl %dx, %eax
+    ret
+
+# ---------------------------------------------------------------------------
+# Internal: scan bus 0 and 1 for virtio-blk device.
+# Out: EAX = dev (device<<3 | function) of virtio-blk, or 0 if not found.
+# Scans bus 0 and 1 (q35 puts PCI devices on bus 1), all 32 devices,
+# 8 functions each. Matches vendor=0x1AF4 (virtio) and device=0x1042
+# (virtio-block).
+# ---------------------------------------------------------------------------
+.Lpci_scan_virtio_blk:
+    pushq %rbx
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    # r12 = bus (0-1), r13 = device (0-31), r14 = function (0-7)
+    xorl %r12d, %r12d
+.Lscan_bus_loop:
+    cmpl $2, %r12d
+    jge .Lscan_not_found
+    xorl %r13d, %r13d
+.Lscan_dev_loop:
+    cmpl $32, %r13d
+    jge .Lscan_next_bus
+    xorl %r14d, %r14d
+.Lscan_func_loop:
+    cmpl $8, %r14d
+    jge .Lscan_next_dev
+
+    # Compose dev = (bus<<20) | (device<<15) | (function<<12) for .Lraw_pci_read32
+    # But .Lraw_pci_read32 expects dev in EDI as (device<<3 | function) for bus 0.
+    # For multi-bus, we need to construct the full config address.
+    # Instead, we'll call a modified read that takes bus/dev/func separately.
+    # Simpler: construct the full config address in EAX and use outl/inl directly.
+    movl $0x80000000, %eax        # enable bit
+    movl %r12d, %edx
+    shll $16, %edx
+    orl %edx, %eax                # bus in bits 23:16
+    movl %r13d, %edx
+    andl $0x1F, %edx
+    shll $11, %edx
+    orl %edx, %eax                # device in bits 15:11
+    movl %r14d, %edx
+    andl $0x07, %edx
+    shll $8, %edx
+    orl %edx, %eax                # function in bits 10:8
+    # offset will be added per read
+
+    # Read vendor/device at offset 0x00
+    movl %eax, %ebx
+    orl $0x00, %ebx
+    movw $0xCF8, %dx
+    xchgl %eax, %ebx
+    outl %eax, %dx
+    movw $0xCFC, %dx
+    inl %dx, %eax
+    xchgl %eax, %ebx
+    # EBX: low 16 = vendor, high 16 = device
+    andl $0xFFFF, %ebx            # vendor
+    cmpl $0x1AF4, %ebx
+    jne .Lscan_next_func
+    shrl $16, %ebx
+    andl $0xFFFF, %ebx            # device
+    cmpl $0x1042, %ebx
+    je .Lscan_found
+
+.Lscan_next_func:
+    incl %r14d
+    jmp .Lscan_func_loop
+
+.Lscan_next_dev:
+    incl %r13d
+    jmp .Lscan_dev_loop
+
+.Lscan_next_bus:
+    incl %r12d
+    jmp .Lscan_bus_loop
+
+.Lscan_found:
+    # Return dev encoding compatible with .Lraw_pci_read32: (bus<<20)|(dev<<15)|(func<<12)
+    # But .Lraw_pci_read32 only uses dev<<11|func. We need a different approach.
+    # Instead, return the full BDF encoded as bus<<16 | dev<<8 | func in EAX.
+    # Caller will need to handle this.
+    movl %r12d, %eax
+    shll $16, %eax
+    movl %r13d, %edx
+    shll $8, %edx
+    orl %edx, %eax
+    movl %r14d, %edx
+    orl %edx, %eax
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %rbx
+    ret
+
+.Lscan_not_found:
+    xorl %eax, %eax
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %rbx
     ret
 
 # ---------------------------------------------------------------------------
