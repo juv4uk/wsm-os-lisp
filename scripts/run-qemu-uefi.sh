@@ -74,6 +74,11 @@ case "$status" in
     cat "$serial_log" >&2
     exit 1
     ;;
+  39)
+    echo "SERIAL-TRANSPORT-FAIL: guest COM1 UART never became transmitter-ready (issue #31)" >&2
+    cat "$serial_log" >&2
+    exit 1
+    ;;
   124)
     echo "TIMEOUT: guest did not reach a structured exit" >&2
     cat "$serial_log" >&2
