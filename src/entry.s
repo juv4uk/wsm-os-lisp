@@ -304,10 +304,22 @@ serial_init:
 serial_putc:
     movl %eax, %r8d
     movw $0x3FD, %dx                # LSR
+    movl $100000, %ecx              # finite retry bound (~100k polls)
 1:
     inb %dx, %al
     testb $0x20, %al                # THRE (transmitter holding register empty)
-    jz 1b
+    jnz 2f
+    loop 1b                         # dec %ecx; jnz if not zero
+
+    # Transport failure: UART never became ready.
+    # Distinct from kernel_failure/panic/result schema.
+    # Exit via ISA debug port 0xF4 with code 0x13 (19) = serial transport failure.
+    movw $0xF4, %dx
+    movl $0x13, %eax
+    outl %eax, %dx
+    hlt
+
+2:
     movw $0x3F8, %dx
     movl %r8d, %eax
     outb %al, %dx
