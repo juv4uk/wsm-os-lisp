@@ -31,6 +31,13 @@ closure_arena_end:
 
 .section .data
 .align 16
+# Boot handoff state: raw pointer captured from RDI on entry. The actual
+# physical-memory offset is parsed into a plain u64 (see wsm_boot_handoff).
+.globl saved_boot_info
+saved_boot_info:
+    .quad 0
+
+.align 16
 runtime_context:
     .quad heap_arena                # offset 0: heap_base
     .quad 4096                      # offset 8: heap_capacity (4096 * 16 bytes = 64KB)
@@ -83,6 +90,14 @@ _start:
     # Disable interrupts
     cli
 
+    # Save BootInfo pointer. Per the pinned bootloader 0.11.17 the entry
+    # handoff places &BootInfo in RDI before jumping here (see
+    # docs/TARGET-BOOT-HANDOFF-ABI.md, section 1). We only capture the
+    # pointer now; semantic extraction happens in wsm_boot_handoff.
+    # If the pointer is null we still proceed fail-closed (MMIO will not
+    # provision without a physical-memory mapping).
+    movq %rdi, saved_boot_info(%rip)
+
     # Setup stack
     leaq stack_top(%rip), %rsp
 
@@ -93,6 +108,11 @@ _start:
     leaq msg_boot(%rip), %rsi
     movl $msg_boot_len, %edx
     call serial_write
+
+    # Parse BootInfo handed off in RDI: extract physical_memory_offset into
+    # target memory state. Missing/None stays fail-closed (offset stays 0 and
+    # no MMIO region will be provisioned).
+    call wsm_boot_handoff
 
     # Call Lisp entry: wsm_entry(&runtime_context)
     leaq runtime_context(%rip), %rdi
