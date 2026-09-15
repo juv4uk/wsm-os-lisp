@@ -8,11 +8,6 @@ msg_boot:
 msg_boot_end:
 .set msg_boot_len, msg_boot_end - msg_boot
 
-msg_result_ab:
-    .ascii "WSM-OS RESULT schema=1 value=(A . B) status=ok\n"
-msg_result_ab_end:
-.set msg_result_ab_len, msg_result_ab_end - msg_result_ab
-
 msg_panic:
     .ascii "WSM-OS PANIC schema=1 status=error\n"
 msg_panic_end:
@@ -65,13 +60,9 @@ msg_t:
     .ascii "t"
 .set msg_t_len, . - msg_t
 
-msg_sym_a:
-    .ascii "A"
-.set msg_sym_a_len, . - msg_sym_a
-
-msg_sym_b:
-    .ascii "B"
-.set msg_sym_b_len, . - msg_sym_b
+msg_sym_prefix:
+    .ascii "sym"
+.set msg_sym_prefix_len, . - msg_sym_prefix
 
 msg_open_paren:
     .ascii "("
@@ -197,30 +188,15 @@ print_value:
     jmp .Lp_done
 
 .Lp_symbol:
-    # Check known symbols
-    cmpq $12, %rbx                  # Symbol 'A'
-    je .Lp_sym_a
-    cmpq $20, %rbx                  # Symbol 'B'
-    je .Lp_sym_b
-    # Print 'sym'
-    movl $'s', %eax
-    call serial_putc
+    # Symbols are interned ids; the target observes only the id, never the
+    # compiler-owned name. Serialize the observable representation alone.
+    leaq msg_sym_prefix(%rip), %rsi
+    movl $msg_sym_prefix_len, %edx
+    call serial_write
     movq %rbx, %rax
     shrq $3, %rax
     movq %rax, %rdi
     call print_decimal
-    jmp .Lp_done
-
-.Lp_sym_a:
-    leaq msg_sym_a(%rip), %rsi
-    movl $msg_sym_a_len, %edx
-    call serial_write
-    jmp .Lp_done
-
-.Lp_sym_b:
-    leaq msg_sym_b(%rip), %rsi
-    movl $msg_sym_b_len, %edx
-    call serial_write
     jmp .Lp_done
 
 .Lp_fixnum:
