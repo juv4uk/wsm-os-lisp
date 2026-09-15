@@ -14,9 +14,9 @@ set -euo pipefail
 # so this script is the RED witness for issue #31.
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-SRC="$ROOT_DIR/src/entry.s"
+SRC="${WSM_OS_ENTRY_SRC:-$ROOT_DIR/src/entry.s}"
 
-obj="$(mktemp /tmp/wsm-serial-putc.XXXXXX.o)"
+obj="$ROOT_DIR/target/.serial-putc-check.$$.o"
 trap 'rm -f "$obj"' EXIT
 
 as --64 "$SRC" -o "$obj"
@@ -37,12 +37,14 @@ fi
 disasm="$(objdump -d --disassemble=serial_putc "$obj")"
 
 # 2. serial_putc must contain a finite counter (dec + conditional jump).
-if grep -q '^\s*dec\s' <<<"$disasm"; then
+#    objdump lines are "<addr>: <encoded bytes> <mnemonic> <operands>", so the
+#    mnemonic is matched anywhere on the line inside the serial_putc body.
+if grep -q 'dec[[:blank:]]' <<<"$disasm"; then
   : # counter present
 else
   fail "serial_putc has no finite retry counter (no dec of a poll bound)"
 fi
-if grep -q '^\s*jne\s' <<<"$disasm" || grep -q '^\s*jnz\s' <<<"$disasm"; then
+if grep -qE 'jne[[:blank:]]' <<<"$disasm" || grep -qE 'jnz[[:blank:]]' <<<"$disasm"; then
   : # conditional branch present
 else
   fail "serial_putc has no conditional loop branch tied to the counter"

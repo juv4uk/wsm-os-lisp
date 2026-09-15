@@ -18,6 +18,11 @@ msg_panic:
 msg_panic_end:
 .set msg_panic_len, msg_panic_end - msg_panic
 
+msg_serial_fail:
+    .ascii "WSM-OS SERIAL-TRANSPORT-FAIL schema=1 status=error\n"
+msg_serial_fail_end:
+.set msg_serial_fail_len, msg_serial_fail_end - msg_serial_fail
+
 .section .bss
 .align 16
 stack_bottom:
@@ -305,17 +310,51 @@ serial_init:
     outb %al, %dx
     ret
 
+# Bounded THRE poll limit for the raw COM1 transmitter path. A healthy UART
+# clears THRE immediately, so 65536 LSR reads bound a dead/unresponsive port
+# without any timer: it is a plain iteration budget, valid for freestanding
+# early boot where no PIT/APIC is set up yet.
+.set SERIAL_TX_LSR_POLL_LIMIT, 65536
+
 serial_putc:
     movl %eax, %r8d
     movw $0x3FD, %dx                # LSR
+    movl $SERIAL_TX_LSR_POLL_LIMIT, %ecx
 1:
     inb %dx, %al
     testb $0x20, %al                # THRE (transmitter holding register empty)
-    jz 1b
+    jnz 2f
+    decl %ecx
+    jnz 1b
+    jmp serial_transport_failure
+2:
     movw $0x3F8, %dx
     movl %r8d, %eax
     outb %al, %dx
     ret
+
+# ---------------------------------------------------------------------------
+# Serial transport failure (issue #31): bounded THRE polls exhausted, COM1 never
+# became transmitter-ready. This is a substrate/transport failure, NOT a Lisp
+# semantic or runtime condition, so it has its own serial marker and QEMU exit
+# class (val 0x13 -> shell 39) instead of kernel_failure (val 0x12 -> 37).
+# The marker is emitted with direct non-polled writes: this path never re-enters
+# serial_putc, so it cannot recurse even though the transport is unusable.
+# ---------------------------------------------------------------------------
+serial_transport_failure:
+    leaq msg_serial_fail(%rip), %rsi
+    movl $msg_serial_fail_len, %ecx
+1:
+    movzbl (%rsi), %eax
+    movw $0x3F8, %dx
+    outb %al, %dx
+    incq %rsi
+    decl %ecx
+    jnz 1b
+    movw $0xF4, %dx
+    movl $0x13, %eax
+    outl %eax, %dx
+    hlt
 
 # RSI = buffer, EDX = length
 serial_write:
