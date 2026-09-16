@@ -13,12 +13,19 @@ if [ -z "$UNDEF" ]; then
     exit 0
 fi
 
-# The only allowed undefined symbol is wsm_fail when called from inside runtime
+# The only allowed undefined symbols are those deliberately provided by
+# src/entry.s to the freestanding runtime:
+#   wsm_fail        - failure boundary called from inside the runtime;
+#   saved_boot_info - BootInfo pointer saved by entry.s and read by
+#                     wsm_boot_handoff (see docs/TARGET-BOOT-HANDOFF-ABI.md).
 for sym in $UNDEF; do
-    if [[ "$sym" != "wsm_fail" ]]; then
-        echo "ERROR: Forbidden external import detected: $sym"
-        exit 1
-    fi
+    case "$sym" in
+        wsm_fail|saved_boot_info) ;;
+        *)
+            echo "ERROR: Forbidden external import detected: $sym"
+            exit 1
+            ;;
+    esac
 done
 
 echo "Runtime is clean. All undefined symbols match the freestanding ABI boundary."
