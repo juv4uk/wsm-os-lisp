@@ -295,10 +295,10 @@ wsm_fail:
 .type wsm_pci_config_capability, @function
 wsm_pci_config_capability:
     # Nonce 0x150434954346, kind 0 (PciConfig), instance 0
-    # Payload: (nonce << 19) | (instance << 3) | kind
+    # Payload: (nonce << 16) | (instance << 3) | kind
     # Encoded word: (payload << 3) | 6
     movabsq $0x150434954346, %rax
-    shlq $22, %rax
+    shlq $19, %rax
     orq $WSM_TAG_CAPABILITY, %rax
     ret
 
@@ -350,7 +350,7 @@ wsm_pci_config_read16:
 # ---------------------------------------------------------------------------
 # Boot handoff: void wsm_boot_handoff(void)
 # Reads the BootInfo pointer saved by entry.s, extracts the runtime
-# physical-memory offset (Optional<u64> at BootInfo+0x88 tag / +0x90 value)
+# physical-memory offset (Optional<u64> at BootInfo+0x58 tag / +0x60 value)
 # and stores it in target state. Missing or None leaves offset = 0 so MMIO
 # provisioning fails closed. See docs/TARGET-BOOT-HANDOFF-ABI.md.
 # Argument: none (saved_boot_info is a symbol owned by entry.s)
@@ -364,12 +364,12 @@ wsm_boot_handoff:
     testq %rbx, %rbx
     jz .Lhandoff_done_nooffset
 
-    # Optional<u64> tag at +0x88: 0x00 == Some, 0x01 == None
-    cmpb $0, 0x88(%rbx)
+    # Optional<u64> tag at +0x58: 0x00 == Some, 0x01 == None
+    cmpb $0, 0x58(%rbx)
     jne .Lhandoff_done_nooffset
 
-    # Value at +0x90 (u64, little endian)
-    movq 0x90(%rbx), %rax
+    # Value at +0x60 (u64, little endian)
+    movq 0x60(%rbx), %rax
     movq %rax, wsm_target_phys_mem_offset(%rip)
     popq %rbx
     ret
@@ -488,7 +488,8 @@ wsm_target_provision_mmio:
 
     # phys = bar_phys + offset_in_bar
     addq %r14, %rax
-    movq %rax, %rcx                 # rcx = phys base of COMMON_CFG
+    movq %rax, %rbx                 # rbx = phys base of COMMON_CFG (preserved across call)
+    movq %rbx, %rcx
 
     # ---- Verify BAR physical address is covered by the physical-memory
     #      mapping. Translated caller: virt = phys + phys_mem_offset.
@@ -501,6 +502,7 @@ wsm_target_provision_mmio:
     jz .Lprov_fail_notmapped
 
     # virt_base = phys + phys_mem_offset
+    movq %rbx, %rcx
     addq %r15, %rcx
     movq %rcx, wsm_mmio_region_base(%rip)
     movq %r13, wsm_mmio_region_len(%rip)
@@ -569,9 +571,10 @@ wsm_mmio_capability:
 
     popq %rdi
     # Nonce 0x1A0495124347, kind 1 (Mmio), instance 0
-    # Encoded word: (nonce << 22) | 6
+    # Payload: (nonce << 16) | (instance << 3) | kind
+    # Encoded word: (payload << 3) | 6
     movabsq $0x1A0495124347, %rax
-    shlq $22, %rax
+    shlq $19, %rax
     orq $WSM_TAG_CAPABILITY, %rax
     ret
 
@@ -696,11 +699,11 @@ wsm_mmio_write32:
     andq $WSM_TAG_MASK, %rax
     cmpq $WSM_TAG_CAPABILITY, %rax
     jne .Lcap_decode_invalid
-    # payload = cap >> 3 must equal (nonce << 19) ; kind==1 implied.
+    # payload = cap >> 3 must equal (nonce << 16) ; kind==1 implied.
     movq %rdi, %rax
     shrq $3, %rax
     movabsq $0x1A0495124347, %rcx
-    shlq $19, %rcx
+    shlq $16, %rcx
     cmpq %rcx, %rax
     jne .Lcap_decode_invalid
     movq wsm_mmio_region_base(%rip), %rax
@@ -791,13 +794,14 @@ wsm_mmio_write32:
     movw $0xCFC, %dx
     inl %dx, %eax
     xchgl %eax, %ebx
-    # EBX: low 16 = vendor, high 16 = device
+    # EBX: raw read value (low 16 = vendor, high 16 = device)
+    movl %ebx, %edx               # save raw value
     andl $0xFFFF, %ebx            # vendor
     cmpl $0x1AF4, %ebx
     jne .Lscan_next_func
-    shrl $16, %ebx
-    andl $0xFFFF, %ebx            # device
-    cmpl $0x1042, %ebx
+    shrl $16, %edx                # device from raw (not from masked vendor)
+    andl $0xFFFF, %edx
+    cmpl $0x1042, %edx
     je .Lscan_found
 
 .Lscan_next_func:

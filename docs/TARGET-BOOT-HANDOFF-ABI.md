@@ -46,8 +46,8 @@ physical_memory_offset offset 0x58 (88)
 
 `Option`-подібне `Optional<u64>` займає 16 байт (тег у нульовому байті,
 значення на offset 8), вирівнювання 8. Тобто **слово значення
-`physical_memory_offset` перебуває на offset `0x88 + 8 = 0x90`** вузла
-`BootInfo`, а **тег — на `0x88`**.
+`physical_memory_offset` перебуває на offset `0x58 + 8 = 0x60`** вузла
+`BootInfo`, а **тег — на `0x58`**.
 
 Підтверджено побайтовим дампом того самого типу (див. розділ 4).
 
@@ -98,8 +98,8 @@ init (перелічені нижче), які покриваються `bootloa
 
 | Поле | Тип | Offset у `BootInfo` | Призначення |
 |---|---|---|---|
-| тег `physical_memory_offset` | `Optional<u64>` discriminant | `0x88` | Some/None |
-| значення `physical_memory_offset` | u64 | `0x90` | базовий offset фіз. пам'яті в virt |
+| тег `physical_memory_offset` | `Optional<u64>` discriminant | `0x58` | Some/None |
+| значення `physical_memory_offset` | u64 | `0x60` | базовий offset фіз. пам'яті в virt |
 
 Якщо `bootloader_api` колись буде змінено версією — цей файл є контрольною
 точкою для повторного вимірювання layout перед комітом.
@@ -119,8 +119,8 @@ init (перелічені нижче), які покриваються `bootloa
 і цільовим асемблером `wsm-os-lisp`:
 
 - `%rdi` на вході в `_start` = `&BootInfo`;
-- `physical_memory_offset` — `Optional<u64>` на offset `0x88` (тег; `0x00`
-= Some, `0x01` = None) та `0x90` (значення, u64);
+- `physical_memory_offset` — `Optional<u64>` на offset `0x58` (тег; `0x00`
+= Some, `0x01` = None) та `0x60` (значення, u64);
 - конфіг мапує фізичну пам'ять (`physical_memory = Some(Dynamic)`), рекурсії
 level-4 немає;
 - ASM читає рівно два поля, всі допоміжні речі — target-side.
