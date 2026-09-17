@@ -145,13 +145,13 @@ wsm_car:
     ret
 
 .Lcar_type_err:
+    movq %rsi, %rdx                 # offending value = the bad word
     movl $ERR_TYPE, %esi
-    movq %rsi, %rdx
     jmp wsm_fail
 
 .Lcar_abi_err:
+    movq %rsi, %rdx                 # offending value = the bad word
     movl $ERR_ABI, %esi
-    movq %rsi, %rdx
     jmp wsm_fail
 
 # ---------------------------------------------------------------------------
@@ -180,13 +180,13 @@ wsm_cdr:
     ret
 
 .Lcdr_type_err:
+    movq %rsi, %rdx                 # offending value = the bad word
     movl $ERR_TYPE, %esi
-    movq %rsi, %rdx
     jmp wsm_fail
 
 .Lcdr_abi_err:
+    movq %rsi, %rdx                 # offending value = the bad word
     movl $ERR_ABI, %esi
-    movq %rsi, %rdx
     jmp wsm_fail
 
 # ---------------------------------------------------------------------------
@@ -273,8 +273,8 @@ wsm_closure_definition:
     ret
 
 .Lclosure_type_err:
+    movq %rsi, %rdx                 # offending value = the bad word
     movl $ERR_TYPE, %esi
-    movq %rsi, %rdx
     jmp wsm_fail
 
 # ---------------------------------------------------------------------------

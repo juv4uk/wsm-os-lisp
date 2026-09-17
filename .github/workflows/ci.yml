@@ -53,4 +53,6 @@ jobs:
         run: bash scripts/check-mmio-mutation-fail-closed.sh
       - name: Prove Lisp device policy polls with a finite budget (issue #40)
         run: bash scripts/check-mmio-bounded-poll.sh
+      - name: Prove device failure is distinguishable from Lisp semantic failure (issue #40)
+        run: bash scripts/check-condition-distinguishability.sh
 

@@ -1,0 +1,2 @@
+WSM-OS BOOT schema=1 arch=x86_64 status=ok
+WSM-OS CONDITION schema=1 kind=TYPE source=0 value=91
