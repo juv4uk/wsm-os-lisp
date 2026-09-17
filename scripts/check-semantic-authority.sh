@@ -43,6 +43,15 @@ require_literal "$runtime" '.set ERR_OOM,                 1'
 require_literal "$runtime" '.set ERR_TYPE,                2'
 require_literal "$runtime" '.set ERR_ABI,                 4'
 
+# Closed device/ABI failure-source vocabulary (structured condition `source=`).
+# These make a device/transport failure distinguishable from a Lisp semantic
+# failure; the values mirror the pre-ADR-004 substrate codes.
+require_literal "$runtime" '.set MMIO_ERR_CAPABILITY_READ,      0x4D494F02'
+require_literal "$runtime" '.set MMIO_ERR_CAPABILITY_WRITE,     0x4D494F05'
+require_literal "$runtime" '.set MMIO_ERR_OVERFLOW_READ,        0x4D494F09'
+require_literal "$runtime" '.set MMIO_ERR_OVERFLOW_WRITE,       0x4D494F0A'
+require_literal "$runtime" '.set MMIO_ERR_PROVISIONING,         0x4D494F00'
+
 # Floating-point escape hatches are strictly forbidden in exact semantic assembly
 if grep -REn '\b(fld|fst|fadd|fsub|fmul|fdiv|movss|movsd|addss|addsd)\b' \
     "$ROOT_DIR/src/runtime.s" "$ROOT_DIR/src/entry.s" >/dev/null; then

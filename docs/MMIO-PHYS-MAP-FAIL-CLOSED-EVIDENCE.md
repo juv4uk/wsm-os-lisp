@@ -103,8 +103,18 @@ WSM-OS CONDITION schema=1 kind=ABI source=1296649992 value=14998298004509163542
 
 ## 4. Позитивний шлях без змін / Positive path unchanged
 
-`scripts/rebuild-and-run-wsm-pci-config-qemu.sh` (d1-capability, d1-bounds,
-d2-status) лишається зеленою без мутації:
+> [!WARNING]
+> **Застаріло з 2026-09-17 (ADR-004 / issue #40):** наведений нижче доказ
+> походить із pre-ADR-004 Rust-ядра; скрипт
+> `scripts/rebuild-and-run-wsm-pci-config-qemu.sh` викликає прибрані крейти
+> (`cargo -p m4-generator/wsm-os-image`) і **більше не запускається**. Рядок
+> `WSM-OS DRIVER …` не є доказом поточного чистого ASM-шляху.
+> Канонічний позитивний свідок тепер:
+> `scripts/check-mmio-device-op.sh` →
+> `WSM-OS RESULT schema=1 value=t status=ok` (див.
+> `docs/MMIO-MUTATION-AND-POLL-EVIDENCE.md`).
+
+Історичний (legacy) запис нижче збережено для provenance:
 
 ```
 WSM-OS DRIVER schema=1 driver=virtio-blk stage=mmio-status value=t execution=wsm status=ok

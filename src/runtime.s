@@ -26,6 +26,31 @@
 .set ERR_OVERFLOW,            5
 
 # ---------------------------------------------------------------------------
+# MMIO failure-source codes (structured condition `source=`, kind=ABI).
+# Ported from the pre-ADR-004 kernel (commit 7b66ca8) so the pure-ASM path
+# reports the same device/ABI failure vocabulary as the historical witnesses.
+# Read and write directions stay distinct, mirroring the legacy pairs.
+#   0x4D494F01 decode_fixnum (read)      0x4D494F04 decode_fixnum (write)
+#   0x4D494F02 capability/bounds (read)  0x4D494F05 capability/bounds (write)
+#   0x4D494F03 not provisioned (read)    0x4D494F06 not provisioned (write)
+#   0x4D494F07 mapping unavailable (read) 0x4D494F08 mapping unavailable (write)
+#   0x4D494F09 address overflow (read)   0x4D494F0A address overflow (write)
+# 0x4D494F00 is pure-ASM-only: fail-closed provisioning of the MMIO
+# capability itself (direction-neutral); see docs/MMIO-MUTATION-...md.
+# ---------------------------------------------------------------------------
+.set MMIO_ERR_DECODE_READ,          0x4D494F01
+.set MMIO_ERR_CAPABILITY_READ,      0x4D494F02
+.set MMIO_ERR_NOT_PROVISIONED_READ, 0x4D494F03
+.set MMIO_ERR_DECODE_WRITE,         0x4D494F04
+.set MMIO_ERR_CAPABILITY_WRITE,     0x4D494F05
+.set MMIO_ERR_NOT_PROVISIONED_WRITE,0x4D494F06
+.set MMIO_ERR_MAPPING_READ,         0x4D494F07
+.set MMIO_ERR_MAPPING_WRITE,        0x4D494F08
+.set MMIO_ERR_OVERFLOW_READ,        0x4D494F09
+.set MMIO_ERR_OVERFLOW_WRITE,       0x4D494F0A
+.set MMIO_ERR_PROVISIONING,         0x4D494F00
+
+# ---------------------------------------------------------------------------
 # Boot handoff / MMIO target state (ADR-004: target owns mechanism).
 # The only values lifted from the Rust BootInfo are the physical-memory
 # offset (a runtime fact) and, later, the provisioned MMIO region resolved
@@ -272,13 +297,27 @@ wsm_closure_environment:
 # ---------------------------------------------------------------------------
 # void wsm_fail(RuntimeContext* ctx, uint32_t code, Word value)
 # Arguments: RDI = ctx, ESI = code, RDX = value
+# Generic/Lisp condition: source_id stays 0 (closed error vocabulary).
 # ---------------------------------------------------------------------------
 .globl wsm_fail
 .type wsm_fail, @function
 wsm_fail:
+    movq %rdx, %rcx                 # offending value -> RCX
+    xorl %edx, %edx                 # condition.source_id = 0
+    jmp wsm_fail_src
+
+# ---------------------------------------------------------------------------
+# void wsm_fail_src(RuntimeContext* ctx, uint32_t code, uint32_t source, Word value)
+# Arguments: RDI = ctx, ESI = code, EDX = source, RCX = value
+# Device/ABI failures carry a substrate source code so a transport/device
+# failure is distinguishable from a Lisp semantic failure in the condition.
+# ---------------------------------------------------------------------------
+.globl wsm_fail_src
+.type wsm_fail_src, @function
+wsm_fail_src:
     movl %esi, 48(%rdi)             # condition.kind = code
-    movl $0, 52(%rdi)               # condition.source_id = 0
-    movq %rdx, 56(%rdi)             # condition.offending_value = value
+    movl %edx, 52(%rdi)             # condition.source_id = source
+    movq %rcx, 56(%rdi)             # condition.offending_value = value
 
     movq 64(%rdi), %rax             # failure_handler
     testq %rax, %rax
@@ -359,6 +398,15 @@ wsm_pci_config_read16:
 .type wsm_boot_handoff, @function
 wsm_boot_handoff:
     pushq %rbx
+.ifdef WSM_FORCE_NO_PHYS_MAP
+    # Test-only mutation (issue #40): force the "bootloader did not provide the
+    # physical-memory mapping" state so the fail-closed MMIO path is witnessable
+    # on the canonical pure-ASM target. Never defined in production builds; the
+    # flag is injected by `as --defsym` from build-uefi-image.sh.
+    movq $0, wsm_target_phys_mem_offset(%rip)
+    popq %rbx
+    ret
+.endif
     # Load saved boot info pointer
     movq saved_boot_info(%rip), %rbx
     testq %rbx, %rbx
@@ -580,10 +628,13 @@ wsm_mmio_capability:
 
 .Lcap_fail:
     popq %rdi
-    # Fail closed: ABI violation (4) with offending value = nil.
-    movq $ERR_ABI, %rsi
-    movq $WSM_NIL, %rdx
-    jmp wsm_fail
+    # Fail closed: ABI violation (4); source = MMIO provisioning, and the
+    # offending value is the provisioning sentinel (2..6) that records which
+    # step failed (no offset / no cap / bad BAR / not mapped / no device).
+    movq wsm_mmio_region_valid(%rip), %rcx
+    movl $ERR_ABI, %esi
+    movl $MMIO_ERR_PROVISIONING, %edx
+    jmp wsm_fail_src
 
 # ---------------------------------------------------------------------------
 # Word wsm_mmio_read32(RuntimeContext* ctx, Word cap, Word offset)
@@ -597,9 +648,10 @@ wsm_mmio_read32:
     pushq %rbx
     pushq %rdi                          # save ctx (caller-saved, clobbered below)
     movq %rsi, %rdi
-    call .Ldecode_check_mmio_cap        # RAX = virt base, or 0 if invalid
+    call .Ldecode_check_mmio_cap        # RAX = virt base, 0 invalid, -1 not provisioned
     testq %rax, %rax
     jz .Lmmio_cap_fail                  # stack still has [rbx, saved_ctx]
+    js .Lmmio_notprov_fail
     movq %rax, %rbx
     popq %rdi                           # restore ctx
     # RDX holds offset fixnum; decode right-shift by 3.
@@ -609,7 +661,7 @@ wsm_mmio_read32:
     movq wsm_mmio_region_len(%rip), %rcx
     movq %rax, %r10
     addq $4, %r10
-    jc .Lmmio_bounds_fail
+    jc .Lmmio_overflow_fail
     cmpq %rcx, %r10
     ja .Lmmio_bounds_fail
     # Compute address = base + offset
@@ -620,17 +672,33 @@ wsm_mmio_read32:
     popq %rbx
     ret
 
-.Lmmio_bounds_fail:
+.Lmmio_overflow_fail:                   # read: offset + 4 wrapped
     popq %rbx
-    jmp .Lmmio_fail_common
+    movq $WSM_NIL, %rcx
+    movl $ERR_ABI, %esi
+    movl $MMIO_ERR_OVERFLOW_READ, %edx
+    jmp wsm_fail_src
+.Lmmio_bounds_fail:                     # read: offset outside region
+    popq %rbx
+    movq $WSM_NIL, %rcx
+    movl $ERR_ABI, %esi
+    movl $MMIO_ERR_CAPABILITY_READ, %edx
+    jmp wsm_fail_src
 .Lmmio_cap_fail:
     # Invalidate the capability usage: pop saved ctx, then the base save.
     popq %rdi
     popq %rbx
-.Lmmio_fail_common:
-    movq $ERR_ABI, %rsi
-    movq $WSM_NIL, %rdx
-    jmp wsm_fail
+    movq $WSM_NIL, %rcx
+    movl $ERR_ABI, %esi
+    movl $MMIO_ERR_CAPABILITY_READ, %edx
+    jmp wsm_fail_src
+.Lmmio_notprov_fail:                    # read: region not provisioned
+    popq %rdi
+    popq %rbx
+    movq $WSM_NIL, %rcx
+    movl $ERR_ABI, %esi
+    movl $MMIO_ERR_NOT_PROVISIONED_READ, %edx
+    jmp wsm_fail_src
 
 # ---------------------------------------------------------------------------
 # Word wsm_mmio_write32(RuntimeContext* ctx, Word cap, Word offset, Word value)
@@ -648,6 +716,7 @@ wsm_mmio_write32:
     call .Ldecode_check_mmio_cap
     testq %rax, %rax
     jz .Lmmio_cap_fail2                 # stack still has [r12, rbx, saved_ctx]
+    js .Lmmio_notprov_fail2
     movq %rax, %rbx
     popq %rdi                           # restore ctx
     # RDX = offset (fixnum), decode
@@ -657,7 +726,7 @@ wsm_mmio_write32:
     movq wsm_mmio_region_len(%rip), %r10
     movq %rax, %r11
     addq $4, %r11
-    jc .Lmmio_bounds_fail2
+    jc .Lmmio_overflow_fail2
     cmpq %r10, %r11
     ja .Lmmio_bounds_fail2
     # R12 = value (fixnum, saved before decode), decode
@@ -668,32 +737,52 @@ wsm_mmio_write32:
     movq $WSM_CANONICAL_T, %rax
     ret
 
-.Lmmio_bounds_fail2:
+.Lmmio_overflow_fail2:                  # write: offset + 4 wrapped
     popq %r12
     popq %rbx
-    jmp .Lmmio_fail_common2
+    movq $WSM_NIL, %rcx
+    movl $ERR_ABI, %esi
+    movl $MMIO_ERR_OVERFLOW_WRITE, %edx
+    jmp wsm_fail_src
+.Lmmio_bounds_fail2:                    # write: offset outside region
+    popq %r12
+    popq %rbx
+    movq $WSM_NIL, %rcx
+    movl $ERR_ABI, %esi
+    movl $MMIO_ERR_CAPABILITY_WRITE, %edx
+    jmp wsm_fail_src
 .Lmmio_cap_fail2:
     # Invalidate the capability usage: pop saved ctx, then base+value saves.
     popq %rdi
     popq %r12
     popq %rbx
-.Lmmio_fail_common2:
-    movq $ERR_ABI, %rsi
-    movq $WSM_NIL, %rdx
-    jmp wsm_fail
+    movq $WSM_NIL, %rcx
+    movl $ERR_ABI, %esi
+    movl $MMIO_ERR_CAPABILITY_WRITE, %edx
+    jmp wsm_fail_src
+.Lmmio_notprov_fail2:                   # write: region not provisioned
+    popq %rdi
+    popq %r12
+    popq %rbx
+    movq $WSM_NIL, %rcx
+    movl $ERR_ABI, %esi
+    movl $MMIO_ERR_NOT_PROVISIONED_WRITE, %edx
+    jmp wsm_fail_src
 
 # ---------------------------------------------------------------------------
 # Internal: validate a provisioned MMIO capability.
 # In:  RDI = capability word
-# Out: RAX = provisioned virtual base (≥1), or 0 if the capability is invalid
-#      (not provisioned / tag mismatch / nonce mismatch). The caller decides
-#      how to fail; no redirections to wsm_fail happen here so stack unwinding
-#      stays in the caller.
+# Out: RAX = provisioned virtual base (≥1) when valid;
+#      RAX = 0 when the capability is well-defined-looking but its identity is
+#            wrong (tag mismatch / nonce mismatch);
+#      RAX = -1 when the region was never provisioned.
+#      The caller decides how to fail; no redirections to wsm_fail happen here
+#      so stack unwinding stays in the caller.
 # ---------------------------------------------------------------------------
 .Ldecode_check_mmio_cap:
     movq wsm_mmio_region_valid(%rip), %rax
     cmpq $1, %rax
-    jne .Lcap_decode_invalid
+    jne .Lcap_decode_notprov
     # tag must be CAPABILITY
     movq %rdi, %rax
     andq $WSM_TAG_MASK, %rax
@@ -707,6 +796,10 @@ wsm_mmio_write32:
     cmpq %rcx, %rax
     jne .Lcap_decode_invalid
     movq wsm_mmio_region_base(%rip), %rax
+    ret
+
+.Lcap_decode_notprov:
+    movq $-1, %rax
     ret
 
 .Lcap_decode_invalid:

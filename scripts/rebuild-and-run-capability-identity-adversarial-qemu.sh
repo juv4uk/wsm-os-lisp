@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# LEGACY (pre-ADR-004, cannot run: requires removed cargo crates).
+# Pure-ASM successor: scripts/check-mmio-mutation-fail-closed.sh
+# (case: wrong-capability) + artifacts/d6-mmio-wrong-capability-fixture.lisp.
+# See docs/LEGACY-PRE-ADR004-SCRIPTS.md.
+#
 # Capability-identity adversarial witness (d3): a hostile WSM gains a genuine,
 # substrate-issued PCI-config capability, then attempts to use that same
 # capability word as an MMIO capability on the virtio-blk common-cfg region.

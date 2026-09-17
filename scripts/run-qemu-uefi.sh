@@ -8,7 +8,11 @@ fi
 
 image=$1
 : "${QEMU_SYSTEM_X86_64:=qemu-system-x86_64}"
-: "${WSM_OS_QEMU_TIMEOUT:=20}"
+# Bounded guest deadline. Kept finite so a truly unbounded spin is a hard
+# failure (status 124). 30s leaves headroom for TCG/OVMF boots on a loaded
+# CI runner while still catching real hangs (observed 2026-09-17: 20s was
+# occasionally exceeded under concurrent QEMU load).
+: "${WSM_OS_QEMU_TIMEOUT:=30}"
 
 # Resolve OVMF via explicit environment first, then Guix discovery
 source "$(dirname "$0")/ovmf-env.sh"

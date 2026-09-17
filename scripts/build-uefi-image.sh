@@ -12,9 +12,17 @@ mkdir -p "$ROOT_DIR/target"
 BUILD_DIR=$(mktemp -d /tmp/wsm-build.XXXXXX)
 trap 'rm -rf "$BUILD_DIR"' EXIT
 
+# Optional test-only assembler flags. WSM_OS_FORCE_NO_PHYS_MAP=1 injects the
+# `WSM_FORCE_NO_PHYS_MAP` symbol consumed by src/runtime.s::wsm_boot_handoff to
+# witness the fail-closed MMIO path (issue #40). Production builds define none.
+as_extra=()
+if [[ "${WSM_OS_FORCE_NO_PHYS_MAP:-0}" == "1" ]]; then
+  as_extra+=(--defsym WSM_FORCE_NO_PHYS_MAP=1)
+fi
+
 # Assemble pure machine runtime and entry
-as --64 "$ROOT_DIR/src/entry.s" -o "$BUILD_DIR/entry.o"
-as --64 "$ROOT_DIR/src/runtime.s" -o "$BUILD_DIR/runtime.o"
+as --64 "${as_extra[@]}" "$ROOT_DIR/src/entry.s" -o "$BUILD_DIR/entry.o"
+as --64 "${as_extra[@]}" "$ROOT_DIR/src/runtime.s" -o "$BUILD_DIR/runtime.o"
 
 # Link freestanding kernel ELF
 ld -m elf_x86_64 -T "$ROOT_DIR/src/linker.ld" \

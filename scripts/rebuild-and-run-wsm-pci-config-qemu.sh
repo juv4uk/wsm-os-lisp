@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# LEGACY (pre-ADR-004, cannot run: requires removed cargo crates).
+# Pure-ASM successors: scripts/check-mmio-device-op.sh,
+# scripts/check-mmio-mutation-fail-closed.sh.
+# See docs/LEGACY-PRE-ADR004-SCRIPTS.md.
 set -euo pipefail
 
 # Resolve OVMF via explicit environment first, then Guix discovery

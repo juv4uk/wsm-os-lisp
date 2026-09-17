@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# LEGACY (pre-ADR-004, cannot run: requires removed cargo crates).
+# Pure-ASM successor: scripts/check-mmio-mutation-fail-closed.sh
+# (case: forced-no-phys-map). See docs/LEGACY-PRE-ADR004-SCRIPTS.md.
+#
 # Fail-closed witness for PHYS-MAP: when the bootloader does not provide the
 # requested dynamic physical-memory mapping, the MMIO path must reject the
 # access BEFORE any volatile access, instead of assuming identity mapping

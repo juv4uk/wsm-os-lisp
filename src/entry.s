@@ -8,10 +8,57 @@ msg_boot:
 msg_boot_end:
 .set msg_boot_len, msg_boot_end - msg_boot
 
-msg_panic:
-    .ascii "WSM-OS PANIC schema=1 status=error\n"
-msg_panic_end:
-.set msg_panic_len, msg_panic_end - msg_panic
+# Structured condition line, matching the pre-ADR-004 substrate format:
+#   WSM-OS CONDITION schema=1 kind=<NAME> source=<code> value=<word>
+msg_cond_pre:
+    .ascii "WSM-OS CONDITION schema=1 kind="
+msg_cond_pre_end:
+.set msg_cond_pre_len, msg_cond_pre_end - msg_cond_pre
+
+msg_cond_source:
+    .ascii " source="
+msg_cond_source_end:
+.set msg_cond_source_len, msg_cond_source_end - msg_cond_source
+
+msg_cond_value:
+    .ascii " value="
+msg_cond_value_end:
+.set msg_cond_value_len, msg_cond_value_end - msg_cond_value
+
+msg_newline:
+    .ascii "\n"
+msg_newline_end:
+.set msg_newline_len, msg_newline_end - msg_newline
+
+msg_kind_oom:
+    .ascii "OOM"
+msg_kind_oom_end:
+.set msg_kind_oom_len, msg_kind_oom_end - msg_kind_oom
+
+msg_kind_type:
+    .ascii "TYPE"
+msg_kind_type_end:
+.set msg_kind_type_len, msg_kind_type_end - msg_kind_type
+
+msg_kind_symbol:
+    .ascii "SYMBOL"
+msg_kind_symbol_end:
+.set msg_kind_symbol_len, msg_kind_symbol_end - msg_kind_symbol
+
+msg_kind_abi:
+    .ascii "ABI"
+msg_kind_abi_end:
+.set msg_kind_abi_len, msg_kind_abi_end - msg_kind_abi
+
+msg_kind_overflow:
+    .ascii "OVERFLOW"
+msg_kind_overflow_end:
+.set msg_kind_overflow_len, msg_kind_overflow_end - msg_kind_overflow
+
+msg_kind_unknown:
+    .ascii "UNKNOWN"
+msg_kind_unknown_end:
+.set msg_kind_unknown_len, msg_kind_unknown_end - msg_kind_unknown
 
 .section .bss
 .align 16
@@ -345,13 +392,74 @@ serial_write:
     ret
 
 kernel_failure:
-    leaq msg_panic(%rip), %rsi
-    movl $msg_panic_len, %edx
+    # RDI still holds the RuntimeContext (wsm_fail calls the handler without
+    # modifying it). Emit the structured condition, then exit 0x12 -> shell 37.
+    pushq %rbx
+    movq %rdi, %rbx
+
+    leaq msg_cond_pre(%rip), %rsi
+    movl $msg_cond_pre_len, %edx
     call serial_write
+
+    movl 48(%rbx), %edi             # condition.kind
+    call print_condition_kind
+
+    leaq msg_cond_source(%rip), %rsi
+    movl $msg_cond_source_len, %edx
+    call serial_write
+    movl 52(%rbx), %edi             # condition.source_id
+    call print_decimal
+
+    leaq msg_cond_value(%rip), %rsi
+    movl $msg_cond_value_len, %edx
+    call serial_write
+    movq 56(%rbx), %rdi             # condition.offending_value
+    call print_decimal
+
+    leaq msg_newline(%rip), %rsi
+    movl $msg_newline_len, %edx
+    call serial_write
+
     movw $0xF4, %dx
     movl $0x12, %eax
     outl %eax, %dx
     hlt
+
+# print_condition_kind: serializes the closed condition-kind name in EDI.
+print_condition_kind:
+    cmpl $1, %edi
+    je .Lck_oom
+    cmpl $2, %edi
+    je .Lck_type
+    cmpl $3, %edi
+    je .Lck_symbol
+    cmpl $4, %edi
+    je .Lck_abi
+    cmpl $5, %edi
+    je .Lck_overflow
+    leaq msg_kind_unknown(%rip), %rsi
+    movl $msg_kind_unknown_len, %edx
+    jmp serial_write
+.Lck_oom:
+    leaq msg_kind_oom(%rip), %rsi
+    movl $msg_kind_oom_len, %edx
+    jmp serial_write
+.Lck_type:
+    leaq msg_kind_type(%rip), %rsi
+    movl $msg_kind_type_len, %edx
+    jmp serial_write
+.Lck_symbol:
+    leaq msg_kind_symbol(%rip), %rsi
+    movl $msg_kind_symbol_len, %edx
+    jmp serial_write
+.Lck_abi:
+    leaq msg_kind_abi(%rip), %rsi
+    movl $msg_kind_abi_len, %edx
+    jmp serial_write
+.Lck_overflow:
+    leaq msg_kind_overflow(%rip), %rsi
+    movl $msg_kind_overflow_len, %edx
+    jmp serial_write
 
 .section .bootloader-config,"a",@progbits
 .incbin "src/bootloader-config.bin"

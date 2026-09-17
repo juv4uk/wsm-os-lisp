@@ -1,0 +1,5 @@
+((lambda (mmio)
+   ((lambda (_)
+      (mmio-write32 (pci-config-capability) 20 1))
+    (mmio-read32 mmio 0)))
+ (mmio-capability))

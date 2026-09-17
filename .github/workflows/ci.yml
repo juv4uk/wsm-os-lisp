@@ -49,4 +49,8 @@ jobs:
         run: bash scripts/rebuild-and-run-qemu.sh
       - name: Prove Lisp MMIO device operation on real virtio-blk (issue #40)
         run: bash scripts/check-mmio-device-op.sh
+      - name: Prove MMIO mutations fail closed with structured device/ABI conditions (issue #40)
+        run: bash scripts/check-mmio-mutation-fail-closed.sh
+      - name: Prove Lisp device policy polls with a finite budget (issue #40)
+        run: bash scripts/check-mmio-bounded-poll.sh
 
