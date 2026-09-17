@@ -53,9 +53,10 @@ and rejected because its UEFI link failed on an unresolved `wcslen` symbol.
 ## Licensing
 
 `bootloader` and `bootloader_api` are dual-licensed `MIT OR Apache-2.0`.
-This is compatible with the repository's MIT policy. Dependency source and
-license remain recorded by Cargo; no third-party source is copied into this
-repository.
+Those upstream licenses govern those dependencies; they do not replace or
+redefine this repository's author license, [ВОЛЬНІСТЬ](../LICENSE). Dependency
+source and license remain recorded by Cargo; no third-party source is copied
+into this repository.
 
 ## Required evidence
 
@@ -121,9 +122,10 @@ Toolchain зафіксовано на **nightly-2026-07-27** з `rust-src`,
 ## Ліцензування
 
 `bootloader` та `bootloader_api` мають подвійну ліцензію `MIT OR Apache-2.0`.
-Це сумісно з політикою MIT у репозиторії. Джерело й ліцензія залежностей
-залишаються під контролем Cargo; жоден third-party код не копіюється в цей
-репозиторій.
+Ці upstream-ліцензії регулюють відповідні залежності; вони не замінюють і не
+перевизначають авторську ліцензію цього репозиторію — [ВОЛЬНІСТЬ](../LICENSE).
+Джерело й ліцензія залежностей залишаються під контролем Cargo; жоден
+third-party код не копіюється в цей репозиторій.
 
 ## Необхідний evidence
 
