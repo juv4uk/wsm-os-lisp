@@ -643,6 +643,7 @@ wsm_mmio_write32:
     pushq %rbx
     pushq %r12
     pushq %rdi                          # save ctx (clobbered by the decode call)
+    movq %rcx, %r12                     # save value: decode clobbers %rcx
     movq %rsi, %rdi
     call .Ldecode_check_mmio_cap
     testq %rax, %rax
@@ -659,8 +660,7 @@ wsm_mmio_write32:
     jc .Lmmio_bounds_fail2
     cmpq %r10, %r11
     ja .Lmmio_bounds_fail2
-    # RCX = value (fixnum), decode
-    movq %rcx, %r12
+    # R12 = value (fixnum, saved before decode), decode
     sarq $3, %r12
     movl %r12d, (%rbx,%rax)           # volatile store
     popq %r12

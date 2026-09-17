@@ -47,4 +47,6 @@ jobs:
           test -s target/wsm-os-uefi.img
       - name: Prove bounded UEFI serial boot in QEMU
         run: bash scripts/rebuild-and-run-qemu.sh
+      - name: Prove Lisp MMIO device operation on real virtio-blk (issue #40)
+        run: bash scripts/check-mmio-device-op.sh
 
