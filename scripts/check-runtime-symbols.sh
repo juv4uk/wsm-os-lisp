@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "Checking pure assembly runtime (src/runtime.s) for forbidden host imports..."
-as --64 "$ROOT_DIR/src/runtime.s" -o /tmp/runtime_check.o
+BOXED_TAG="$(bash "$ROOT_DIR/scripts/target-contract-value.sh" boxed-tag)"
+as --64 --defsym WSM_TAG_BOXED="$BOXED_TAG" "$ROOT_DIR/src/runtime.s" -o /tmp/runtime_check.o
 
 UNDEF=$(nm -u /tmp/runtime_check.o 2>/dev/null | sed -n 's/^[[:space:]]*U[[:space:]]*//p' | sort -u || true)
 
