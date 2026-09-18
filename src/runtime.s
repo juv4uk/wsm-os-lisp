@@ -19,6 +19,16 @@
 .set WSM_TAG_CLOSURE,         5                       # tag 101
 .set WSM_TAG_CAPABILITY,      6                       # tag 110
 
+# WSM_TAG_BOXED is injected from the pinned neutral target-contract v6.
+# Do not duplicate its raw wire value in this runtime.
+.ifndef WSM_TAG_BOXED
+.error "WSM_TAG_BOXED must be supplied from pinned target contract"
+.endif
+
+# Runtime-private boxed-table discriminant. This number is never exposed in
+# the WSM word; target-contract owns only the Boxed wire tag/handle shape.
+.set WSM_BOXED_KIND_RATIONAL, 1
+
 .set ERR_OOM,                 1
 .set ERR_TYPE,                2
 .set ERR_SYMBOL,              3
@@ -87,6 +97,9 @@ wsm_mmio_region_valid:
 #   offset 52: condition_source (uint32_t)
 #   offset 56: condition_value  (uint64_t)
 #   offset 64: failure_handler  (void (*)(RuntimeContext*, uint32_t))
+#   offset 72: boxed_base       (24-byte runtime-private entries)
+#   offset 80: boxed_capacity   (entry count)
+#   offset 88: boxed_len        (entry count)
 
 # ---------------------------------------------------------------------------
 # Word wsm_cons(RuntimeContext* ctx, Word car, Word cdr)
@@ -186,6 +199,103 @@ wsm_cdr:
 
 .Lcdr_abi_err:
     movq %rsi, %rdx                 # offending value = the bad word
+    movl $ERR_ABI, %esi
+    jmp wsm_fail
+
+# ---------------------------------------------------------------------------
+# Word wsm_rational_new(RuntimeContext* ctx, int64_t numerator, int64_t denominator)
+# Arguments: RDI = ctx, RSI = numerator, RDX = denominator
+# Returns:   RAX = target-contract Boxed(handle), handle is 1-based.
+#
+# This is representation mechanism only. The compiler/shared IR supplies the
+# already-canonical exact pair. Runtime deliberately performs no gcd/reduction
+# and owns no Lisp arithmetic law.
+# ---------------------------------------------------------------------------
+.globl wsm_rational_new
+.type wsm_rational_new, @function
+wsm_rational_new:
+    testq %rdx, %rdx
+    jz .Lrational_new_abi_err
+
+    movq 88(%rdi), %rax             # boxed_len / zero-based index
+    cmpq 80(%rdi), %rax             # len >= capacity?
+    jae .Lrational_oom
+
+    movq %rax, %rcx
+    imulq $24, %rcx, %rcx
+    addq 72(%rdi), %rcx             # entry = boxed_base + index*24
+
+    movq $WSM_BOXED_KIND_RATIONAL, 0(%rcx)
+    movq %rsi, 8(%rcx)              # exact numerator fact
+    movq %rdx, 16(%rcx)             # exact denominator fact
+
+    incq %rax                       # 1-based handle; zero is never returned
+    movq %rax, 88(%rdi)             # boxed_len = old_len + 1
+
+    shlq $3, %rax
+    orq $WSM_TAG_BOXED, %rax
+    ret
+
+.Lrational_new_abi_err:
+    # denominator zero is an invalid stored representation here, not a Lisp
+    # DivisionByZero observation: this constructor performs no division.
+    movl $ERR_ABI, %esi
+    # RDX is already the offending zero denominator.
+    jmp wsm_fail
+
+.Lrational_oom:
+    movl $ERR_OOM, %esi
+    xorq %rdx, %rdx
+    jmp wsm_fail
+
+# ---------------------------------------------------------------------------
+# int64_t wsm_rational_numerator(RuntimeContext* ctx, Word rational)
+# int64_t wsm_rational_denominator(RuntimeContext* ctx, Word rational)
+#
+# Both accessors validate the neutral Boxed wire shape, runtime ownership/range
+# and the runtime-private Rational kind before exposing representation facts.
+# ---------------------------------------------------------------------------
+.globl wsm_rational_numerator
+.type wsm_rational_numerator, @function
+wsm_rational_numerator:
+    movl $8, %r8d
+    jmp .Lrational_access
+
+.globl wsm_rational_denominator
+.type wsm_rational_denominator, @function
+wsm_rational_denominator:
+    movl $16, %r8d
+
+.Lrational_access:
+    movq %rsi, %rax
+    andq $WSM_TAG_MASK, %rax
+    cmpq $WSM_TAG_BOXED, %rax
+    jne .Lrational_type_err
+
+    movq %rsi, %rax
+    shrq $3, %rax                   # 1-based handle
+    testq %rax, %rax
+    jz .Lrational_handle_abi_err
+    decq %rax                       # zero-based index
+    cmpq 88(%rdi), %rax             # must name an allocated entry
+    jae .Lrational_handle_abi_err
+
+    movq %rax, %rcx
+    imulq $24, %rcx, %rcx
+    addq 72(%rdi), %rcx
+    cmpq $WSM_BOXED_KIND_RATIONAL, 0(%rcx)
+    jne .Lrational_type_err
+
+    movq (%rcx,%r8,1), %rax
+    ret
+
+.Lrational_type_err:
+    movq %rsi, %rdx
+    movl $ERR_TYPE, %esi
+    jmp wsm_fail
+
+.Lrational_handle_abi_err:
+    movq %rsi, %rdx
     movl $ERR_ABI, %esi
     jmp wsm_fail
 
