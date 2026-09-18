@@ -19,6 +19,8 @@ jobs:
         run: bash scripts/check-no-rust.sh
       - name: Prove pure assembly runtime has no forbidden host imports
         run: bash scripts/check-runtime-symbols.sh
+      - name: Require boxed rational runtime mechanism (issue #45)
+        run: bash scripts/check-boxed-rational-runtime.sh
       - name: Prove target observer is bounded (issue #33)
         run: bash scripts/check-target-observer-bounded.sh
       - name: Verify CML fixture provenance
