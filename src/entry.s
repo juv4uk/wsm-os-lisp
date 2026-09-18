@@ -76,6 +76,11 @@ closure_arena:
     .skip 16384                     # 16 KB closure arena
 closure_arena_end:
 
+.align 16
+boxed_arena:
+    .skip 24576                     # 1024 * 24-byte runtime-private boxed entries
+boxed_arena_end:
+
 .section .data
 .align 16
 # Boot handoff state: raw pointer captured from RDI on entry. The actual
@@ -96,6 +101,9 @@ runtime_context:
     .long 0                         # offset 52: condition_source
     .quad 0                         # offset 56: condition_value
     .quad kernel_failure            # offset 64: failure_handler
+    .quad boxed_arena               # offset 72: boxed_base
+    .quad 1024                      # offset 80: boxed_capacity
+    .quad 0                         # offset 88: boxed_len
 
 .section .rodata
 msg_res_pre:
