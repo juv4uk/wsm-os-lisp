@@ -25,7 +25,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="${WSM_OS_ENTRY_SRC:-$ROOT_DIR/src/entry.s}"
 
-obj="$ROOT_DIR/target/.target-observer-check.$$.o"
+mkdir -p "$ROOT_DIR/target"
+obj="$ROOT_DIR/target/.target-observer-check.${BASHPID}.o"
 trap 'rm -f "$obj"' EXIT
 
 as --64 "$SRC" -o "$obj"

@@ -1,8 +1,8 @@
-# wsm-os-lisp x86_64 target ABI — contract v2
+# wsm-os-lisp x86_64 target ABI — contract v6
 
 The source of truth is the dependency-free `no_std`
 [`wsm-os-target`](https://github.com/juv4uk/wsm-target-contract) crate in the
-neutral `wsm-target-contract` repository. Its `target-contract.wsm` is a
+neutral `wsm-target-contract` repository. Its `target-contract.lisp` is a
 generated projection checked byte-for-byte by crate tests. CML and this
 runtime consume that package rather than carrying separate numeric copies.
 
@@ -23,10 +23,10 @@ Values are 64-bit little-endian words with three low tag bits.
 | `symbol` | `100` | non-zero, image-local interned symbol id; canonical `t` is `Symbol(SYMBOL_ID_MAX)` |
 | `closure` | `101` | pointer to a runtime-owned bounded closure descriptor |
 | `capability` | `110` | opaque, nonce-bearing substrate capability descriptor |
-| reserved | `111` | unadmitted |
+| `boxed` | `111` | session-local runtime-owned boxed handle; concrete kind lives inside boxed object |
 
 The important semantic boundary is deliberate: the bit pattern historically
-named `Tag::True` remains reserved in target-contract v2 for representation
+named `Tag::True` remains reserved in target-contract v6 for representation
 history, but it is **not a second truth value**. Canonical WSM `t` is the
 ordinary symbol `t`, encoded as `CANONICAL_T = Symbol(SYMBOL_ID_MAX)`. Runtime,
 hosted rendering, QEMU result validation and future backends must fail closed
@@ -69,7 +69,7 @@ Value wsm_entry(RuntimeContext *context);
 - direction flag: clear;
 - normal System V callee-saved registers remain preserved.
 
-Runtime imports are versioned mechanism. Current contract v2 includes:
+Runtime imports are versioned mechanism. Current contract v6 includes:
 
 ```c
 Value    wsm_cons(RuntimeContext *, Value car, Value cdr);
@@ -86,6 +86,9 @@ Value    wsm_pci_config_read16(RuntimeContext *, Value capability, Value bus, Va
 Value    wsm_mmio_capability(RuntimeContext *);
 Value    wsm_mmio_read32(RuntimeContext *, Value capability, Value offset);
 Value    wsm_mmio_write32(RuntimeContext *, Value capability, Value offset, Value value);
+Value    wsm_rational_new(RuntimeContext *, Value numerator, Value denominator);
+Value    wsm_rational_numerator(RuntimeContext *, Value rational);
+Value    wsm_rational_denominator(RuntimeContext *, Value rational);
 void     wsm_fail(RuntimeContext *, uint32_t error_code, Value offending_value,
                   uint32_t source_id) /* noreturn */;
 ```
@@ -129,11 +132,11 @@ a separate evidence graduation for the same pinned artifact.
 
 ---
 
-# wsm-os-lisp x86_64 цільовий ABI — контракт v2
+# wsm-os-lisp x86_64 цільовий ABI — контракт v6
 
 Джерелом істини є незалежний `no_std`-крейт
 [`wsm-os-target`](https://github.com/juv4uk/wsm-target-contract) у нейтральному
-репозиторії `wsm-target-contract`. Його `target-contract.wsm` є згенерованою
+репозиторії `wsm-target-contract`. Його `target-contract.lisp` є згенерованою
 проекцією, яку тести перевіряють байт-у-байт. CML і цей runtime споживають
 один пакет замість локальних копій числових констант.
 
@@ -154,10 +157,10 @@ Target ABI описує представлення і механізм. Це **�
 | `symbol` | `100` | ненульовий image-local symbol id; канонічне `t` = `Symbol(SYMBOL_ID_MAX)` |
 | `closure` | `101` | вказівник на bounded closure descriptor, яким володіє runtime |
 | `capability` | `110` | opaque nonce-bearing capability, виданий substrate |
-| зарезервовано | `111` | не допускається |
+| `boxed` | `111` | session-local runtime-owned boxed handle; конкретний kind зберігається всередині boxed object |
 
 Ключова семантична межа навмисна: бітовий шаблон, історично названий
-`Tag::True`, лишається reserved legacy representation у target-contract v2,
+`Tag::True`, лишається reserved legacy representation у target-contract v6,
 але **не є другою істиною**. Канонічне WSM `t` — звичайний символ `t`, тобто
 `CANONICAL_T = Symbol(SYMBOL_ID_MAX)`. Runtime, hosted renderer, QEMU-validator
 і майбутні backends мають fail-closed відхиляти legacy immediate як семантичне
@@ -195,8 +198,9 @@ Value wsm_entry(RuntimeContext *context);
 `rdi` містить opaque runtime context, результат повертається в `rax`, стек
 вирівнюється до 16 байт перед call, red zone заборонений.
 
-Поточний contract v2 містить механічні imports `cons/car/cdr/eq/atom`, bounded
-closure operations, PCI/MMIO capability operations та структурований
+Поточний contract v6 містить механічні imports `cons/car/cdr/eq/atom`, bounded
+closure operations, PCI/MMIO capability operations, ратифіковані Rational
+imports (`wsm_rational_new/numerator/denominator`) та структурований
 `wsm_fail(context, error_code, offending_value, source_id)`. Ці imports не
 створюють нових мовних примітивів.
 
