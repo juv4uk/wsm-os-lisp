@@ -11,6 +11,8 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
+      - name: Verify pinned neutral target ABI v6 authority
+        run: bash scripts/check-target-abi-authority.sh
       - name: Check repository role authority
         run: bash scripts/check-role-authority.sh
       - name: Check semantic authority
