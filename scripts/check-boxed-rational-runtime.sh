@@ -14,7 +14,8 @@ for symbol in wsm_rational_new wsm_rational_numerator wsm_rational_denominator; 
     }
 done
 
-as --64 "$ROOT_DIR/src/runtime.s" -o "$OBJ"
+BOXED_TAG="$(bash "$ROOT_DIR/scripts/target-contract-value.sh" boxed-tag)"
+as --64 --defsym WSM_TAG_BOXED="$BOXED_TAG" "$ROOT_DIR/src/runtime.s" -o "$OBJ"
 
 defined_symbols="$(nm -g --defined-only "$OBJ" | awk '{print $3}' | sort -u)"
 
