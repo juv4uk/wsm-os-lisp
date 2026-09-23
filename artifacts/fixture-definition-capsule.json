@@ -28,7 +28,7 @@
   },
   "contracts": {
     "cml": {
-      "revision": "6ce577f24083c54b55bf1870396f6b3e1c3d04b9",
+      "revision": "48f9b1566f899a48132bbff44ecf33f816e2cbd9",
       "supported_contract": "2.0"
     },
     "my_lisp": {
