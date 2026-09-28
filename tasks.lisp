@@ -1,4 +1,4 @@
-; tasks.my — durable compiler-first implementation plan for wsm-os.
+; tasks.lisp — durable compiler-first implementation plan for wsm-os.
 ; `done . t` is added only after pushed implementation and evidence exist.
 
 ((kind . tasks-my)
