@@ -6,7 +6,6 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 runtime="$ROOT_DIR/src/runtime.s"
 entry="$ROOT_DIR/src/entry.s"
 profile="$ROOT_DIR/target-profile.lisp"
-[[ -f "$profile" ]] || profile="$ROOT_DIR/target-profile.wsm"
 abi_doc="$ROOT_DIR/docs/TARGET-ABI.md"
 
 fail() {
