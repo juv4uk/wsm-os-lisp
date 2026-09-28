@@ -58,7 +58,7 @@ for ext in wsm s o; do
   cp "artifacts/$observation_lane.$ext" "$backup_dir/$observation_lane.$ext"
 done
 
-corpus_file="$work_dir/conformance.my"
+corpus_file="$work_dir/conformance.lisp"
 if [[ -n "${MY_LISP_CORPUS_FILE:-}" ]]; then
   cp "$MY_LISP_CORPUS_FILE" "$corpus_file"
 else
