@@ -36,13 +36,13 @@ semantics, CML lowering rules, or the FPGA ISA.
 
 | Source | Reuse in `wsm-os` | Status and limit |
 |---|---|---|
-| [`my-lisp/language-contract.my`](https://github.com/juv4uk/my-lisp/blob/667b587394dc8d3fc8dadff7c925e5bce68ed887/language-contract.my) | Semantic authority and version gate | Direct contract reuse; not machine code |
+| [`sens/language-contract.lisp`](https://github.com/juv4uk/sens/blob/667b587394dc8d3fc8dadff7c925e5bce68ed887/language-contract.lisp) | Semantic authority and version gate | Direct contract reuse; not machine code |
 | [`my-lisp` conformance fixtures](https://github.com/juv4uk/my-lisp/tree/667b587394dc8d3fc8dadff7c925e5bce68ed887/tests/fixtures) | Oracle-parity inputs and expected behavior | Reuse test data selectively; preserve exact contract tier |
 | [`canonical-serialization.md`](https://github.com/juv4uk/my-lisp/blob/667b587394dc8d3fc8dadff7c925e5bce68ed887/docs/canonical-serialization.md) | Stable serial/boot transcript representation | Direct specification reuse |
 | [`syntax::fasl`](https://github.com/juv4uk/my-lisp/blob/667b587394dc8d3fc8dadff7c925e5bce68ed887/crates/my-lisp/src/syntax.rs) | Pre-parsed, source-hash-bound program image pattern | Reuse format/code only after `alloc` portability audit |
 | [`CML Ir`](https://github.com/juv4uk/cml/blob/bfb0cac3ab3938924a58e749d99eec6ca06a8a88/src/ir.rs) and [`lower`](https://github.com/juv4uk/cml/blob/bfb0cac3ab3938924a58e749d99eec6ca06a8a88/src/lower.rs) | Front-end-independent AOT boundary | Best starting point for a freestanding target; CML coverage is narrower than current my-lisp |
 | [`CML C backend`](https://github.com/juv4uk/cml/blob/bfb0cac3ab3938924a58e749d99eec6ca06a8a88/src/c_backend.rs) | Reference for closures, environments and emitted runtime layout | Design/code reference; current output is hosted C, not freestanding C |
-| [`fpga-lisp/isa-contract.my`](https://github.com/juv4uk/fpga-lisp/blob/80e2fc170650b391f128353985445291da493957/isa-contract.my) | Example of a machine-readable target contract | Reuse the contract pattern, not its 32-bit FPGA encoding |
+| [`fpga-lisp/isa-contract.lisp`](https://github.com/juv4uk/fpga-lisp/blob/80e2fc170650b391f128353985445291da493957/isa-contract.lisp) | Example of a machine-readable target contract | Reuse the contract pattern, not its 32-bit FPGA encoding |
 | [`fpga-lisp` testing contract](https://github.com/juv4uk/fpga-lisp/blob/80e2fc170650b391f128353985445291da493957/docs/testing.md) | Boot-image -> execute -> stable observable result evidence shape | Direct methodology reuse |
 
 All three source repositories are MIT at the inspected commits. Linking does
@@ -168,13 +168,13 @@ wsm-os boot/runtime ------------------+
 
 | Джерело | Перевикористання в `wsm-os` | Статус і межа |
 |---|---|---|
-| [`my-lisp/language-contract.my`](https://github.com/juv4uk/my-lisp/blob/667b587394dc8d3fc8dadff7c925e5bce68ed887/language-contract.my) | Семантична авторитетність і версійний гейт | Пряме перевикористання контракту; не машинний код |
+| [`sens/language-contract.lisp`](https://github.com/juv4uk/sens/blob/667b587394dc8d3fc8dadff7c925e5bce68ed887/language-contract.lisp) | Семантична авторитетність і версійний гейт | Пряме перевикористання контракту; не машинний код |
 | [`my-lisp` conformance fixtures](https://github.com/juv4uk/my-lisp/tree/667b587394dc8d3fc8dadff7c925e5bce68ed887/tests/fixtures) | Вхідні дані й очікувана поведінка для oracle-parity | Перевикористовувати тестові дані вибірково; зберегти точний рівень контракту |
 | [`canonical-serialization.md`](https://github.com/juv4uk/my-lisp/blob/667b587394dc8d3fc8dadff7c925e5bce68ed887/docs/canonical-serialization.md) | Стабільне представлення serial/boot-транскрипту | Пряме перевикористання специфікації |
 | [`syntax::fasl`](https://github.com/juv4uk/my-lisp/blob/667b587394dc8d3fc8dadff7c925e5bce68ed887/crates/my-lisp/src/syntax.rs) | Патерн попередньо розібраного образу програми, прив'язаного до source-hash | Перевикористовувати формат/код лише після аудиту портативності `alloc` |
 | [`CML Ir`](https://github.com/juv4uk/cml/blob/bfb0cac3ab3938924a58e749d99eec6ca06a8a88/src/ir.rs) і [`lower`](https://github.com/juv4uk/cml/blob/bfb0cac3ab3938924a58e749d99eec6ca06a8a88/src/lower.rs) | Межа AOT, незалежна від фронтенду | Найкраща точка старту для freestanding-цілі; покриття CML уже, ніж поточний my-lisp |
 | [`CML C backend`](https://github.com/juv4uk/cml/blob/bfb0cac3ab3938924a58e749d99eec6ca06a8a88/src/c_backend.rs) | Довідник для замикань, середовищ і розкладки рантайму | Довідник дизайну/коду; поточний вивід — hosted C, не freestanding C |
-| [`fpga-lisp/isa-contract.my`](https://github.com/juv4uk/fpga-lisp/blob/80e2fc170650b391f128353985445291da493957/isa-contract.my) | Приклад machine-readable цільового контракту | Перевикористати патерн контракту, не його 32-бітне FPGA-кодування |
+| [`fpga-lisp/isa-contract.lisp`](https://github.com/juv4uk/fpga-lisp/blob/80e2fc170650b391f128353985445291da493957/isa-contract.lisp) | Приклад machine-readable цільового контракту | Перевикористати патерн контракту, не його 32-бітне FPGA-кодування |
 | [`fpga-lisp` testing contract](https://github.com/juv4uk/fpga-lisp/blob/80e2fc170650b391f128353985445291da493957/docs/testing.md) | Форма evidence boot-image -> виконання -> стабільний спостережуваний результат | Пряме перевикористання методології |
 
 Усі три вихідні репозиторії — MIT на переглянутих комітах. Лінкування не
