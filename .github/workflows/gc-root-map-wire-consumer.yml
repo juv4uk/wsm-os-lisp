@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "scripts/research-gc-root-map-wire-consumer.py"
+      - "scripts/research-gc-root-pc-binding.py"
       - "scripts/research-gc-root-map-abi.py"
       - ".github/workflows/gc-root-map-wire-consumer.yml"
   workflow_dispatch:
@@ -24,6 +25,8 @@ jobs:
         run: python3 scripts/research-gc-root-map-abi.py
       - name: Parse producer wire and require explicit PC binding
         run: python3 scripts/research-gc-root-map-wire-consumer.py
+      - name: Consume relocated final-PC bindings
+        run: python3 scripts/research-gc-root-pc-binding.py
       - name: Publish boundary
         if: always()
         run: |
