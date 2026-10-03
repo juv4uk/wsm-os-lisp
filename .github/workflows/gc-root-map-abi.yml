@@ -1,0 +1,35 @@
+name: GC root-map ABI research
+
+on:
+  pull_request:
+    paths:
+      - "scripts/research-gc-root-map-abi.py"
+      - ".github/workflows/gc-root-map-abi.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  root-map-abi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run fail-closed root-map ABI witness
+        run: python3 scripts/research-gc-root-map-abi.py
+      - name: Publish boundary
+        if: always()
+        run: |
+          {
+            echo "## #62 GC root-map ABI witness"
+            echo
+            echo '~~~text'
+            python3 scripts/research-gc-root-map-abi.py
+            echo '~~~'
+            echo
+            echo "Research only; no collector is enabled."
+          } >> "$GITHUB_STEP_SUMMARY"
