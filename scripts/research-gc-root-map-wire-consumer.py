@@ -223,6 +223,7 @@ site id=3 label=.Lgc_return_3 allocator=wsm_cons kind=quote-bounded frame=40 sta
             ".Lgc_return_0": 0x501050,
             ".Lgc_return_1": 0x501090,
             ".Lgc_return_2": 0x5010D0,
+            ".Lgc_return_3": 0x501110,
         },
     )
     assert [r.stack_offsets for r in rebound] == [r.stack_offsets for r in bound]
