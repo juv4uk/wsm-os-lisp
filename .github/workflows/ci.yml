@@ -27,7 +27,7 @@ jobs:
         run: bash scripts/check-cml-provenance.sh
       - name: Setup pinned CML compiler toolchain
         run: |
-          CML_REV="$(grep -oP '(?<=\\(cml-revision ")[0-9a-f]{40}(?="\\))' contracts/cml.lock)"
+          CML_REV="$(sed -n 's/.*(cml-revision "\([0-9a-f]\{40\}\)").*/\1/p' contracts/cml.lock)"
           test -n "$CML_REV"
           git init /tmp/cml
           git -C /tmp/cml remote add origin https://github.com/juv4uk/cml.git
