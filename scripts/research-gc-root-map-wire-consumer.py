@@ -183,15 +183,17 @@ def main() -> None:
 site id=0 label=.Lgc_return_0 allocator=wsm_cons kind=runtime-call-structured frame=64 stack=16,40 regs=%rdx,%rsi
 site id=1 label=.Lgc_return_1 allocator=wsm_cons kind=pack-rest-bounded frame=48 stack=8,24 regs=%rdx,%rsi
 site id=2 label=.Lgc_return_2 allocator=wsm_closure_new kind=closure-new-bounded frame=32 stack=- regs=%rdx
+site id=3 label=.Lgc_return_3 allocator=wsm_cons kind=quote-bounded frame=40 stack=16 regs=%rdx,%rsi
 """
     records = parse_manifest(manifest)
-    assert len(records) == 3
+    assert len(records) == 4
 
     # Symbolic labels are not runtime addresses. Explicit binding is mandatory.
     symbols = {
         ".Lgc_return_0": 0x401050,
         ".Lgc_return_1": 0x401090,
         ".Lgc_return_2": 0x4010D0,
+        ".Lgc_return_3": 0x401110,
     }
     bound = bind_final_pcs(records, symbols)
     table = abi.RootMap(bound)
@@ -199,6 +201,7 @@ site id=2 label=.Lgc_return_2 allocator=wsm_closure_new kind=closure-new-bounded
     assert table.lookup(0x401050, "wsm_cons").status is abi.LookupStatus.CERTIFIED
     assert table.lookup(0x401090, "wsm_cons").status is abi.LookupStatus.CERTIFIED
     assert table.lookup(0x4010D0, "wsm_closure_new").status is abi.LookupStatus.CERTIFIED
+    assert table.lookup(0x401110, "wsm_cons").status is abi.LookupStatus.CERTIFIED
     assert table.lookup(0x401070, "wsm_cons").status is abi.LookupStatus.NOT_A_SAFEPOINT
     assert (
         table.lookup(0x401050, "wsm_closure_new").status
@@ -228,6 +231,8 @@ site id=2 label=.Lgc_return_2 allocator=wsm_closure_new kind=closure-new-bounded
             {
                 ".Lgc_return_0": 0x401050,
                 ".Lgc_return_1": 0x401090,
+                ".Lgc_return_2": 0x4010D0,
+                ".Lgc_return_3": 0x401110,
             },
         ),
     )
@@ -273,6 +278,7 @@ site id=2 label=.Lgc_return_2 allocator=wsm_closure_new kind=closure-new-bounded
     print("DUPLICATE-FINAL-PC=REJECTED")
     print("MISSING-SITE=NOT-A-SAFEPOINT")
     print("CLOSURE-NEW-POSITIVE=PASS")
+    print("QUOTE-BOUNDED-POSITIVE=PASS")
     print("ALLOCATOR-MISMATCH=REJECTED")
     print("BAD-VERSION/LABEL/OFFSET/REGISTER=REJECTED")
     print("COLLECTOR-ENABLED=0")
