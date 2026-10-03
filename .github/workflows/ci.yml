@@ -25,10 +25,16 @@ jobs:
         run: bash scripts/check-target-observer-bounded.sh
       - name: Verify CML fixture provenance
         run: bash scripts/check-cml-provenance.sh
-      - name: Setup external CML compiler toolchain
+      - name: Setup pinned CML compiler toolchain
         run: |
-          git clone --depth 1 https://github.com/juv4uk/cml.git /tmp/cml
-          git -C /tmp/cml submodule update --init external/sens
+          CML_REV="$(grep -oP '(?<=\\(cml-revision ")[0-9a-f]{40}(?="\\))' contracts/cml.lock)"
+          test -n "$CML_REV"
+          git init /tmp/cml
+          git -C /tmp/cml remote add origin https://github.com/juv4uk/cml.git
+          git -C /tmp/cml fetch --depth 1 origin "$CML_REV"
+          git -C /tmp/cml checkout --detach FETCH_HEAD
+          git -C /tmp/cml submodule update --init --recursive
+          test "$(git -C /tmp/cml rev-parse HEAD)" = "$CML_REV"
           cd /tmp/cml
           cargo build --release
           echo "CML_BIN=/tmp/cml/target/release/cml" >> $GITHUB_ENV
