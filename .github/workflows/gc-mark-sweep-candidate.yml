@@ -1,0 +1,37 @@
+name: GC mark-sweep candidate evidence
+
+on:
+  pull_request:
+    paths:
+      - "scripts/research-gc-mark-sweep-arena.py"
+      - ".github/workflows/gc-mark-sweep-candidate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate-a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run exact cons-arena mechanism witness
+        run: python3 scripts/research-gc-mark-sweep-arena.py
+      - name: Publish mechanism boundary
+        if: always()
+        run: |
+          {
+            echo "## Mark-sweep candidate A — research only"
+            echo
+            echo '~~~text'
+            python3 scripts/research-gc-mark-sweep-arena.py
+            echo '~~~'
+            echo
+            echo "- Explicit model roots only."
+            echo "- Production runtime OOM remains unchanged."
+            echo "- Collector is not enabled or ratified."
+          } >> "$GITHUB_STEP_SUMMARY"
