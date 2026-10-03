@@ -88,7 +88,12 @@ _start:
     call wsm_cons
 .Lgc_return_1:
     nop
+    call wsm_closure_new
+.Lgc_return_2:
+    nop
 wsm_cons:
+    ret
+wsm_closure_new:
     ret
 
 .section .wsm_gc_root_pc_bind,"a",@progbits
@@ -97,6 +102,8 @@ wsm_cons:
 .quad .Lgc_return_0
 .quad 1
 .quad .Lgc_return_1
+.quad 2
+.quad .Lgc_return_2
 """
     with tempfile.TemporaryDirectory(prefix="wsm-gc-pc-bind-") as tmp:
         tmp = Path(tmp)
@@ -135,6 +142,7 @@ def main() -> None:
     manifest = """CML_GC_ROOT_MAP_V1
 site id=0 label=.Lgc_return_0 allocator=wsm_cons kind=runtime-call-structured frame=64 stack=16,40 regs=%rdx,%rsi
 site id=1 label=.Lgc_return_1 allocator=wsm_cons kind=pack-rest-bounded frame=48 stack=8,24 regs=%rdx,%rsi
+site id=2 label=.Lgc_return_2 allocator=wsm_closure_new kind=closure-new-bounded frame=32 stack=- regs=%rdx
 """
     records = wire.parse_manifest(manifest)
 
@@ -143,8 +151,8 @@ site id=1 label=.Lgc_return_1 allocator=wsm_cons kind=pack-rest-bounded frame=48
     low = parse_pc_bindings(low_data)
     high = parse_pc_bindings(high_data)
 
-    assert sorted(low) == [0, 1]
-    assert sorted(high) == [0, 1]
+    assert sorted(low) == [0, 1, 2]
+    assert sorted(high) == [0, 1, 2]
     assert all(high[site] - low[site] == 0x100000 for site in low)
 
     low_bound = bind_by_site_id(records, low)
@@ -156,6 +164,11 @@ site id=1 label=.Lgc_return_1 allocator=wsm_cons kind=pack-rest-bounded frame=48
     table = abi.RootMap(low_bound)
     assert table.lookup(low[0], "wsm_cons").status is abi.LookupStatus.CERTIFIED
     assert table.lookup(low[1], "wsm_cons").status is abi.LookupStatus.CERTIFIED
+    assert table.lookup(low[2], "wsm_closure_new").status is abi.LookupStatus.CERTIFIED
+    assert (
+        table.lookup(low[2], "wsm_cons").status
+        is abi.LookupStatus.ALLOCATOR_KIND_MISMATCH
+    )
     assert table.lookup(low[0] + 1, "wsm_cons").status is abi.LookupStatus.NOT_A_SAFEPOINT
 
     assert_rejects("multiple of 16", lambda: parse_pc_bindings(low_data + b"\x00"))
@@ -184,6 +197,7 @@ site id=1 label=.Lgc_return_1 allocator=wsm_cons kind=pack-rest-bounded frame=48
     print("GC-ROOT-PC-BINDING=PASS")
     print("PRODUCER-BINDING=ELF-RELOCATION")
     print("RUNTIME-KEY=FINAL-PC+ALLOCATOR-KIND")
+    print("CLOSURE-NEW-POSITIVE=PASS")
     print("SYMBOL-TABLE-LOOKUP=0")
     print("DISASSEMBLY-GUESSING=0")
     print("MISSING/EXTRA/DUPLICATE-BINDING=REJECTED")
