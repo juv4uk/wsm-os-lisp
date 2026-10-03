@@ -1,0 +1,38 @@
+name: GC root-map wire consumer research
+
+on:
+  pull_request:
+    paths:
+      - "scripts/research-gc-root-map-wire-consumer.py"
+      - "scripts/research-gc-root-map-abi.py"
+      - ".github/workflows/gc-root-map-wire-consumer.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wire-consumer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Re-check root-map ABI law
+        run: python3 scripts/research-gc-root-map-abi.py
+      - name: Parse producer wire and require explicit PC binding
+        run: python3 scripts/research-gc-root-map-wire-consumer.py
+      - name: Publish boundary
+        if: always()
+        run: |
+          {
+            echo "## #64 GC root-map wire consumer"
+            echo
+            echo '~~~text'
+            python3 scripts/research-gc-root-map-wire-consumer.py
+            echo '~~~'
+            echo
+            echo "Research only; unresolved labels never authorize collection."
+          } >> "$GITHUB_STEP_SUMMARY"
