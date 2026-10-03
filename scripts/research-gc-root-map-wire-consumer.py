@@ -202,6 +202,10 @@ site id=3 label=.Lgc_return_3 allocator=wsm_cons kind=quote-bounded frame=40 sta
     assert table.lookup(0x401090, "wsm_cons").status is abi.LookupStatus.CERTIFIED
     assert table.lookup(0x4010D0, "wsm_closure_new").status is abi.LookupStatus.CERTIFIED
     assert table.lookup(0x401110, "wsm_cons").status is abi.LookupStatus.CERTIFIED
+    assert (
+        table.lookup(0x401110, "wsm_closure_new").status
+        is abi.LookupStatus.ALLOCATOR_KIND_MISMATCH
+    )
     assert table.lookup(0x401070, "wsm_cons").status is abi.LookupStatus.NOT_A_SAFEPOINT
     assert (
         table.lookup(0x401050, "wsm_closure_new").status
@@ -232,7 +236,6 @@ site id=3 label=.Lgc_return_3 allocator=wsm_cons kind=quote-bounded frame=40 sta
                 ".Lgc_return_0": 0x401050,
                 ".Lgc_return_1": 0x401090,
                 ".Lgc_return_2": 0x4010D0,
-                ".Lgc_return_3": 0x401110,
             },
         ),
     )
@@ -244,6 +247,7 @@ site id=3 label=.Lgc_return_3 allocator=wsm_cons kind=quote-bounded frame=40 sta
                 ".Lgc_return_0": 0x401050,
                 ".Lgc_return_1": 0x401050,
                 ".Lgc_return_2": 0x4010D0,
+                ".Lgc_return_3": 0x401110,
             },
         ),
     )
