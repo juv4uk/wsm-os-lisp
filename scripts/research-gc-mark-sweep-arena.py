@@ -62,7 +62,7 @@ class Arena:
         if word & TAG_MASK != TAG_CONS:
             return None
         if word < HEAP_BASE or word >= HEAP_BASE + CAPACITY * CELL_BYTES:
-            return None
+            raise HeapError("cons-looking word is outside arena")
         delta = word - HEAP_BASE
         if delta % CELL_BYTES != 0:
             raise HeapError("cons-looking word is not cell-aligned")
@@ -130,6 +130,8 @@ class Arena:
             self.sweep_inspections += 1
             cell = self.cells[index]
             if not cell.allocated:
+                cell.next_free = self.free_head
+                self.free_head = index
                 continue
             if self.marked[index]:
                 self.marked[index] = False
@@ -209,6 +211,8 @@ def main() -> None:
     assert list_length(arena, live) == 4
     assert len(before) == 7
     assert arena.sweep_inspections == 7
+    # A second collection before reuse must preserve the existing holes.
+    assert arena.collect([live]) == (4, 0)
     reused = [arena.index_for(arena.cons(NIL, NIL)) for _ in range(3)]
     assert set(reused) == garbage_indices
 
@@ -253,6 +257,14 @@ def main() -> None:
     root = pointer_shape.cons(0x100003, NIL)
     assert pointer_shape.collect([root]) == (1, 0)
 
+    outside = HEAP_BASE - CELL_BYTES
+    try:
+        pointer_shape.collect([outside])
+    except HeapError as exc:
+        assert "outside arena" in str(exc)
+    else:
+        raise AssertionError("out-of-arena cons-looking root must fail closed")
+
     bad = HEAP_BASE + 8
     try:
         pointer_shape.collect([bad])
@@ -273,6 +285,8 @@ def main() -> None:
     print("UNROOTED-CYCLE-RECLAIM=PASS")
     print("DEEP-4096-CHAIN=ITERATIVE-PASS")
     print("FORCE-EARLY-VS-LATE-SEMANTICS=PASS")
+    print("FREE-LIST-SURVIVES-REPEATED-SWEEP=PASS")
+    print("OUTSIDE-ARENA-CONS-LOOKING-ROOT=FAIL-CLOSED")
     print("UNALIGNED-CONS-LOOKING-ROOT=FAIL-CLOSED")
     print("ROOT-PROTOCOL=EXPLICIT-MODEL-ONLY")
     print("RUNTIME-OOM-REPLACED=0")
