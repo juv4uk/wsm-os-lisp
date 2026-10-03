@@ -182,23 +182,30 @@ def main() -> None:
     manifest = """CML_GC_ROOT_MAP_V1
 site id=0 label=.Lgc_return_0 allocator=wsm_cons kind=runtime-call-structured frame=64 stack=16,40 regs=%rdx,%rsi
 site id=1 label=.Lgc_return_1 allocator=wsm_cons kind=pack-rest-bounded frame=48 stack=8,24 regs=%rdx,%rsi
+site id=2 label=.Lgc_return_2 allocator=wsm_closure_new kind=closure-new-bounded frame=32 stack=- regs=%rdx
 """
     records = parse_manifest(manifest)
-    assert len(records) == 2
+    assert len(records) == 3
 
     # Symbolic labels are not runtime addresses. Explicit binding is mandatory.
     symbols = {
         ".Lgc_return_0": 0x401050,
         ".Lgc_return_1": 0x401090,
+        ".Lgc_return_2": 0x4010D0,
     }
     bound = bind_final_pcs(records, symbols)
     table = abi.RootMap(bound)
 
     assert table.lookup(0x401050, "wsm_cons").status is abi.LookupStatus.CERTIFIED
     assert table.lookup(0x401090, "wsm_cons").status is abi.LookupStatus.CERTIFIED
+    assert table.lookup(0x4010D0, "wsm_closure_new").status is abi.LookupStatus.CERTIFIED
     assert table.lookup(0x401070, "wsm_cons").status is abi.LookupStatus.NOT_A_SAFEPOINT
     assert (
         table.lookup(0x401050, "wsm_closure_new").status
+        is abi.LookupStatus.ALLOCATOR_KIND_MISMATCH
+    )
+    assert (
+        table.lookup(0x4010D0, "wsm_cons").status
         is abi.LookupStatus.ALLOCATOR_KIND_MISMATCH
     )
 
@@ -208,6 +215,7 @@ site id=1 label=.Lgc_return_1 allocator=wsm_cons kind=pack-rest-bounded frame=48
         {
             ".Lgc_return_0": 0x501050,
             ".Lgc_return_1": 0x501090,
+            ".Lgc_return_2": 0x5010D0,
         },
     )
     assert [r.stack_offsets for r in rebound] == [r.stack_offsets for r in bound]
@@ -215,13 +223,23 @@ site id=1 label=.Lgc_return_1 allocator=wsm_cons kind=pack-rest-bounded frame=48
 
     assert_rejects(
         "unresolved return label",
-        lambda: bind_final_pcs(records, {".Lgc_return_0": 0x401050}),
+        lambda: bind_final_pcs(
+            records,
+            {
+                ".Lgc_return_0": 0x401050,
+                ".Lgc_return_1": 0x401090,
+            },
+        ),
     )
     assert_rejects(
         "duplicate resolved return PC",
         lambda: bind_final_pcs(
             records,
-            {".Lgc_return_0": 0x401050, ".Lgc_return_1": 0x401050},
+            {
+                ".Lgc_return_0": 0x401050,
+                ".Lgc_return_1": 0x401050,
+                ".Lgc_return_2": 0x4010D0,
+            },
         ),
     )
 
@@ -254,6 +272,7 @@ site id=1 label=.Lgc_return_1 allocator=wsm_cons kind=pack-rest-bounded frame=48
     print("UNRESOLVED-LABEL=REJECTED")
     print("DUPLICATE-FINAL-PC=REJECTED")
     print("MISSING-SITE=NOT-A-SAFEPOINT")
+    print("CLOSURE-NEW-POSITIVE=PASS")
     print("ALLOCATOR-MISMATCH=REJECTED")
     print("BAD-VERSION/LABEL/OFFSET/REGISTER=REJECTED")
     print("COLLECTOR-ENABLED=0")
