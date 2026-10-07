@@ -1,0 +1,47 @@
+name: M0-M1 deterministic boot witness
+
+on:
+  push:
+    paths:
+      - "src/**"
+      - "artifacts/fixture.o"
+      - "artifacts/qemu-serial-transcript.txt"
+      - "contracts/qemu-m0-machine-profile.lisp"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/canonicalize-gpt-image.py"
+      - "scripts/check-m0-m1-boot-witness.sh"
+      - ".github/workflows/m0-m1-boot-witness.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "artifacts/fixture.o"
+      - "artifacts/qemu-serial-transcript.txt"
+      - "contracts/qemu-m0-machine-profile.lisp"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/canonicalize-gpt-image.py"
+      - "scripts/check-m0-m1-boot-witness.sh"
+      - ".github/workflows/m0-m1-boot-witness.yml"
+  workflow_dispatch:
+
+jobs:
+  mechanism-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pure boot-witness dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 ovmf mtools dosfstools gdisk binutils
+      - name: Run deterministic boot/reboot witness
+        run: bash scripts/check-m0-m1-boot-witness.sh
+      - name: Upload machine-readable witness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m0-m1-boot-witness
+          path: target/m0-m1-boot-witness/
+          if-no-files-found: error

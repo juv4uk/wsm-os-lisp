@@ -32,17 +32,43 @@ ld -m elf_x86_64 -T "$ROOT_DIR/src/linker.ld" \
   -o "$BUILD_DIR/kernel-x86_64.elf"
 cp "$BUILD_DIR/kernel-x86_64.elf" "$ROOT_DIR/target/kernel-x86_64"
 
+# Build a reproducible GPT/FAT boot image.
+#
+# GPT GUIDs are pinned test-image identities rather than generated UUIDs.
+# FAT uses mkfs.fat's invariant mode, and the staged directory tree has a fixed
+# representable FAT timestamp. This makes repeated builds deterministic in all
+# fields we own; the M0/M1 witness still canonicalizes GPT as an independent
+# guard against accidental reintroduction of GUID variance.
+DISK_GUID="57534d4f-5300-4d30-8000-000000000001"
+ESP_GUID="57534d4f-5300-4d30-8000-000000000002"
+FAT_TIMESTAMP="198001010000.00"
 
-# Create UEFI GPT disk image with FAT12/16 partition
 rm -f "$OUTPUT_IMG"
 truncate -s 8M "$OUTPUT_IMG"
-sgdisk -n 1:2048:14335 -t 1:ef00 -c 1:"EFI System" "$OUTPUT_IMG" >/dev/null
+sgdisk \
+  -n 1:2048:14335 \
+  -t 1:ef00 \
+  -c 1:"EFI System" \
+  -U "$DISK_GUID" \
+  -u 1:"$ESP_GUID" \
+  "$OUTPUT_IMG" >/dev/null
 
 dd if=/dev/zero of="$BUILD_DIR/part.fat" bs=512 count=12288 status=none
-mkfs.vfat -F 12 "$BUILD_DIR/part.fat" >/dev/null
-mmd -i "$BUILD_DIR/part.fat" ::efi ::efi/boot
-mcopy -i "$BUILD_DIR/part.fat" "$ROOT_DIR/artifacts/bootx64.efi" ::efi/boot/bootx64.efi
-mcopy -i "$BUILD_DIR/part.fat" "$BUILD_DIR/kernel-x86_64.elf" ::kernel-x86_64
+mkfs.vfat --invariant -F 12 "$BUILD_DIR/part.fat" >/dev/null
+
+fat_root="$BUILD_DIR/fat-root"
+mkdir -p "$fat_root/EFI/BOOT"
+cp "$ROOT_DIR/artifacts/bootx64.efi" "$fat_root/EFI/BOOT/BOOTX64.EFI"
+cp "$BUILD_DIR/kernel-x86_64.elf" "$fat_root/kernel-x86_64"
+
+# FAT timestamps have 2-second granularity and a 1980 epoch. Pin every staged
+# directory/file before mcopy and preserve the modification timestamp.
+find "$fat_root" -exec touch -t "$FAT_TIMESTAMP" {} +
+mcopy -s -m -i "$BUILD_DIR/part.fat" \
+  "$fat_root/EFI" \
+  "$fat_root/kernel-x86_64" \
+  ::
+
 dd if="$BUILD_DIR/part.fat" of="$OUTPUT_IMG" bs=512 seek=2048 conv=notrunc status=none
 
 echo "$OUTPUT_IMG"
