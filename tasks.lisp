@@ -199,10 +199,11 @@
    ("WSM-OS-FS-VIRTUAL-DISK-PERSISTENCE-Q6B" .
     ((priority . 8.8)
      (capabilities . (wsm-os qemu block-device storage persistence evidence))
-     (depends-on . (WSM-OS-FS-MACHINE-WITNESS-F6 WSM-OS-BLOCK-MECHANISM-F5 WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B))
+     (depends-on . (WSM-OS-FS-MACHINE-WITNESS-F6 WSM-OS-BLOCK-MECHANISM-F5 WSM-OS-VIRTIO-BLK-DATA-IO-Q6B))
      (origin . wsm-os-lisp)
-     (context . "Q6a guest-memory read/write/flush witness is committed as ad61201; Q6b design is docs/Q6B-VIRTUAL-DISK-DESIGN.md (commit 4fb107b). Implement a separate disposable QEMU raw disk and guest-visible bounded block ABI; clean-restart persistence is still OPEN." )
-     (description . "Implement Q6b: attach a separate disposable virtual disk, perform bounded guest read/write/flush, cleanly restart with the same disk, and validate header/checksum/payload after reopen. Record exact kernel/image provenance and transcript. Do not claim power-loss durability until Q7 crash evidence.")))
+     (github-issue . 77)
+     (context . "Architecture correction 2026-10-08: Q6a guest-memory evidence and the historical D2 COMMON_CFG STATUS witness do not prove device data transfer. Q6b remains OPEN. Current path is issue #82 real virtio-blk sector read/write/flush on the Pure Lisp + x86-64 ASM target, then the same separate raw disk across two clean QEMU boots, then F6-style envelope validation and SENS L0->L3 parity. FAT/RAM-disk are optional projections, not prerequisites." )
+     (description . "Implement Q6b: attach a separate disposable QEMU raw disk, perform bounded guest read/write/flush through the current Lisp+ASM target, cleanly restart with the same disk, and validate header/checksum/payload after reopen. Record exact boot/data image, machine profile, payload and oracle provenance. Do not claim power-loss durability until Q7 crash evidence.")))
 
    ("WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B" .
     ((priority . 9.0)
@@ -210,8 +211,20 @@
      (capabilities . (wsm cml no-std x86_64 qemu pci virtio block-device capability-abi))
      (depends-on . (WSM-OS-WSM-PCI-CONFIG-CAPABILITY-D1))
      (origin . wsm-os-lisp)
-     (context . "D2 milestone completed 2026-09-07: WSM virtio-blk MMIO status negotiation via bounded capability. Fixture d2-virtio-blk-status-fixture: WSM writes ACKNOWLEDGE (1) to common-cfg STATUS register (offset 20), reads back, eq-compares. Kernel walks PCI cap list for BDF 00:05.0 to find common-cfg BAR; uses bootloader physical_memory_offset (map-physical-memory enabled via BOOTLOADER_CONFIG) for BAR virtual address. QEMU 3/3: d1-pci-config-capability, d1-pci-config-bounds, d2-virtio-blk-status all pass. PHYS-MAP fail-closed 2026-09-13: the MMIO path no longer treats a zero offset as proof of a bootloader-provisioned physical-memory mapping. Kernel stores PhysMemMapping (Offset | Unavailable) at boot; translate_mmio_addr resolves BAR plus byte offset with checked_add and rejects (MMIO_ERR_MAPPING_UNAVAILABLE_READ/WRITE, 0x4D49_4F07/08) before any volatile access. Mutation witness WSM_OS_FORCE_NO_PHYS_MAP=1 exit 37 + CONDITION source=1296649992 and no mmio-status volatile witness; positive d2 path still green in rebuild-and-run-wsm-pci-config-qemu.sh. Evidence: docs/MMIO-PHYS-MAP-FAIL-CLOSED-EVIDENCE.md, artifacts/d2-virtio-blk-status-fixture-fail-closed-phys-map-transcript.txt.")
-     (description . "Implement the minimal WSM virtio-blk guest driver over bounded machine capabilities: WSM owns discovery, register protocol, virtqueue descriptors, request state, completion and error interpretation; the machine substrate owns only privileged PCI/MMIO access, DMA mapping, interrupt entry and fences. Compare an optional Rust reference against the WSM driver on the same QEMU sector/checksum. Do not add a general scheduler or claim physical/power-loss durability.")))
+     (scope-correction . "DONE means the D2 discovery/MMIO COMMON_CFG STATUS-negotiation slice only. It never proved virtqueue setup, sector transfer, request completion or FLUSH. Those data-I/O obligations moved to WSM-OS-VIRTIO-BLK-DATA-IO-Q6B / GitHub #82.")
+     (superseded-for-data-io-by . WSM-OS-VIRTIO-BLK-DATA-IO-Q6B)
+     (context . "D2 milestone completed 2026-09-07: WSM virtio-blk MMIO status negotiation via bounded capability. Fixture d2-virtio-blk-status-fixture: WSM writes ACKNOWLEDGE (1) to common-cfg STATUS register (offset 20), reads back, eq-compares. Kernel walks PCI cap list to find common-cfg BAR and uses the provisioned physical-memory mapping fail-closed. This evidence is retained as the device-negotiation prerequisite, not as a complete block driver.")
+     (description . "Historical D2 slice: discover virtio-blk, provision bounded PCI/MMIO capability and prove COMMON_CFG STATUS negotiation plus fail-closed mapping/bounds behavior. No claim of virtqueue or block payload transfer.")))
+
+   ("WSM-OS-VIRTIO-BLK-DATA-IO-Q6B" .
+    ((priority . 9.4)
+     (done . nil)
+     (capabilities . (wsm-os lisp x86_64 assembly qemu pci virtio block-device dma virtqueue bounded-io flush evidence))
+     (depends-on . (WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B))
+     (origin . wsm-os-lisp)
+     (github-issue . 82)
+     (context . "Created 2026-10-08 after audit found the old DONE task proved only STATUS negotiation. Current production architecture is Pure Lisp + x86-64 ASM. Implement one bounded queue and one real 512-byte sector read/write/flush against a separate QEMU raw disk; all completion polling must be finite and all unsupported feature/geometry/DMA cases fail closed.")
+     (description . "Graduate the D2 MMIO/status witness into actual block data I/O: configure one virtqueue, submit one bounded IN/OUT request, observe device completion/status, prove same-boot read-after-write payload digest, and expose the operation through the WSM package boundary without leaking virtqueue mechanics into SENS Core. This is the concrete prerequisite for Q6b clean-restart persistence.")))
 
    ("WSM-OS-WSM-PCI-IDENTITY-D0" .
      ((priority . 9.2)
