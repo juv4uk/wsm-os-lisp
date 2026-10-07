@@ -218,12 +218,12 @@
 
    ("WSM-OS-M2-DMA-ADDRESS-Q6B" .
     ((priority . 9.5)
-     (done . nil)
+     (done . t)
      (capabilities . (wsm-os x86_64 assembly qemu dma page-table virtqueue evidence))
      (depends-on . (WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B))
      (origin . wsm-os-lisp)
      (github-issue . 84)
-     (context . "Created 2026-10-08 as the explicit CPU/device direction split before real virtqueue I/O. PR #85 starts the bounded proof: one page-aligned target-owned arena, CR3 virtual->guest-physical translation, whole-page contiguity/alignment check and no-physical-map negative. Raw DMA addresses remain mechanism-only and never enter SENS/WSM values or CML imports.")
+     (context . "Completed 2026-10-08 in two bounded slices: #85 proved one page-aligned target-owned arena through a CR3 virtual->guest-physical walk while preserving all previous boot/MMIO gates; the v2 evidence slice records exact virtual/physical addresses only on a test-only WSM-M2 serial channel and proves fail-closed no-map, translation-failure, misalignment, zero-physical and noncontiguous mutations. Partial-page crossing and start+4095 u64 overflow are eliminated by the exact 4096-byte p2align12 construction. No raw DMA address enters SENS/WSM values or CML imports.")
      (description . "Prove one bounded guest-physical DMA arena for virtqueue descriptor/ring/request storage without assuming virt==phys. Fail closed on missing/invalid mapping, alignment, contiguity or arithmetic evidence. This task owns address proof only; #82 owns queue/data-I/O protocol.")))
 
    ("WSM-OS-VIRTIO-BLK-DATA-IO-Q6B" .
