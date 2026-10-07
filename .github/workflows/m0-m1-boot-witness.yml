@@ -11,6 +11,8 @@ on:
       - "scripts/run-qemu-uefi.sh"
       - "scripts/canonicalize-gpt-image.py"
       - "scripts/check-m0-m1-boot-witness.sh"
+      - "scripts/project-qemu-observation-to-sens-conformance.py"
+      - "scripts/project-qemu-observation-to-sens-conformance.py"
       - ".github/workflows/m0-m1-boot-witness.yml"
   pull_request:
     paths:
@@ -36,6 +38,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             qemu-system-x86 ovmf mtools dosfstools gdisk binutils
+      - name: Projection self-test
+        run: python3 scripts/project-qemu-observation-to-sens-conformance.py --selftest
       - name: Run deterministic boot/reboot witness
         run: bash scripts/check-m0-m1-boot-witness.sh
       - name: Upload machine-readable witness
