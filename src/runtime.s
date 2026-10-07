@@ -77,6 +77,7 @@ wsm_mmio_region_valid:
 # witness.  Raw addresses remain target mechanism and are never exposed as
 # SENS/WSM semantic values or CML runtime imports.
 .p2align 12
+.globl wsm_dma_arena
 wsm_dma_arena:
     .skip 4096
 wsm_dma_arena_end:
@@ -1240,11 +1241,22 @@ wsm_mmio_write32:
     testq %r13, %r13
     jz .Ldma_no_map
 
+.ifdef WSM_FORCE_DMA_TRANSLATION_FAIL
+    jmp .Ldma_translate_fail
+.endif
+
+.ifdef WSM_FORCE_DMA_MISALIGN
+    leaq wsm_dma_arena+1(%rip), %rdi
+.else
     leaq wsm_dma_arena(%rip), %rdi
+.endif
     testq $0xFFF, %rdi
     jnz .Ldma_bad_alignment
     movq %r13, %rsi
     call .Lvirtual_to_physical
+.ifdef WSM_FORCE_DMA_ZERO_PHYS
+    xorq %rax, %rax
+.endif
     testq %rax, %rax
     jz .Ldma_translate_fail
     movq %rax, %r12
@@ -1256,6 +1268,9 @@ wsm_mmio_write32:
     call .Lvirtual_to_physical
     testq %rax, %rax
     jz .Ldma_translate_fail
+.ifdef WSM_FORCE_DMA_NONCONTIGUOUS
+    addq $4096, %rax
+.endif
 
     movq %r12, %rbx
     addq $4095, %rbx
