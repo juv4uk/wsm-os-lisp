@@ -19,6 +19,21 @@ as_extra=()
 if [[ "${WSM_OS_FORCE_NO_PHYS_MAP:-0}" == "1" ]]; then
   as_extra+=(--defsym WSM_FORCE_NO_PHYS_MAP=1)
 fi
+if [[ "${WSM_DMA_EVIDENCE_SERIAL:-0}" == "1" ]]; then
+  as_extra+=(--defsym WSM_DMA_EVIDENCE_SERIAL=1)
+fi
+if [[ "${WSM_FORCE_DMA_TRANSLATION_FAIL:-0}" == "1" ]]; then
+  as_extra+=(--defsym WSM_FORCE_DMA_TRANSLATION_FAIL=1)
+fi
+if [[ "${WSM_FORCE_DMA_MISALIGN:-0}" == "1" ]]; then
+  as_extra+=(--defsym WSM_FORCE_DMA_MISALIGN=1)
+fi
+if [[ "${WSM_FORCE_DMA_ZERO_PHYS:-0}" == "1" ]]; then
+  as_extra+=(--defsym WSM_FORCE_DMA_ZERO_PHYS=1)
+fi
+if [[ "${WSM_FORCE_DMA_NONCONTIGUOUS:-0}" == "1" ]]; then
+  as_extra+=(--defsym WSM_FORCE_DMA_NONCONTIGUOUS=1)
+fi
 
 # Assemble pure machine runtime and entry
 as --64 "${as_extra[@]}" "$ROOT_DIR/src/entry.s" -o "$BUILD_DIR/entry.o"
