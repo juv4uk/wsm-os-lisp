@@ -60,6 +60,11 @@ timeout "$WSM_OS_QEMU_TIMEOUT" "$QEMU_SYSTEM_X86_64" "${qemu_args[@]}"
 status=$?
 set -e
 
+if [[ -n "${WSM_QEMU_RAW_SERIAL_COPY:-}" ]]; then
+  mkdir -p "$(dirname "$WSM_QEMU_RAW_SERIAL_COPY")"
+  cp "$serial_log" "$WSM_QEMU_RAW_SERIAL_COPY"
+fi
+
 case "$status" in
   33|37)
     transcript_file=${WSM_QEMU_TRANSCRIPT:-artifacts/qemu-serial-transcript.txt}
