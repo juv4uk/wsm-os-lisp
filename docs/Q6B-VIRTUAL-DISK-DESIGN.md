@@ -48,3 +48,42 @@ disposable artifact.
 Не називати clean restart доказом power-loss durability. Не використовувати
 boot image як прихований writable data disk: medium має бути окремим
 disposable artifact.
+
+
+## Current architecture correction — 2026-10-08
+
+The original Q6b sequence remains correct, but the implementation dependency is
+now explicit.
+
+Historical task `WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B` is complete only for the
+D2 device-negotiation slice: PCI/MMIO discovery plus COMMON_CFG STATUS
+ACKNOWLEDGE/readback. It did **not** establish a virtqueue or transfer sector
+payload bytes.
+
+The missing mechanism is tracked by **GitHub #82 /
+`WSM-OS-VIRTIO-BLK-DATA-IO-Q6B`**:
+
+```text
+existing D2 discovery/MMIO STATUS witness
+  -> one bounded virtqueue
+  -> one real 512-byte IN/OUT request
+  -> explicit completion/status
+  -> explicit FLUSH or fail-closed unsupported
+  -> Q6b same-disk clean restart
+```
+
+Production implementation follows ADR-004: Lisp owns device/request policy;
+x86-64 assembly owns irreducible PCI/MMIO/DMA/queue/fence mechanism. Retired
+Rust storage crates remain specification/evidence donors only.
+
+### Filesystem and envelope ordering
+
+Q6b does not require FAT. First prove that bytes cross the real block device and
+survive a clean reboot on the same separate raw data image. Then reuse the F6
+adapter boundary for canonical envelope/content validation and finally compare
+the reconstructed/evaluated result through the SENS-owned L0→L3 oracle law.
+
+A read-only FAT16/32 projection can be added later for interoperability, but it
+must not substitute for real block persistence evidence.
+
+A RAM-disk may remain a fast mechanism test but never counts as persistence.
