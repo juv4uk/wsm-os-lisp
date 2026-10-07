@@ -89,6 +89,36 @@ wsm_dma_arena_phys:
 wsm_dma_arena_valid:
     .skip 8
 
+# M2 / #82 modern VirtIO block queue0 mechanism state.
+# These are target-only transport facts, never SENS semantic identities.
+.globl wsm_virtio_blk_bdf
+wsm_virtio_blk_bdf:
+    .skip 8
+.globl wsm_virtio_notify_base
+wsm_virtio_notify_base:
+    .skip 8
+.globl wsm_virtio_notify_len
+wsm_virtio_notify_len:
+    .skip 8
+.globl wsm_virtio_notify_multiplier
+wsm_virtio_notify_multiplier:
+    .skip 8
+.globl wsm_virtio_notify_valid
+wsm_virtio_notify_valid:
+    .skip 8
+.globl wsm_virtio_queue0_notify_addr
+wsm_virtio_queue0_notify_addr:
+    .skip 8
+.globl wsm_virtio_queue0_size
+wsm_virtio_queue0_size:
+    .skip 8
+.globl wsm_virtio_flush_supported
+wsm_virtio_flush_supported:
+    .skip 8
+.globl wsm_virtio_queue0_valid
+wsm_virtio_queue0_valid:
+    .skip 8
+
 .section .text
 .align 16
 
@@ -486,7 +516,8 @@ wsm_target_provision_mmio:
     call .Lpci_scan_virtio_blk
     testl %eax, %eax
     jz .Lprov_fail_nodev
-    movl %eax, %r12d          # store discovered dev
+    movl %eax, %r12d          # store discovered BDF
+    movl %r12d, wsm_virtio_blk_bdf(%rip)
 
     # ---- PCI status (config offset 0x04) bit 16 (status bit 4): cap list ----
     movl %r12d, %edi
@@ -574,6 +605,10 @@ wsm_target_provision_mmio:
     movq %rcx, wsm_mmio_region_base(%rip)
     movq %r13, wsm_mmio_region_len(%rip)
     movq $1, wsm_mmio_region_valid(%rip)
+
+    # #82 needs NOTIFY_CFG in addition to the historical COMMON_CFG slice.
+    # Failure leaves COMMON_CFG valid for old MMIO witnesses but queue0 closed.
+    call .Lprovision_virtio_notify
 
     jmp .Lprov_done
 
@@ -1094,6 +1129,336 @@ wsm_mmio_write32:
     xorl %eax, %eax
     popq %r14
     popq %r13
+    popq %rbx
+    ret
+
+# ---------------------------------------------------------------------------
+# M2 / #82: provision VIRTIO_PCI_CAP_NOTIFY_CFG (cfg_type=2).
+# ---------------------------------------------------------------------------
+.Lprovision_virtio_notify:
+    pushq %rbp
+    pushq %rbx
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    pushq %r15
+
+    movq $0, wsm_virtio_notify_base(%rip)
+    movq $0, wsm_virtio_notify_len(%rip)
+    movq $0, wsm_virtio_notify_multiplier(%rip)
+    movq $0, wsm_virtio_notify_valid(%rip)
+
+    movl wsm_virtio_blk_bdf(%rip), %r12d
+    testl %r12d, %r12d
+    jz .Lnotify_fail_nocap
+
+    movq wsm_target_phys_mem_offset(%rip), %r15
+    testq %r15, %r15
+    jz .Lnotify_fail_mapping
+
+    movl %r12d, %edi
+    movl $0x04, %esi
+    call .Lraw_pci_read32
+    testl $0x00100000, %eax
+    jz .Lnotify_fail_nocap
+
+    movl %r12d, %edi
+    movl $0x34, %esi
+    call .Lraw_pci_read32
+    movl %eax, %r13d
+    andl $0xFC, %r13d
+
+.Lnotify_cap_loop:
+    cmpl $0x40, %r13d
+    jl .Lnotify_fail_nocap
+    cmpl $0x100, %r13d
+    jge .Lnotify_fail_nocap
+
+    movl %r12d, %edi
+    movl %r13d, %esi
+    call .Lraw_pci_read32
+    movl %eax, %r14d
+
+    movl %r14d, %eax
+    andl $0xFF, %eax
+    cmpl $0x09, %eax
+    jne .Lnotify_next_cap
+    movl %r14d, %eax
+    shrl $24, %eax
+    cmpl $2, %eax
+    jne .Lnotify_next_cap
+
+    # Notify capability includes the 16-byte generic cap plus multiplier.
+    movl %r14d, %eax
+    shrl $16, %eax
+    andl $0xFF, %eax
+    cmpl $20, %eax
+    jb .Lnotify_fail_geometry
+
+    movl %r13d, %ebp                 # preserve matching cap offset
+
+    movl %r12d, %edi
+    leal 4(%rbp), %esi
+    call .Lraw_pci_read32
+    movzbl %al, %r14d                # BAR number
+
+    movl %r12d, %edi
+    leal 8(%rbp), %esi
+    call .Lraw_pci_read32
+    movl %eax, %r13d                 # offset within BAR
+
+    movl %r12d, %edi
+    leal 12(%rbp), %esi
+    call .Lraw_pci_read32
+    movl %eax, %eax
+    cmpq $2, %rax
+    jb .Lnotify_fail_geometry
+    movq %rax, wsm_virtio_notify_len(%rip)
+
+    movl %r12d, %edi
+    leal 16(%rbp), %esi
+    call .Lraw_pci_read32
+    movl %eax, %eax
+    movq %rax, wsm_virtio_notify_multiplier(%rip)
+
+    # Without VIRTIO_F_NOTIFICATION_DATA the multiplier must be 0 or an even
+    # power of two. The first #82 slice never negotiates notification-data.
+    testq %rax, %rax
+    jz .Lnotify_multiplier_ok
+    testq $1, %rax
+    jnz .Lnotify_fail_geometry
+    movq %rax, %rcx
+    decq %rcx
+    testq %rcx, %rax
+    jnz .Lnotify_fail_geometry
+.Lnotify_multiplier_ok:
+
+    movl %r12d, %edi
+    movl %r14d, %esi
+    call .Lraw_bar_phys
+    testq %rax, %rax
+    jz .Lnotify_fail_bar
+    addq %r13, %rax
+    jc .Lnotify_fail_bar
+    movq %rax, %rbx                  # notify physical start
+
+    # Prove both ends of the bounded notify capability are mapped.
+    movq %rbx, %rdi
+    movq %r15, %rsi
+    call .Lpage_walk_present
+    testq %rax, %rax
+    jz .Lnotify_fail_mapping
+
+    movq wsm_virtio_notify_len(%rip), %rcx
+    decq %rcx
+    addq %rbx, %rcx
+    jc .Lnotify_fail_bar
+    movq %rcx, %rdi
+    movq %r15, %rsi
+    call .Lpage_walk_present
+    testq %rax, %rax
+    jz .Lnotify_fail_mapping
+
+    movq %rbx, %rax
+    addq %r15, %rax
+    jc .Lnotify_fail_bar
+    movq %rax, wsm_virtio_notify_base(%rip)
+    movq $1, wsm_virtio_notify_valid(%rip)
+    jmp .Lnotify_done
+
+.Lnotify_next_cap:
+    movl %r14d, %eax
+    shrl $8, %eax
+    andl $0xFC, %eax
+    testl %eax, %eax
+    jz .Lnotify_fail_nocap
+    movl %eax, %r13d
+    jmp .Lnotify_cap_loop
+
+.Lnotify_fail_nocap:
+    movq $2, wsm_virtio_notify_valid(%rip)
+    jmp .Lnotify_done
+.Lnotify_fail_geometry:
+    movq $3, wsm_virtio_notify_valid(%rip)
+    jmp .Lnotify_done
+.Lnotify_fail_bar:
+    movq $4, wsm_virtio_notify_valid(%rip)
+    jmp .Lnotify_done
+.Lnotify_fail_mapping:
+    movq $5, wsm_virtio_notify_valid(%rip)
+
+.Lnotify_done:
+    popq %r15
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %rbx
+    popq %rbp
+    ret
+
+# ---------------------------------------------------------------------------
+# M2 / #82: configure modern VirtIO block request queue 0 as a split ring.
+#
+# This owns transport mechanism only. It does not submit block requests yet.
+# Returns raw RAX=1 on success, RAX=0 on fail-closed.
+#
+# COMMON_CFG offsets follow VirtIO 1.3:
+#   status +20 u8, queue_select +22 u16, queue_size +24 u16,
+#   queue_enable +28 u16, queue_notify_off +30 u16,
+#   queue_desc +32 u64, queue_driver +40 u64, queue_device +48 u64.
+# ---------------------------------------------------------------------------
+.globl wsm_virtio_blk_prepare_queue0
+.type wsm_virtio_blk_prepare_queue0, @function
+wsm_virtio_blk_prepare_queue0:
+    pushq %rbx
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    pushq %r15
+
+    movq $0, wsm_virtio_queue0_valid(%rip)
+    movq $0, wsm_virtio_queue0_notify_addr(%rip)
+    movq $0, wsm_virtio_queue0_size(%rip)
+    movq $0, wsm_virtio_flush_supported(%rip)
+
+    call wsm_target_provision_mmio
+    cmpq $1, wsm_mmio_region_valid(%rip)
+    jne .Lqueue0_fail
+    cmpq $1, wsm_virtio_notify_valid(%rip)
+    jne .Lqueue0_fail
+    cmpq $1, wsm_dma_arena_valid(%rip)
+    jne .Lqueue0_fail
+
+    movq wsm_mmio_region_len(%rip), %rax
+    cmpq $56, %rax
+    jb .Lqueue0_fail
+    movq wsm_mmio_region_base(%rip), %rbx
+
+    # Reset and bound the mandatory status readback.
+    movb $0, 20(%rbx)
+    movl $100000, %ecx
+.Lqueue0_reset_wait:
+    movzbl 20(%rbx), %eax
+    testb %al, %al
+    jz .Lqueue0_reset_ok
+    pause
+    loop .Lqueue0_reset_wait
+    jmp .Lqueue0_fail_mark
+.Lqueue0_reset_ok:
+    movb $1, 20(%rbx)                # ACKNOWLEDGE
+    movb $3, 20(%rbx)                # + DRIVER
+
+    # Device feature bank 1: VIRTIO_F_VERSION_1 is bit 32 => bank1 bit0.
+    movl $1, 0(%rbx)
+    movl 4(%rbx), %eax
+    testl $1, %eax
+    jz .Lqueue0_fail_mark
+
+    # Device feature bank 0: reject read-only; remember FLUSH support.
+    movl $0, 0(%rbx)
+    movl 4(%rbx), %r12d
+    testl $0x20, %r12d               # VIRTIO_BLK_F_RO
+    jnz .Lqueue0_fail_mark
+    testl $0x200, %r12d              # VIRTIO_BLK_F_FLUSH
+    jz .Lqueue0_no_flush
+    movq $1, wsm_virtio_flush_supported(%rip)
+.Lqueue0_no_flush:
+
+    # Driver accepts only VERSION_1 and, when offered, FLUSH.
+    movl $1, 8(%rbx)
+    movl $1, 12(%rbx)
+    movl $0, 8(%rbx)
+    xorl %eax, %eax
+    testl $0x200, %r12d
+    jz .Lqueue0_write_low_features
+    movl $0x200, %eax
+.Lqueue0_write_low_features:
+    movl %eax, 12(%rbx)
+
+    movb $11, 20(%rbx)               # ACK|DRIVER|FEATURES_OK
+    movzbl 20(%rbx), %eax
+    testb $8, %al
+    jz .Lqueue0_fail_mark
+
+    # Queue 0, split ring size 8.
+    movw $0, 22(%rbx)
+    movzwl 24(%rbx), %eax
+    cmpl $8, %eax
+    jb .Lqueue0_fail_mark
+    movw $8, 24(%rbx)
+    movzwl 24(%rbx), %eax
+    cmpl $8, %eax
+    jne .Lqueue0_fail_mark
+    movzwl 28(%rbx), %eax
+    testl %eax, %eax
+    jnz .Lqueue0_fail_mark
+    movzwl 30(%rbx), %r13d           # queue_notify_off
+
+    # Clear exactly one #84 page before publishing any queue addresses.
+    leaq wsm_dma_arena(%rip), %rdi
+    xorl %eax, %eax
+    movl $512, %ecx
+    cld
+    rep stosq
+
+    # Split ring geometry inside the proved contiguous page:
+    # desc=+0 (128 B), avail=+128 (20 B), used=+148 (68 B).
+    movq wsm_dma_arena_phys(%rip), %r12
+    testq %r12, %r12
+    jz .Lqueue0_fail_mark
+    movq %r12, 32(%rbx)
+    leaq 128(%r12), %r14
+    movq %r14, 40(%rbx)
+    leaq 148(%r12), %r15
+    movq %r15, 48(%rbx)
+
+    # Derive and bound the per-queue notify address.
+    movq wsm_virtio_notify_multiplier(%rip), %r14
+    movq %r13, %rax
+    mulq %r14                         # RDX:RAX = notify_off * multiplier
+    testq %rdx, %rdx
+    jnz .Lqueue0_fail_mark
+    movq %rax, %r13
+    movq %r13, %rcx
+    addq $2, %rcx
+    jc .Lqueue0_fail_mark
+    cmpq wsm_virtio_notify_len(%rip), %rcx
+    ja .Lqueue0_fail_mark
+    movq wsm_virtio_notify_base(%rip), %rax
+    addq %r13, %rax
+    jc .Lqueue0_fail_mark
+    testq $1, %rax                    # 16-bit notify write requires alignment
+    jnz .Lqueue0_fail_mark
+    movq %rax, wsm_virtio_queue0_notify_addr(%rip)
+
+    mfence
+    movw $1, 28(%rbx)                 # queue_enable
+    movzwl 28(%rbx), %eax
+    cmpl $1, %eax
+    jne .Lqueue0_fail_mark
+
+    movb $15, 20(%rbx)                # + DRIVER_OK
+    movzbl 20(%rbx), %eax
+    andl $15, %eax
+    cmpl $15, %eax
+    jne .Lqueue0_fail_mark
+
+    movq $8, wsm_virtio_queue0_size(%rip)
+    movq $1, wsm_virtio_queue0_valid(%rip)
+    movl $1, %eax
+    jmp .Lqueue0_done
+
+.Lqueue0_fail_mark:
+    # Once COMMON_CFG is live, advertise driver failure explicitly.
+    orb $0x80, 20(%rbx)
+.Lqueue0_fail:
+    xorl %eax, %eax
+
+.Lqueue0_done:
+    popq %r15
+    popq %r14
+    popq %r13
+    popq %r12
     popq %rbx
     ret
 
