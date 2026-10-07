@@ -233,7 +233,7 @@
      (depends-on . (WSM-OS-M2-DMA-ADDRESS-Q6B))
      (origin . wsm-os-lisp)
      (github-issue . 82)
-     (context . "Created 2026-10-08 after audit found the old DONE task proved only STATUS negotiation. Current production architecture is Pure Lisp + x86-64 ASM. Implement one bounded queue and one real 512-byte sector read/write/flush against a separate QEMU raw disk; all completion polling must be finite and all unsupported feature/geometry/DMA cases fail closed.")
+     (context . "Created 2026-10-08 after audit found the old DONE task proved only STATUS negotiation. #84 is now DONE and provides one exact 4096-byte guest-physical DMA arena. Current #82 tranche configures modern PCI NOTIFY_CFG plus split-ring queue0 size 8 using exact-width COMMON_CFG fields; it explicitly submits no block request yet. Next tranche is bounded IN sector0 -> OUT deterministic 512B -> FLUSH -> IN digest equality, with finite used-ring polling and explicit request-status checks.")
      (description . "Graduate the D2 MMIO/status witness into actual block data I/O: configure one virtqueue, submit one bounded IN/OUT request, observe device completion/status, prove same-boot read-after-write payload digest, and expose the operation through the WSM package boundary without leaking virtqueue mechanics into SENS Core. This is the concrete prerequisite for Q6b clean-restart persistence.")))
 
    ("WSM-OS-WSM-PCI-IDENTITY-D0" .
