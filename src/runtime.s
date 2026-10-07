@@ -73,6 +73,21 @@ wsm_mmio_region_len:
 wsm_mmio_region_valid:
     .skip 8
 
+# M2 / #84: one target-owned page used only as the first bounded DMA arena
+# witness.  Raw addresses remain target mechanism and are never exposed as
+# SENS/WSM semantic values or CML runtime imports.
+.p2align 12
+wsm_dma_arena:
+    .skip 4096
+wsm_dma_arena_end:
+
+.globl wsm_dma_arena_phys
+wsm_dma_arena_phys:
+    .skip 8
+.globl wsm_dma_arena_valid
+wsm_dma_arena_valid:
+    .skip 8
+
 .section .text
 .align 16
 
@@ -404,6 +419,7 @@ wsm_boot_handoff:
     # on the canonical pure-ASM target. Never defined in production builds; the
     # flag is injected by `as --defsym` from build-uefi-image.sh.
     movq $0, wsm_target_phys_mem_offset(%rip)
+    call .Lprepare_dma_arena
     popq %rbx
     ret
 .endif
@@ -419,11 +435,13 @@ wsm_boot_handoff:
     # Value at +0x60 (u64, little endian)
     movq 0x60(%rbx), %rax
     movq %rax, wsm_target_phys_mem_offset(%rip)
+    call .Lprepare_dma_arena
     popq %rbx
     ret
 
 .Lhandoff_done_nooffset:
     movq $0, wsm_target_phys_mem_offset(%rip)
+    call .Lprepare_dma_arena
     popq %rbx
     ret
 
@@ -1075,6 +1093,198 @@ wsm_mmio_write32:
     xorl %eax, %eax
     popq %r14
     popq %r13
+    popq %rbx
+    ret
+
+# ---------------------------------------------------------------------------
+# M2 / #84: translate one mapped kernel virtual address to guest physical.
+#
+# In:  RDI = virtual address
+#      RSI = bootloader physical-memory direct-map offset
+# Out: RAX = guest physical address, or 0 when the mapping cannot be proved.
+#
+# Page-table pages themselves are addressed through the already-proved
+# physical-memory direct map.  This is the reverse direction of
+# .Lpage_walk_present: CPU->device MMIO mapping and device->guest DMA mapping
+# remain separate proofs.  1 GiB, 2 MiB and 4 KiB leaves are handled.
+# ---------------------------------------------------------------------------
+.Lvirtual_to_physical:
+    pushq %rbx
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    pushq %r15
+
+    testq %rsi, %rsi
+    jz .Lv2p_fail
+
+    movq %rdi, %r14                   # virtual address
+    movq %rsi, %r12                   # direct-map offset
+    movabsq $0x000FFFFFFFFFF000, %r15 # ordinary page-frame mask
+
+    movq %cr3, %r13
+    andq %r15, %r13                   # PML4 guest-physical base
+
+    # PML4
+    movq %r14, %rax
+    shrq $39, %rax
+    andq $0x1FF, %rax
+    leaq (%r13,%rax,8), %rbx
+    addq %r12, %rbx
+    jc .Lv2p_fail
+    movq (%rbx), %rax
+    testq $1, %rax
+    jz .Lv2p_fail
+    movq %rax, %r13
+    andq %r15, %r13
+
+    # PDPT
+    movq %r14, %rax
+    shrq $30, %rax
+    andq $0x1FF, %rax
+    leaq (%r13,%rax,8), %rbx
+    addq %r12, %rbx
+    jc .Lv2p_fail
+    movq (%rbx), %rax
+    testq $1, %rax
+    jz .Lv2p_fail
+    testq $0x80, %rax
+    jnz .Lv2p_1g
+    movq %rax, %r13
+    andq %r15, %r13
+
+    # PD
+    movq %r14, %rax
+    shrq $21, %rax
+    andq $0x1FF, %rax
+    leaq (%r13,%rax,8), %rbx
+    addq %r12, %rbx
+    jc .Lv2p_fail
+    movq (%rbx), %rax
+    testq $1, %rax
+    jz .Lv2p_fail
+    testq $0x80, %rax
+    jnz .Lv2p_2m
+    movq %rax, %r13
+    andq %r15, %r13
+
+    # PT / 4 KiB leaf
+    movq %r14, %rax
+    shrq $12, %rax
+    andq $0x1FF, %rax
+    leaq (%r13,%rax,8), %rbx
+    addq %r12, %rbx
+    jc .Lv2p_fail
+    movq (%rbx), %rax
+    testq $1, %rax
+    jz .Lv2p_fail
+    andq %r15, %rax
+    movq %r14, %rdx
+    andq $0xFFF, %rdx
+    addq %rdx, %rax
+    jc .Lv2p_fail
+    jmp .Lv2p_done
+
+.Lv2p_2m:
+    movabsq $0x000FFFFFFFE00000, %rbx
+    andq %rbx, %rax
+    movq %r14, %rdx
+    andq $0x1FFFFF, %rdx
+    addq %rdx, %rax
+    jc .Lv2p_fail
+    jmp .Lv2p_done
+
+.Lv2p_1g:
+    movabsq $0x000FFFFFC0000000, %rbx
+    andq %rbx, %rax
+    movq %r14, %rdx
+    andq $0x3FFFFFFF, %rdx
+    addq %rdx, %rax
+    jc .Lv2p_fail
+    jmp .Lv2p_done
+
+.Lv2p_fail:
+    xorq %rax, %rax
+
+.Lv2p_done:
+    popq %r15
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %rbx
+    ret
+
+# ---------------------------------------------------------------------------
+# M2 / #84: prove exactly one page-aligned, physically contiguous DMA arena.
+#
+# State:
+#   valid=0 not attempted
+#   valid=1 proved
+#   valid=2 physical-memory map unavailable
+#   valid=3 virtual->physical translation failed
+#   valid=4 physical alignment invalid
+#   valid=5 page not physically contiguous
+#   valid=6 address arithmetic overflow
+#
+# The physical address is target-only evidence.  It is not a language value.
+# ---------------------------------------------------------------------------
+.Lprepare_dma_arena:
+    pushq %rbx
+    pushq %r12
+    pushq %r13
+
+    movq $0, wsm_dma_arena_phys(%rip)
+    movq $0, wsm_dma_arena_valid(%rip)
+
+    movq wsm_target_phys_mem_offset(%rip), %r13
+    testq %r13, %r13
+    jz .Ldma_no_map
+
+    leaq wsm_dma_arena(%rip), %rdi
+    testq $0xFFF, %rdi
+    jnz .Ldma_bad_alignment
+    movq %r13, %rsi
+    call .Lvirtual_to_physical
+    testq %rax, %rax
+    jz .Ldma_translate_fail
+    movq %rax, %r12
+    testq $0xFFF, %r12
+    jnz .Ldma_bad_alignment
+
+    leaq wsm_dma_arena+4095(%rip), %rdi
+    movq %r13, %rsi
+    call .Lvirtual_to_physical
+    testq %rax, %rax
+    jz .Ldma_translate_fail
+
+    movq %r12, %rbx
+    addq $4095, %rbx
+    jc .Ldma_overflow
+    cmpq %rbx, %rax
+    jne .Ldma_noncontiguous
+
+    movq %r12, wsm_dma_arena_phys(%rip)
+    movq $1, wsm_dma_arena_valid(%rip)
+    jmp .Ldma_done
+
+.Ldma_no_map:
+    movq $2, wsm_dma_arena_valid(%rip)
+    jmp .Ldma_done
+.Ldma_translate_fail:
+    movq $3, wsm_dma_arena_valid(%rip)
+    jmp .Ldma_done
+.Ldma_bad_alignment:
+    movq $4, wsm_dma_arena_valid(%rip)
+    jmp .Ldma_done
+.Ldma_noncontiguous:
+    movq $5, wsm_dma_arena_valid(%rip)
+    jmp .Ldma_done
+.Ldma_overflow:
+    movq $6, wsm_dma_arena_valid(%rip)
+
+.Ldma_done:
+    popq %r13
+    popq %r12
     popq %rbx
     ret
 
