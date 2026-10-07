@@ -7,7 +7,10 @@ cd "$ROOT_DIR"
 fixture_obj="${WSM_M0_FIXTURE_OBJ:-artifacts/fixture.o}"
 expected_transcript="${WSM_M0_EXPECTED_TRANSCRIPT:-artifacts/qemu-serial-transcript.txt}"
 machine_profile="${WSM_M0_MACHINE_PROFILE:-contracts/qemu-m0-machine-profile.lisp}"
-semantic_manifest="${WSM_M0_SEMANTIC_MANIFEST:-}"
+handoff_manifest="${WSM_M0_HANDOFF_MANIFEST:-${WSM_M0_SEMANTIC_MANIFEST:-}}"
+oracle_row="${WSM_M0_ORACLE_ROW:-}"
+sens_validator="${SENS_CONFORMANCE_VALIDATOR:-}"
+producer="${WSM_M0_PRODUCER:-wsm-os-lisp@unversioned:qemu-m0-m1}"
 require_semantic="${WSM_M0_REQUIRE_SEMANTIC:-0}"
 out_dir="${WSM_M0_OUT_DIR:-target/m0-m1-boot-witness}"
 
@@ -36,11 +39,16 @@ case "$require_semantic" in
   *) fail "WSM_M0_REQUIRE_SEMANTIC must be 0 or 1" ;;
 esac
 
-if [[ "$require_semantic" == 1 && -z "$semantic_manifest" ]]; then
-  fail "full M0/M1 mode requires WSM_M0_SEMANTIC_MANIFEST"
-fi
-if [[ -n "$semantic_manifest" && ! -s "$semantic_manifest" ]]; then
-  fail "semantic manifest does not exist or is empty: $semantic_manifest"
+for optional in "$handoff_manifest" "$oracle_row" "$sens_validator"; do
+  if [[ -n "$optional" && ! -s "$optional" ]]; then
+    fail "declared evidence input does not exist or is empty: $optional"
+  fi
+done
+
+if [[ "$require_semantic" == 1 ]]; then
+  [[ -n "$handoff_manifest" ]] || fail "full M0/M1 mode requires WSM_M0_HANDOFF_MANIFEST"
+  [[ -n "$oracle_row" ]] || fail "full M0/M1 mode requires WSM_M0_ORACLE_ROW"
+  [[ -n "$sens_validator" ]] || fail "full M0/M1 mode requires SENS_CONFORMANCE_VALIDATOR"
 fi
 
 rm -rf "$out_dir"
@@ -54,6 +62,8 @@ report_a="$out_dir/boot-a.canonicalization.json"
 report_b="$out_dir/boot-b.canonicalization.json"
 transcript_a="$out_dir/boot-a.serial.txt"
 transcript_b="$out_dir/boot-b.serial.txt"
+l3_a="$out_dir/boot-a.sens-l3.jsonl"
+l3_b="$out_dir/boot-b.sens-l3.jsonl"
 
 scripts/build-uefi-image.sh "$fixture_obj" "$image_a" >/dev/null
 scripts/build-uefi-image.sh "$fixture_obj" "$image_b" >/dev/null
@@ -80,9 +90,11 @@ if ! cmp -s "$transcript_a" "$transcript_b"; then
   fail "reboot transcript differs across identical pinned inputs"
 fi
 
+# This comparison is a mechanism/reproducibility guard only. In full M0/M1
+# mode the semantic verdict comes from the SENS L0 oracle digest below.
 if ! cmp -s "$transcript_a" "$expected_transcript"; then
   diff -u "$expected_transcript" "$transcript_a" >&2 || true
-  fail "observed transcript differs from the declared expected transcript"
+  fail "observed transcript differs from the declared mechanism transcript"
 fi
 
 fixture_sha="$(sha256_file "$fixture_obj")"
@@ -92,13 +104,38 @@ transcript_sha="$(sha256_file "$transcript_a")"
 raw_image_sha_a="$(sha256_file "$image_a")"
 raw_image_sha_b="$(sha256_file "$image_b")"
 
-semantic_sha=""
+handoff_sha=""
+oracle_sha=""
+l3_sha=""
 completion="MECHANISM-SMOKE"
-if [[ -n "$semantic_manifest" ]]; then
-  semantic_sha="$(sha256_file "$semantic_manifest")"
-  completion="SEMANTIC-BOUND"
+
+if [[ -n "$handoff_manifest" ]]; then
+  handoff_sha="$(sha256_file "$handoff_manifest")"
+  completion="HANDOFF-BOUND"
 fi
+
+if [[ -n "$oracle_row" ]]; then
+  oracle_sha="$(sha256_file "$oracle_row")"
+  completion="ORACLE-BOUND"
+fi
+
 if [[ "$require_semantic" == 1 ]]; then
+  python3 scripts/project-qemu-observation-to-sens-conformance.py \
+    --oracle-row "$oracle_row" \
+    --transcript "$transcript_a" \
+    --producer "$producer" \
+    --out "$l3_a" \
+    --validator "$sens_validator" \
+    --require-pass
+  python3 scripts/project-qemu-observation-to-sens-conformance.py \
+    --oracle-row "$oracle_row" \
+    --transcript "$transcript_b" \
+    --producer "$producer" \
+    --out "$l3_b" \
+    --validator "$sens_validator" \
+    --require-pass
+  cmp -s "$l3_a" "$l3_b" || fail "reboot L3 conformance row is not deterministic"
+  l3_sha="$(sha256_file "$l3_a")"
   completion="M0-M1"
 fi
 
@@ -111,7 +148,9 @@ python3 - \
   "$fixture_obj" "$fixture_sha" \
   "$expected_transcript" "$expected_sha" \
   "$machine_profile" "$machine_sha" \
-  "$semantic_manifest" "$semantic_sha" \
+  "$handoff_manifest" "$handoff_sha" \
+  "$oracle_row" "$oracle_sha" \
+  "$l3_a" "$l3_sha" \
   "$canonical_sha_a" "$raw_image_sha_a" "$raw_image_sha_b" \
   "$transcript_sha" "$duration_a_ms" "$duration_b_ms" "$completion" <<'PY'
 import hashlib
@@ -127,8 +166,12 @@ from pathlib import Path
     expected_sha,
     machine_profile_path,
     machine_profile_sha,
-    semantic_manifest_path,
-    semantic_manifest_sha,
+    handoff_manifest_path,
+    handoff_manifest_sha,
+    oracle_row_path,
+    oracle_row_sha,
+    l3_path,
+    l3_sha,
     canonical_image_sha,
     raw_image_sha_a,
     raw_image_sha_b,
@@ -140,7 +183,7 @@ from pathlib import Path
 
 stable = {
     "schema": "wsm-os-m0-m1-boot-witness",
-    "schema_version": 1,
+    "schema_version": 2,
     "completion": completion,
     "fixture_artifact": {
         "path": fixture_path,
@@ -150,15 +193,28 @@ stable = {
         "path": machine_profile_path,
         "sha256": machine_profile_sha,
     },
-    "semantic_domain": None
-    if not semantic_manifest_path
+    "compiler_handoff": None
+    if not handoff_manifest_path
     else {
-        "manifest": semantic_manifest_path,
-        "sha256": semantic_manifest_sha,
+        "manifest": handoff_manifest_path,
+        "sha256": handoff_manifest_sha,
     },
-    "expected_transcript": {
+    "semantic_oracle": None
+    if not oracle_row_path
+    else {
+        "row": oracle_row_path,
+        "sha256": oracle_row_sha,
+    },
+    "l3_conformance": None
+    if not l3_sha
+    else {
+        "row": l3_path,
+        "sha256": l3_sha,
+    },
+    "mechanism_expected_transcript": {
         "path": expected_path,
         "sha256": expected_sha,
+        "semantic_authority": False,
     },
     "canonical_image_sha256": canonical_image_sha,
     "observed_transcript_sha256": transcript_sha,
@@ -180,11 +236,15 @@ PY
 
 case "$completion" in
   MECHANISM-SMOKE)
-    printf 'M0-M1-BOOT-WITNESS-PASS: completion=%s canonical_image=%s witness=%s semantic_domain=UNBOUND\n' \
+    printf 'M0-M1-BOOT-WITNESS-PASS: completion=%s canonical_image=%s witness=%s oracle=UNBOUND\n' \
       "$completion" "$canonical_sha_a" "$witness_json"
     ;;
+  M0-M1)
+    printf 'M0-M1-BOOT-WITNESS-PASS: completion=%s canonical_image=%s witness=%s l3=%s\n' \
+      "$completion" "$canonical_sha_a" "$witness_json" "$l3_sha"
+    ;;
   *)
-    printf 'M0-M1-BOOT-WITNESS-PASS: completion=%s canonical_image=%s witness=%s semantic_domain=%s\n' \
-      "$completion" "$canonical_sha_a" "$witness_json" "$semantic_sha"
+    printf 'M0-M1-BOOT-WITNESS-PASS: completion=%s canonical_image=%s witness=%s\n' \
+      "$completion" "$canonical_sha_a" "$witness_json"
     ;;
 esac
