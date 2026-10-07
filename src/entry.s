@@ -8,6 +8,21 @@ msg_boot:
 msg_boot_end:
 .set msg_boot_len, msg_boot_end - msg_boot
 
+.ifdef WSM_DMA_EVIDENCE_SERIAL
+msg_dma_pre:
+    .ascii "WSM-M2 DMA schema=1 virtual="
+msg_dma_pre_end:
+.set msg_dma_pre_len, msg_dma_pre_end - msg_dma_pre
+msg_dma_phys:
+    .ascii " physical="
+msg_dma_phys_end:
+.set msg_dma_phys_len, msg_dma_phys_end - msg_dma_phys
+msg_dma_tail:
+    .ascii " length=4096 pages=1 status="
+msg_dma_tail_end:
+.set msg_dma_tail_len, msg_dma_tail_end - msg_dma_tail
+.endif
+
 # Structured condition line, matching the pre-ADR-004 substrate format:
 #   WSM-OS CONDITION schema=1 kind=<NAME> source=<code> value=<word>
 msg_cond_pre:
@@ -161,6 +176,10 @@ _start:
     # no MMIO region will be provisioned).
     call wsm_boot_handoff
 
+.ifdef WSM_DMA_EVIDENCE_SERIAL
+    call print_dma_evidence
+.endif
+
     # Call Lisp entry: wsm_entry(&runtime_context)
     leaq runtime_context(%rip), %rdi
     call wsm_entry
@@ -188,6 +207,37 @@ _start:
 .Lhalt:
     hlt
     jmp .Lhalt
+
+.ifdef WSM_DMA_EVIDENCE_SERIAL
+# Test-only mechanism evidence. This line intentionally does not use the
+# WSM-OS RESULT schema and is compiled only for #84 evidence runs.
+.extern wsm_dma_arena
+.extern wsm_dma_arena_phys
+.extern wsm_dma_arena_valid
+print_dma_evidence:
+    leaq msg_dma_pre(%rip), %rsi
+    movl $msg_dma_pre_len, %edx
+    call serial_write
+    leaq wsm_dma_arena(%rip), %rdi
+    call print_decimal
+
+    leaq msg_dma_phys(%rip), %rsi
+    movl $msg_dma_phys_len, %edx
+    call serial_write
+    movq wsm_dma_arena_phys(%rip), %rdi
+    call print_decimal
+
+    leaq msg_dma_tail(%rip), %rsi
+    movl $msg_dma_tail_len, %edx
+    call serial_write
+    movq wsm_dma_arena_valid(%rip), %rdi
+    call print_decimal
+
+    leaq msg_newline(%rip), %rsi
+    movl $msg_newline_len, %edx
+    call serial_write
+    ret
+.endif
 
 # ---------------------------------------------------------------------------
 # print_value: prints canonical WSM representation of Word in RDI
