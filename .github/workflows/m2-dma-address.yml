@@ -1,0 +1,45 @@
+name: M2 DMA address proof
+
+on:
+  push:
+    paths:
+      - "src/runtime.s"
+      - "src/entry.s"
+      - "src/linker.ld"
+      - "artifacts/m2-dma-address-probe.s"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/check-m2-dma-address.sh"
+      - ".github/workflows/m2-dma-address.yml"
+  pull_request:
+    paths:
+      - "src/runtime.s"
+      - "src/entry.s"
+      - "src/linker.ld"
+      - "artifacts/m2-dma-address-probe.s"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/check-m2-dma-address.sh"
+      - ".github/workflows/m2-dma-address.yml"
+  workflow_dispatch:
+
+jobs:
+  dma-address:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pure target dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 ovmf mtools dosfstools gdisk binutils
+      - name: Prove bounded DMA arena address
+        run: bash scripts/check-m2-dma-address.sh
+      - name: Upload DMA address witness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-dma-address-witness
+          path: target/m2-dma-address/
+          if-no-files-found: error

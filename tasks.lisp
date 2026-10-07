@@ -216,11 +216,21 @@
      (context . "D2 milestone completed 2026-09-07: WSM virtio-blk MMIO status negotiation via bounded capability. Fixture d2-virtio-blk-status-fixture: WSM writes ACKNOWLEDGE (1) to common-cfg STATUS register (offset 20), reads back, eq-compares. Kernel walks PCI cap list to find common-cfg BAR and uses the provisioned physical-memory mapping fail-closed. This evidence is retained as the device-negotiation prerequisite, not as a complete block driver.")
      (description . "Historical D2 slice: discover virtio-blk, provision bounded PCI/MMIO capability and prove COMMON_CFG STATUS negotiation plus fail-closed mapping/bounds behavior. No claim of virtqueue or block payload transfer.")))
 
+   ("WSM-OS-M2-DMA-ADDRESS-Q6B" .
+    ((priority . 9.5)
+     (done . nil)
+     (capabilities . (wsm-os x86_64 assembly qemu dma page-table virtqueue evidence))
+     (depends-on . (WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B))
+     (origin . wsm-os-lisp)
+     (github-issue . 84)
+     (context . "Created 2026-10-08 as the explicit CPU/device direction split before real virtqueue I/O. PR #85 starts the bounded proof: one page-aligned target-owned arena, CR3 virtual->guest-physical translation, whole-page contiguity/alignment check and no-physical-map negative. Raw DMA addresses remain mechanism-only and never enter SENS/WSM values or CML imports.")
+     (description . "Prove one bounded guest-physical DMA arena for virtqueue descriptor/ring/request storage without assuming virt==phys. Fail closed on missing/invalid mapping, alignment, contiguity or arithmetic evidence. This task owns address proof only; #82 owns queue/data-I/O protocol.")))
+
    ("WSM-OS-VIRTIO-BLK-DATA-IO-Q6B" .
     ((priority . 9.4)
      (done . nil)
      (capabilities . (wsm-os lisp x86_64 assembly qemu pci virtio block-device dma virtqueue bounded-io flush evidence))
-     (depends-on . (WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B))
+     (depends-on . (WSM-OS-M2-DMA-ADDRESS-Q6B))
      (origin . wsm-os-lisp)
      (github-issue . 82)
      (context . "Created 2026-10-08 after audit found the old DONE task proved only STATUS negotiation. Current production architecture is Pure Lisp + x86-64 ASM. Implement one bounded queue and one real 512-byte sector read/write/flush against a separate QEMU raw disk; all completion polling must be finite and all unsupported feature/geometry/DMA cases fail closed.")
