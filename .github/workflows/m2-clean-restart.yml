@@ -1,0 +1,45 @@
+name: M2 clean restart persistence
+
+on:
+  push:
+    paths:
+      - "src/runtime.s"
+      - "artifacts/m2-persist-boot-a-probe.s"
+      - "artifacts/m2-persist-boot-b-probe.s"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/check-m2-clean-restart.sh"
+      - "contracts/qemu-m0-machine-profile.lisp"
+      - ".github/workflows/m2-clean-restart.yml"
+  pull_request:
+    paths:
+      - "src/runtime.s"
+      - "artifacts/m2-persist-boot-a-probe.s"
+      - "artifacts/m2-persist-boot-b-probe.s"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/check-m2-clean-restart.sh"
+      - "contracts/qemu-m0-machine-profile.lisp"
+      - ".github/workflows/m2-clean-restart.yml"
+  workflow_dispatch:
+
+jobs:
+  clean-restart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pure target dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 ovmf mtools dosfstools gdisk binutils
+      - name: Prove same-disk clean restart persistence
+        run: bash scripts/check-m2-clean-restart.sh
+      - name: Upload clean restart witness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-clean-restart-witness
+          path: target/m2-clean-restart/
+          if-no-files-found: error
