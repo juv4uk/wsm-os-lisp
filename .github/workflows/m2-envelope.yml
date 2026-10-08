@@ -1,0 +1,45 @@
+name: M2 framed envelope
+
+on:
+  push:
+    paths:
+      - "src/runtime.s"
+      - "artifacts/m2-envelope-boot-a-probe.s"
+      - "artifacts/m2-envelope-boot-b-probe.s"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/check-m2-envelope.sh"
+      - "contracts/qemu-m0-machine-profile.lisp"
+      - ".github/workflows/m2-envelope.yml"
+  pull_request:
+    paths:
+      - "src/runtime.s"
+      - "artifacts/m2-envelope-boot-a-probe.s"
+      - "artifacts/m2-envelope-boot-b-probe.s"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/check-m2-envelope.sh"
+      - "contracts/qemu-m0-machine-profile.lisp"
+      - ".github/workflows/m2-envelope.yml"
+  workflow_dispatch:
+
+jobs:
+  framed-envelope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pure target dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 ovmf mtools dosfstools gdisk binutils
+      - name: Prove framed clean-restart persistence and corruption rejection
+        run: bash scripts/check-m2-envelope.sh
+      - name: Upload framed-envelope witness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-envelope-witness
+          path: target/m2-envelope/
+          if-no-files-found: error
