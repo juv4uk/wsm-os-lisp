@@ -202,7 +202,7 @@
      (depends-on . (WSM-OS-FS-MACHINE-WITNESS-F6 WSM-OS-BLOCK-MECHANISM-F5 WSM-OS-VIRTIO-BLK-DATA-IO-Q6B))
      (origin . wsm-os-lisp)
      (github-issue . 77)
-     (context . "Architecture correction 2026-10-08: Q6a guest-memory evidence and the historical D2 COMMON_CFG STATUS witness do not prove device data transfer. Q6b remains OPEN. Current path is issue #82 real virtio-blk sector read/write/flush on the Pure Lisp + x86-64 ASM target, then the same separate raw disk across two clean QEMU boots, then F6-style envelope validation and SENS L0->L3 parity. FAT/RAM-disk are optional projections, not prerequisites." )
+     (context . "Milestone update 2026-10-08: #82 real virtio-blk block I/O is complete. #92 / 721bf004 proves same-disk clean-restart persistence on the Pure Lisp + x86-64 ASM target: Boot A writes+flushes one admitted 512-byte sector on a separate raw disk; Boot B is a distinct QEMU boot over the exact same medium and recovers identical bytes without mutating the image. Q6b raw-sector persistence is CONFIRMED. This task remains OPEN for the canonical framed envelope, corruption/truncation negatives, F6 reconstruction/evaluation and SENS L0->L3 parity. FAT/RAM-disk remain optional projections; Q7 crash durability remains unclaimed." )
      (description . "Implement Q6b: attach a separate disposable QEMU raw disk, perform bounded guest read/write/flush through the current Lisp+ASM target, cleanly restart with the same disk, and validate header/checksum/payload after reopen. Record exact boot/data image, machine profile, payload and oracle provenance. Do not claim power-loss durability until Q7 crash evidence.")))
 
    ("WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B" .
@@ -228,12 +228,12 @@
 
    ("WSM-OS-VIRTIO-BLK-DATA-IO-Q6B" .
     ((priority . 9.4)
-     (done . nil)
+     (done . t)
      (capabilities . (wsm-os lisp x86_64 assembly qemu pci virtio block-device dma virtqueue bounded-io flush evidence))
      (depends-on . (WSM-OS-M2-DMA-ADDRESS-Q6B))
      (origin . wsm-os-lisp)
      (github-issue . 82)
-     (context . "Created 2026-10-08 after audit found the old DONE task proved only STATUS negotiation. #84 is DONE and provides one exact 4096-byte guest-physical DMA arena. Queue0 setup landed in #88 / 88d24ce7: modern PCI NOTIFY_CFG, exact-width COMMON_CFG, split-ring size 8. Active sector roundtrip tranche performs fresh IN sector0 -> OUT exact 512B payload -> negotiated FLUSH -> IN sector0; every request requires finite used-ring completion and VIRTIO_BLK_S_OK, and CI hashes raw sector0 after QEMU to prove bytes crossed the device boundary. #82 remains OPEN until that tranche lands.")
+     (context . "Completed 2026-10-08. #84 provides one exact 4096-byte guest-physical DMA arena. #88 / 88d24ce7 configured modern PCI NOTIFY_CFG and split-ring queue0 size 8. #89 / c45b50e3 proved real IN fresh sector0 -> OUT exact 512B payload -> negotiated FLUSH -> IN exact payload with finite used-ring completion, explicit VIRTIO_BLK_S_OK and independent host raw-sector digest. #90 / b7bd40b9 closed the fail-closed matrix for unsupported queue geometry, missing FLUSH, finite completion timeout and nonzero device status while preserving all prior gates. GitHub #82 is closed completed; clean-restart persistence belongs to #77.")
      (description . "Graduate the D2 MMIO/status witness into actual block data I/O: configure one virtqueue, submit one bounded IN/OUT request, observe device completion/status, prove same-boot read-after-write payload digest, and expose the operation through the WSM package boundary without leaking virtqueue mechanics into SENS Core. This is the concrete prerequisite for Q6b clean-restart persistence.")))
 
    ("WSM-OS-WSM-PCI-IDENTITY-D0" .
