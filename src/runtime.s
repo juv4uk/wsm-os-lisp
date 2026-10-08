@@ -139,6 +139,29 @@ wsm_virtio_block_completed_requests:
 wsm_virtio_persistence_stage:
     .skip 8
 
+# M3 / #78 timer/IRQ mechanism state. These counters are target evidence only;
+# they are not SENS identities and do not define scheduler semantics.
+.p2align 4
+.globl wsm_m3_timer_ticks
+wsm_m3_timer_ticks:
+    .skip 8
+.globl wsm_m3_logical_slot
+wsm_m3_logical_slot:
+    .skip 8
+.globl wsm_m3_logical_alternations
+wsm_m3_logical_alternations:
+    .skip 8
+wsm_m3_pic_master_mask_saved:
+    .skip 1
+wsm_m3_pic_slave_mask_saved:
+    .skip 1
+
+# One bounded IDT page. The first M3 slice installs only vector 32 (IRQ0).
+.p2align 12
+wsm_m3_idt:
+    .skip 4096
+wsm_m3_idt_end:
+
 # Exact target v8 PredicateBit singleton descriptors. These bytes are mechanism
 # only. Handles are session-local and never carry SENS NO/YES semantics.
 .section .data
@@ -146,6 +169,12 @@ wsm_virtio_persistence_stage:
 wsm_predicate_bit_table:
     .byte BOXED_KIND_PREDICATE_BIT, 0
     .byte BOXED_KIND_PREDICATE_BIT, 1
+
+# IDTR is mechanism-only target state. Limit covers exactly the allocated page.
+.p2align 3
+wsm_m3_idtr:
+    .word 4095
+    .quad wsm_m3_idt
 
 .section .text
 .align 16
@@ -2432,6 +2461,192 @@ wsm_virtio_blk_persist_envelope_verify:
 .Ldma_done:
     popq %r13
     popq %r12
+    popq %rbx
+    ret
+
+# ---------------------------------------------------------------------------
+# M3 / #78: first real timer/interrupt substrate witness.
+#
+# This slice proves only:
+#   PIT channel 0 -> legacy PIC IRQ0 -> IDT vector 32 -> bounded ISR -> EOI.
+#
+# It deliberately does NOT claim a task context switch yet. The ISR records a
+# deterministic logical slot alternation so the next slice has an observable
+# scheduler clock without minting any language control meaning.
+# ---------------------------------------------------------------------------
+
+# IRQ0 handler. Preserve every GPR touched by this bounded witness.
+.p2align 4
+wsm_m3_irq0_handler:
+    pushq %rax
+    pushq %rdx
+
+    incq wsm_m3_timer_ticks(%rip)
+
+    movq wsm_m3_logical_slot(%rip), %rax
+    xorq $1, %rax
+    movq %rax, wsm_m3_logical_slot(%rip)
+    incq wsm_m3_logical_alternations(%rip)
+
+    # Non-specific EOI to the master 8259A PIC.
+    movw $0x20, %dx
+    movb $0x20, %al
+    outb %al, %dx
+
+    popq %rdx
+    popq %rax
+    iretq
+
+# Build one present interrupt gate at IDT vector 32 using the current code
+# segment selector. All other entries stay zero and therefore fail closed.
+.Lm3_install_irq0_idt:
+    pushq %rbx
+    leaq wsm_m3_idt(%rip), %rdi
+    xorl %eax, %eax
+    movl $512, %ecx
+    cld
+    rep stosq
+
+    leaq wsm_m3_irq0_handler(%rip), %rax
+    leaq wsm_m3_idt+512(%rip), %rbx   # 32 * 16
+
+    movw %ax, 0(%rbx)                 # offset[15:0]
+    movw %cs, %dx
+    movw %dx, 2(%rbx)                 # current code selector
+    movb $0, 4(%rbx)                  # IST=0
+    movb $0x8E, 5(%rbx)               # present, DPL0, interrupt gate
+    movq %rax, %rdx
+    shrq $16, %rdx
+    movw %dx, 6(%rbx)                 # offset[31:16]
+    shrq $16, %rdx
+    movl %edx, 8(%rbx)                # offset[63:32]
+    movl $0, 12(%rbx)
+
+    lidt wsm_m3_idtr(%rip)
+    popq %rbx
+    ret
+
+# Save masks, remap PIC IRQs to 32..47 and unmask only IRQ0.
+.Lm3_pic_init_irq0:
+    movw $0x21, %dx
+    inb %dx, %al
+    movb %al, wsm_m3_pic_master_mask_saved(%rip)
+    movw $0xA1, %dx
+    inb %dx, %al
+    movb %al, wsm_m3_pic_slave_mask_saved(%rip)
+
+    movw $0x20, %dx
+    movb $0x11, %al
+    outb %al, %dx
+    movw $0xA0, %dx
+    outb %al, %dx
+
+    movw $0x21, %dx
+    movb $0x20, %al
+    outb %al, %dx
+    movw $0xA1, %dx
+    movb $0x28, %al
+    outb %al, %dx
+
+    movw $0x21, %dx
+    movb $0x04, %al
+    outb %al, %dx
+    movw $0xA1, %dx
+    movb $0x02, %al
+    outb %al, %dx
+
+    movw $0x21, %dx
+    movb $0x01, %al
+    outb %al, %dx
+    movw $0xA1, %dx
+    outb %al, %dx
+
+    # Master: only IRQ0 enabled. Slave: all masked.
+    movw $0x21, %dx
+    movb $0xFE, %al
+    outb %al, %dx
+    movw $0xA1, %dx
+    movb $0xFF, %al
+    outb %al, %dx
+    ret
+
+# Restore the masks observed before the witness. Vector remapping is mechanism
+# state and remains harmless because interrupts are disabled on return.
+.Lm3_pic_restore_masks:
+    movw $0x21, %dx
+    movb wsm_m3_pic_master_mask_saved(%rip), %al
+    outb %al, %dx
+    movw $0xA1, %dx
+    movb wsm_m3_pic_slave_mask_saved(%rip), %al
+    outb %al, %dx
+    ret
+
+# PIT channel 0, mode 3, divisor 1193 ~= 1000 Hz.
+.Lm3_pit_start:
+    movw $0x43, %dx
+    movb $0x36, %al
+    outb %al, %dx
+    movw $0x40, %dx
+    movb $0xA9, %al
+    outb %al, %dx
+    movb $0x04, %al
+    outb %al, %dx
+    ret
+
+# Raw mechanism witness: returns EAX=1 after >=8 IRQ0 ticks and >=8 logical
+# alternations, EAX=0 after a finite poll budget. Entry calls us with IF=0.
+.globl wsm_m3_timer_irq_witness
+.type wsm_m3_timer_irq_witness, @function
+wsm_m3_timer_irq_witness:
+    pushq %rbx
+
+    cli
+    movq $0, wsm_m3_timer_ticks(%rip)
+    movq $0, wsm_m3_logical_slot(%rip)
+    movq $0, wsm_m3_logical_alternations(%rip)
+
+    call .Lm3_install_irq0_idt
+    call .Lm3_pic_init_irq0
+    call .Lm3_pit_start
+
+.ifdef WSM_FORCE_M3_TIMER_MASKED
+    # Test-only negative: keep IRQ0 masked after otherwise-valid setup.
+    movw $0x21, %dx
+    movb $0xFF, %al
+    outb %al, %dx
+.endif
+
+    sti
+
+    # Finite CPU-side wait. This is intentionally much larger than eight PIT
+    # periods under QEMU TCG while still providing a closed failure path.
+    movl $100000000, %ebx
+.Lm3_timer_wait:
+    cmpq $8, wsm_m3_timer_ticks(%rip)
+    jae .Lm3_timer_have_ticks
+    pause
+    decl %ebx
+    jnz .Lm3_timer_wait
+
+    cli
+    call .Lm3_pic_restore_masks
+    xorl %eax, %eax
+    popq %rbx
+    ret
+
+.Lm3_timer_have_ticks:
+    cli
+    cmpq $8, wsm_m3_logical_alternations(%rip)
+    jb .Lm3_timer_fail_after_ticks
+
+    call .Lm3_pic_restore_masks
+    movl $1, %eax
+    popq %rbx
+    ret
+
+.Lm3_timer_fail_after_ticks:
+    call .Lm3_pic_restore_masks
+    xorl %eax, %eax
     popq %rbx
     ret
 
