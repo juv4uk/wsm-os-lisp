@@ -118,6 +118,12 @@ wsm_virtio_flush_supported:
 .globl wsm_virtio_queue0_valid
 wsm_virtio_queue0_valid:
     .skip 8
+.globl wsm_virtio_block_roundtrip_stage
+wsm_virtio_block_roundtrip_stage:
+    .skip 8
+.globl wsm_virtio_block_completed_requests
+wsm_virtio_block_completed_requests:
+    .skip 8
 
 .section .text
 .align 16
@@ -887,6 +893,57 @@ wsm_mmio_write32:
     inl %dx, %eax
     ret
 
+# Enable PCI memory-space + bus-master for the discovered virtio-blk function.
+# In: EDI = BDF encoded as (bus<<16)|(dev<<8)|func
+# Out: EAX = 1 when command bits 1/2 read back set, otherwise 0.
+.Lraw_pci_enable_mem_busmaster:
+    pushq %rbx
+    movl %edi, %ebx
+
+    movl %ebx, %eax
+    andl $0xFF0000, %eax
+    orl $0x80000000, %eax
+    movl %ebx, %edx
+    andl $0xFF00, %edx
+    shll $3, %edx
+    orl %edx, %eax
+    movl %ebx, %edx
+    andl $0xFF, %edx
+    shll $8, %edx
+    orl %edx, %eax
+    orl $0x04, %eax                # PCI Command/Status dword
+    movw $0xCF8, %dx
+    outl %eax, %dx
+
+    movw $0xCFC, %dx
+    inw %dx, %ax                   # Command register low 16 bits
+    orw $0x0006, %ax               # MEMORY + BUS MASTER
+    outw %ax, %dx
+
+    # Read back command bits.
+    movl %ebx, %eax
+    andl $0xFF0000, %eax
+    orl $0x80000000, %eax
+    movl %ebx, %edx
+    andl $0xFF00, %edx
+    shll $3, %edx
+    orl %edx, %eax
+    movl %ebx, %edx
+    andl $0xFF, %edx
+    shll $8, %edx
+    orl %edx, %eax
+    orl $0x04, %eax
+    movw $0xCF8, %dx
+    outl %eax, %dx
+    movw $0xCFC, %dx
+    inw %dx, %ax
+    andl $0x0006, %eax
+    cmpl $0x0006, %eax
+    sete %al
+    movzbl %al, %eax
+    popq %rbx
+    ret
+
 # ---------------------------------------------------------------------------
 # Internal: scan bus 0 and 1 for virtio-blk device.
 # Out: EAX = dev (device<<3 | function) of virtio-blk, or 0 if not found.
@@ -1320,6 +1377,7 @@ wsm_virtio_blk_prepare_queue0:
     movq $0, wsm_virtio_queue0_notify_addr(%rip)
     movq $0, wsm_virtio_queue0_size(%rip)
     movq $0, wsm_virtio_flush_supported(%rip)
+    movq $0, wsm_virtio_block_completed_requests(%rip)
 
     call wsm_target_provision_mmio
     cmpq $1, wsm_mmio_region_valid(%rip)
@@ -1457,6 +1515,251 @@ wsm_virtio_blk_prepare_queue0:
 .Lqueue0_done:
     popq %r15
     popq %r14
+    popq %r13
+    popq %r12
+    popq %rbx
+    ret
+
+# ---------------------------------------------------------------------------
+# M2 / #82: submit one sector-0 virtio-blk request through queue0.
+#
+# In: EDI = request type (0 IN, 1 OUT, 4 FLUSH)
+# Out: EAX = 1 only after bounded used-ring completion + status byte == OK.
+#
+# Descriptor layout in the single #84 DMA page:
+#   desc[0] @ +0   -> request header @ +256
+#   desc[1] @ +16  -> data buffer    @ +512 (IN/OUT only)
+#   desc[2] @ +32  -> status byte    @ +1024
+# avail ring @ +128, used ring @ +148.
+# ---------------------------------------------------------------------------
+.Lvirtio_blk_submit_sector0:
+    pushq %rbx
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    pushq %r15
+
+    movl %edi, %r12d
+    cmpl $0, %r12d
+    je .Lblk_type_ok
+    cmpl $1, %r12d
+    je .Lblk_type_ok
+    cmpl $4, %r12d
+    jne .Lblk_submit_fail
+.Lblk_type_ok:
+    cmpq $1, wsm_virtio_queue0_valid(%rip)
+    jne .Lblk_submit_fail
+
+    leaq wsm_dma_arena(%rip), %rbx
+    movq wsm_dma_arena_phys(%rip), %r13
+    testq %r13, %r13
+    jz .Lblk_submit_fail
+
+    # Header: type, reserved=0, sector=0.
+    movl %r12d, 256(%rbx)
+    movl $0, 260(%rbx)
+    movq $0, 264(%rbx)
+    movb $0xFF, 1024(%rbx)           # device must overwrite status
+
+    # desc0 -> header, always NEXT.
+    leaq 256(%r13), %rax
+    movq %rax, 0(%rbx)
+    movl $16, 8(%rbx)
+    movw $1, 12(%rbx)                # VIRTQ_DESC_F_NEXT
+    cmpl $4, %r12d
+    je .Lblk_desc_flush
+    movw $1, 14(%rbx)                # next = data desc1
+
+    # desc1 -> 512-byte data. IN lets device write; OUT lets device read.
+    leaq 512(%r13), %rax
+    movq %rax, 16(%rbx)
+    movl $512, 24(%rbx)
+    movw $1, 28(%rbx)                # NEXT
+    cmpl $0, %r12d
+    jne .Lblk_desc_data_flags_done
+    orw $2, 28(%rbx)                 # + VIRTQ_DESC_F_WRITE for IN
+.Lblk_desc_data_flags_done:
+    movw $2, 30(%rbx)                # next = status desc2
+    jmp .Lblk_desc_status
+
+.Lblk_desc_flush:
+    # FLUSH has no data buffer: header jumps directly to status.
+    movw $2, 14(%rbx)
+
+.Lblk_desc_status:
+    leaq 1024(%r13), %rax
+    movq %rax, 32(%rbx)
+    movl $1, 40(%rbx)
+    movw $2, 44(%rbx)                # VIRTQ_DESC_F_WRITE
+    movw $0, 46(%rbx)
+
+    # Capture old used index and publish head descriptor 0 into the next
+    # available slot. Requests are strictly sequential in this bounded witness.
+    movzwl 150(%rbx), %r15d          # used.idx before request
+    movzwl 130(%rbx), %r14d          # avail.idx before request
+    movl %r14d, %eax
+    andl $7, %eax
+    movw $0, 132(%rbx,%rax,2)        # avail.ring[avail_idx % 8] = head 0
+    mfence
+    incl %r14d
+    andl $0xFFFF, %r14d
+    movw %r14w, 130(%rbx)
+    mfence
+
+    # Notification data was not negotiated: notify payload is queue index 0.
+    movq wsm_virtio_queue0_notify_addr(%rip), %rax
+    testq %rax, %rax
+    jz .Lblk_submit_fail
+    movw $0, (%rax)
+
+    # Bounded completion wait. Expected used.idx = previous + 1 modulo u16.
+    movl %r15d, %r14d
+    incl %r14d
+    andl $0xFFFF, %r14d
+    movl $1000000, %ecx
+.Lblk_wait_used:
+    movzwl 150(%rbx), %eax
+    cmpl %r14d, %eax
+    je .Lblk_used_ready
+    pause
+    loop .Lblk_wait_used
+    jmp .Lblk_submit_fail
+
+.Lblk_used_ready:
+    lfence
+    # Device must report the head descriptor id in the used-ring slot that was
+    # current before this request.
+    movl %r15d, %eax
+    andl $7, %eax
+    leaq 152(%rbx,%rax,8), %rdx
+    cmpl $0, 0(%rdx)
+    jne .Lblk_submit_fail
+
+    # Virtio block status byte: 0 == VIRTIO_BLK_S_OK.
+    cmpb $0, 1024(%rbx)
+    jne .Lblk_submit_fail
+
+    incq wsm_virtio_block_completed_requests(%rip)
+    movl $1, %eax
+    jmp .Lblk_submit_done
+
+.Lblk_submit_fail:
+    xorl %eax, %eax
+.Lblk_submit_done:
+    popq %r15
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %rbx
+    ret
+
+# ---------------------------------------------------------------------------
+# M2 / #82: real sector-0 read -> write -> flush -> read round trip.
+#
+# Fresh raw disk must read as zero. The write payload is exactly
+# b"SENSM2V1" repeated 64 times (512 bytes). The second read must return the
+# same bytes. Host-side CI also hashes sector 0 after QEMU exits.
+# ---------------------------------------------------------------------------
+.globl wsm_virtio_blk_sector0_roundtrip
+.type wsm_virtio_blk_sector0_roundtrip, @function
+wsm_virtio_blk_sector0_roundtrip:
+    pushq %rbx
+    pushq %r12
+    pushq %r13
+
+    movq $0, wsm_virtio_block_roundtrip_stage(%rip)
+    movq $0, wsm_virtio_block_completed_requests(%rip)
+
+    # DMA requires PCI bus-master + memory-space command bits.
+    movl wsm_virtio_blk_bdf(%rip), %edi
+    testl %edi, %edi
+    jnz .Lblk_have_bdf
+    # Provision once to discover the BDF before enabling bus mastering.
+    call wsm_target_provision_mmio
+    movl wsm_virtio_blk_bdf(%rip), %edi
+.Lblk_have_bdf:
+    testl %edi, %edi
+    jz .Lblk_roundtrip_fail
+    call .Lraw_pci_enable_mem_busmaster
+    cmpl $1, %eax
+    jne .Lblk_roundtrip_fail
+
+    call wsm_virtio_blk_prepare_queue0
+    cmpl $1, %eax
+    jne .Lblk_roundtrip_fail
+    movq $1, wsm_virtio_block_roundtrip_stage(%rip)
+
+    # Persistence witness requires an actual negotiated FLUSH.
+    cmpq $1, wsm_virtio_flush_supported(%rip)
+    jne .Lblk_roundtrip_fail
+
+    # IN sector 0 on a fresh truncated raw image.
+    movl $0, %edi
+    call .Lvirtio_blk_submit_sector0
+    cmpl $1, %eax
+    jne .Lblk_roundtrip_fail
+    movq $2, wsm_virtio_block_roundtrip_stage(%rip)
+
+    # Classify fresh sector as all-zero.
+    leaq wsm_dma_arena+512(%rip), %rbx
+    movl $64, %ecx
+.Lblk_zero_check:
+    cmpq $0, (%rbx)
+    jne .Lblk_roundtrip_fail
+    addq $8, %rbx
+    loop .Lblk_zero_check
+
+    # Fill exact 512-byte deterministic payload: ASCII "SENSM2V1" repeated.
+    leaq wsm_dma_arena+512(%rip), %rdi
+    movabsq $0x3156324D534E4553, %rax
+    movl $64, %ecx
+    cld
+    rep stosq
+
+    # OUT sector 0.
+    movl $1, %edi
+    call .Lvirtio_blk_submit_sector0
+    cmpl $1, %eax
+    jne .Lblk_roundtrip_fail
+    movq $3, wsm_virtio_block_roundtrip_stage(%rip)
+
+    # FLUSH: sector=0, no data descriptor.
+    movl $4, %edi
+    call .Lvirtio_blk_submit_sector0
+    cmpl $1, %eax
+    jne .Lblk_roundtrip_fail
+    movq $4, wsm_virtio_block_roundtrip_stage(%rip)
+
+    # Clear buffer so the final IN cannot pass from stale guest bytes.
+    leaq wsm_dma_arena+512(%rip), %rdi
+    xorl %eax, %eax
+    movl $64, %ecx
+    cld
+    rep stosq
+
+    movl $0, %edi
+    call .Lvirtio_blk_submit_sector0
+    cmpl $1, %eax
+    jne .Lblk_roundtrip_fail
+    movq $5, wsm_virtio_block_roundtrip_stage(%rip)
+
+    # Compare final read against the exact deterministic payload.
+    leaq wsm_dma_arena+512(%rip), %rbx
+    movabsq $0x3156324D534E4553, %r12
+    movl $64, %ecx
+.Lblk_pattern_check:
+    cmpq %r12, (%rbx)
+    jne .Lblk_roundtrip_fail
+    addq $8, %rbx
+    loop .Lblk_pattern_check
+
+    movq $6, wsm_virtio_block_roundtrip_stage(%rip)
+    movl $1, %eax
+    jmp .Lblk_roundtrip_done
+
+.Lblk_roundtrip_fail:
+    xorl %eax, %eax
+.Lblk_roundtrip_done:
     popq %r13
     popq %r12
     popq %rbx

@@ -1,0 +1,45 @@
+name: M2 sector roundtrip
+
+on:
+  push:
+    paths:
+      - "src/runtime.s"
+      - "src/entry.s"
+      - "src/linker.ld"
+      - "artifacts/m2-sector-roundtrip-probe.s"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/check-m2-sector-roundtrip.sh"
+      - ".github/workflows/m2-sector-roundtrip.yml"
+  pull_request:
+    paths:
+      - "src/runtime.s"
+      - "src/entry.s"
+      - "src/linker.ld"
+      - "artifacts/m2-sector-roundtrip-probe.s"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/check-m2-sector-roundtrip.sh"
+      - ".github/workflows/m2-sector-roundtrip.yml"
+  workflow_dispatch:
+
+jobs:
+  sector0:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pure target dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 ovmf mtools dosfstools gdisk binutils
+      - name: Prove real sector0 read write flush roundtrip
+        run: bash scripts/check-m2-sector-roundtrip.sh
+      - name: Upload block data witness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-sector-roundtrip-witness
+          path: target/m2-sector-roundtrip/
+          if-no-files-found: error
