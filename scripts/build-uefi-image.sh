@@ -49,6 +49,9 @@ fi
 if [[ "${WSM_FORCE_VIRTIO_BAD_STATUS:-0}" == "1" ]]; then
   as_extra+=(--defsym WSM_FORCE_VIRTIO_BAD_STATUS=1)
 fi
+if [[ "${WSM_FORCE_M3_TIMER_MASKED:-0}" == "1" ]]; then
+  as_extra+=(--defsym WSM_FORCE_M3_TIMER_MASKED=1)
+fi
 
 # Assemble pure machine runtime and entry
 as --64 "${as_extra[@]}" "$ROOT_DIR/src/entry.s" -o "$BUILD_DIR/entry.o"
