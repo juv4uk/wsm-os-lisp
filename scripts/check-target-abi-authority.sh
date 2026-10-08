@@ -41,10 +41,14 @@ ACTUAL_SHA=$(sha256sum "$PROJECTION" | awk '{print $1}')
 grep -Fq "(schema . \"$SCHEMA\")" "$PROJECTION"
 grep -Fq "(version . $VERSION)" "$PROJECTION"
 grep -Fq "(boxed . 7)" "$PROJECTION"
-grep -Fq "(kinds-defined-so-far . (string game-handle rational))" "$PROJECTION"
+grep -Fq "(kinds-defined-so-far . (string game-handle rational sid8 predicate-bit))" "$PROJECTION"
 grep -Fq "wsm_rational_new" "$PROJECTION"
 grep -Fq "wsm_rational_numerator" "$PROJECTION"
 grep -Fq "wsm_rational_denominator" "$PROJECTION"
+grep -Fq "(predicate-bit . ((boxed-kind . 5) (bits . 1) (allowed . (0 1))" "$PROJECTION"
+grep -Fq "wsm_predicate_bit_0" "$PROJECTION"
+grep -Fq "wsm_predicate_bit_1" "$PROJECTION"
+grep -Fq "wsm_predicate_bit_bits" "$PROJECTION"
 grep -Fq "(numeric-overflow . 5)" "$PROJECTION"
 
 # Locally implemented subset must agree exactly with the pinned neutral authority.
@@ -55,13 +59,15 @@ grep -Fq ".set WSM_TAG_FIXNUM,          3" "$RUNTIME"
 grep -Fq ".set WSM_TAG_SYMBOL,          4" "$RUNTIME"
 grep -Fq ".set WSM_TAG_CLOSURE,         5" "$RUNTIME"
 grep -Fq ".set WSM_TAG_CAPABILITY,      6" "$RUNTIME"
+grep -Fq ".set WSM_TAG_BOXED,           7" "$RUNTIME"
+grep -Fq ".set BOXED_KIND_PREDICATE_BIT, 5" "$RUNTIME"
 grep -Fq ".set ERR_OOM,                 1" "$RUNTIME"
 grep -Fq ".set ERR_TYPE,                2" "$RUNTIME"
 grep -Fq ".set ERR_SYMBOL,              3" "$RUNTIME"
 grep -Fq ".set ERR_ABI,                 4" "$RUNTIME"
 grep -Fq ".set ERR_OVERFLOW,            5" "$RUNTIME"
 
-# Ratified v6 features may remain explicitly unsupported by this P0 runtime.
+# Ratified v8 features may remain explicitly unsupported by this P0 runtime.
 grep -Fq "(excludes . (lambda application closure strings bytes bignum rational reader evaluator gc))" "$PROFILE"
 
-echo "TARGET-ABI-V6-GREEN pin=$PIN schema=$SCHEMA version=$VERSION sha256=$ACTUAL_SHA"
+echo "TARGET-ABI-V8-GREEN pin=$PIN schema=$SCHEMA version=$VERSION sha256=$ACTUAL_SHA"
