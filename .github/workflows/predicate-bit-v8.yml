@@ -1,0 +1,47 @@
+name: PredicateBit v8 carrier
+
+on:
+  push:
+    paths:
+      - "target-abi-pin.lisp"
+      - "target-profile.lisp"
+      - "src/runtime.s"
+      - "artifacts/predicate-bit-v8-probe.s"
+      - "artifacts/predicate-bit-v8-malformed-probe.s"
+      - "scripts/check-target-abi-authority.sh"
+      - "scripts/check-predicate-bit-v8.sh"
+      - ".github/workflows/predicate-bit-v8.yml"
+  pull_request:
+    paths:
+      - "target-abi-pin.lisp"
+      - "target-profile.lisp"
+      - "src/runtime.s"
+      - "artifacts/predicate-bit-v8-probe.s"
+      - "artifacts/predicate-bit-v8-malformed-probe.s"
+      - "scripts/check-target-abi-authority.sh"
+      - "scripts/check-predicate-bit-v8.sh"
+      - ".github/workflows/predicate-bit-v8.yml"
+  workflow_dispatch:
+
+jobs:
+  carrier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pure target dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 ovmf mtools dosfstools gdisk binutils
+      - name: Verify exact target v8 authority
+        run: bash scripts/check-target-abi-authority.sh
+      - name: Prove PredicateBit carrier in QEMU
+        run: bash scripts/check-predicate-bit-v8.sh
+      - name: Upload carrier witness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: predicate-bit-v8-witness
+          path: target/predicate-bit-v8/
+          if-no-files-found: error

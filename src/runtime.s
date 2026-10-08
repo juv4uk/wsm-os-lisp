@@ -18,6 +18,17 @@
 .set WSM_TAG_SYMBOL,          4                       # tag 100
 .set WSM_TAG_CLOSURE,         5                       # tag 101
 .set WSM_TAG_CAPABILITY,      6                       # tag 110
+.set WSM_TAG_BOXED,           7                       # tag 111
+
+# Target ABI v8 exact PredicateBit representation. This runtime admits one
+# boot-session RuntimeContext, so handles 1/2 are its two canonical singleton
+# objects for this session. The target transports bit 0/1 only; SENS owns
+# predicate meaning.
+.set BOXED_KIND_PREDICATE_BIT, 5
+.set PREDICATE_BIT0_HANDLE,    1
+.set PREDICATE_BIT1_HANDLE,    2
+.set PREDICATE_BIT0_WORD,      15                      # (1 << 3) | 7
+.set PREDICATE_BIT1_WORD,      23                      # (2 << 3) | 7
 
 .set ERR_OOM,                 1
 .set ERR_TYPE,                2
@@ -127,6 +138,14 @@ wsm_virtio_block_completed_requests:
 .globl wsm_virtio_persistence_stage
 wsm_virtio_persistence_stage:
     .skip 8
+
+# Exact target v8 PredicateBit singleton descriptors. These bytes are mechanism
+# only. Handles are session-local and never carry SENS NO/YES semantics.
+.section .data
+.align 2
+wsm_predicate_bit_table:
+    .byte BOXED_KIND_PREDICATE_BIT, 0
+    .byte BOXED_KIND_PREDICATE_BIT, 1
 
 .section .text
 .align 16
@@ -277,6 +296,68 @@ wsm_atom:
 1:
     movq $WSM_NIL, %rax
     ret
+
+# ---------------------------------------------------------------------------
+# Target ABI v8 PredicateBit representation-only accessors.
+#
+# These do not define truth, branch selection or predicate semantics.
+# They only expose two canonical boxed singleton words and recover exact bit
+# 0/1 after validating the local runtime-owned descriptor.
+# ---------------------------------------------------------------------------
+.globl wsm_predicate_bit_0
+.type wsm_predicate_bit_0, @function
+wsm_predicate_bit_0:
+    movl $PREDICATE_BIT0_WORD, %eax
+    ret
+
+.globl wsm_predicate_bit_1
+.type wsm_predicate_bit_1, @function
+wsm_predicate_bit_1:
+    movl $PREDICATE_BIT1_WORD, %eax
+    ret
+
+.globl wsm_predicate_bit_bits
+.type wsm_predicate_bit_bits, @function
+wsm_predicate_bit_bits:
+    movq %rsi, %rdx                  # preserve offending word for fail-closed path
+    movq %rsi, %rax
+    movq %rax, %rcx
+    andq $WSM_TAG_MASK, %rcx
+    cmpq $WSM_TAG_BOXED, %rcx
+    jne .Lpredicate_bits_type
+
+    shrq $3, %rax
+    cmpq $PREDICATE_BIT0_HANDLE, %rax
+    je .Lpredicate_bits_0
+    cmpq $PREDICATE_BIT1_HANDLE, %rax
+    je .Lpredicate_bits_1
+    jmp .Lpredicate_bits_abi
+
+.Lpredicate_bits_0:
+    leaq wsm_predicate_bit_table(%rip), %rcx
+    cmpb $BOXED_KIND_PREDICATE_BIT, 0(%rcx)
+    jne .Lpredicate_bits_abi
+    cmpb $0, 1(%rcx)
+    jne .Lpredicate_bits_abi
+    xorl %eax, %eax
+    ret
+
+.Lpredicate_bits_1:
+    leaq wsm_predicate_bit_table+2(%rip), %rcx
+    cmpb $BOXED_KIND_PREDICATE_BIT, 0(%rcx)
+    jne .Lpredicate_bits_abi
+    cmpb $1, 1(%rcx)
+    jne .Lpredicate_bits_abi
+    movl $1, %eax
+    ret
+
+.Lpredicate_bits_type:
+    movl $ERR_TYPE, %esi
+    jmp wsm_fail
+
+.Lpredicate_bits_abi:
+    movl $ERR_ABI, %esi
+    jmp wsm_fail
 
 # ---------------------------------------------------------------------------
 # Word wsm_closure_new(RuntimeContext* ctx, uint32_t def_id, Word env)

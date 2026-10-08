@@ -2,8 +2,8 @@
 ; Representation authority only; Lisp meaning remains in my-lisp.
 ((kind . wsm-target-abi-pin)
  (repository . "https://github.com/juv4uk/wsm-target-contract.git")
- (commit . "8a5ba96d8a137ba18070872f2ea4b7e1532589c1")
+ (commit . "b5ec3211f6bd07fb7c4a5f704875892eff145b91")
  (schema . "wsm-os-target-v1")
- (version . 6)
+ (version . 8)
  (projection . "target-contract.lisp")
- (projection-sha256 . "528bafc5975267624b5a6d76f091f9fe64b0f92e8d7cde43e9b7e525db6dbbf1"))
+ (projection-sha256 . "3c477aecb46bc3ab87b6d35b705b2a52964a8c551022014b5a9ff160f8ae6b41"))
