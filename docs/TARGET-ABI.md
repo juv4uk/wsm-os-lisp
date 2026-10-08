@@ -1,4 +1,4 @@
-# wsm-os-lisp x86_64 target ABI — contract v6
+# wsm-os-lisp x86_64 target ABI — contract v8
 
 The source of truth is the dependency-free `no_std`
 [`wsm-os-target`](https://github.com/juv4uk/wsm-target-contract) crate in the
@@ -26,7 +26,7 @@ Values are 64-bit little-endian words with three low tag bits.
 | `boxed` | `111` | session-local runtime-owned boxed handle; concrete kind lives inside boxed object |
 
 The important semantic boundary is deliberate: the bit pattern historically
-named `Tag::True` remains reserved in target-contract v6 for representation
+named `Tag::True` remains reserved in target-contract v8 for representation
 history, but it is **not a second truth value**. Canonical WSM `t` is the
 ordinary symbol `t`, encoded as `CANONICAL_T = Symbol(SYMBOL_ID_MAX)`. Runtime,
 hosted rendering, QEMU result validation and future backends must fail closed
@@ -69,7 +69,7 @@ Value wsm_entry(RuntimeContext *context);
 - direction flag: clear;
 - normal System V callee-saved registers remain preserved.
 
-Runtime imports are versioned mechanism. Current contract v6 includes:
+Runtime imports are versioned mechanism. Current contract v8 includes:
 
 ```c
 Value    wsm_cons(RuntimeContext *, Value car, Value cdr);
@@ -89,9 +89,21 @@ Value    wsm_mmio_write32(RuntimeContext *, Value capability, Value offset, Valu
 Value    wsm_rational_new(RuntimeContext *, Value numerator, Value denominator);
 Value    wsm_rational_numerator(RuntimeContext *, Value rational);
 Value    wsm_rational_denominator(RuntimeContext *, Value rational);
+Value    wsm_sid8_new(RuntimeContext *, uint64_t bits);
+uint32_t wsm_sid8_bits(RuntimeContext *, Value sid8);
+Value    wsm_predicate_bit_0(RuntimeContext *);
+Value    wsm_predicate_bit_1(RuntimeContext *);
+uint32_t wsm_predicate_bit_bits(RuntimeContext *, Value predicate_bit);
 void     wsm_fail(RuntimeContext *, uint32_t error_code, Value offending_value,
                   uint32_t source_id) /* noreturn */;
 ```
+
+Target v8 also defines `BoxedKind::PredicateBit = 5`: an exact one-bit,
+runtime-owned carrier with canonical singleton identity inside one runtime
+context. The target layer exposes only bit `0`/`1`; it does not define
+NO/YES, truthiness, or conditional semantics. The freestanding OS runtime
+therefore treats PredicateBit as representation-only and keeps historical
+`wsm_atom`/`wsm_eq` compatibility behavior separate.
 
 The context layout is deliberately opaque to generated code. Device
 capabilities are mechanism, not language identities: a privileged import may
@@ -132,7 +144,7 @@ a separate evidence graduation for the same pinned artifact.
 
 ---
 
-# wsm-os-lisp x86_64 цільовий ABI — контракт v6
+# wsm-os-lisp x86_64 цільовий ABI — контракт v8
 
 Джерелом істини є незалежний `no_std`-крейт
 [`wsm-os-target`](https://github.com/juv4uk/wsm-target-contract) у нейтральному
@@ -160,7 +172,7 @@ Target ABI описує представлення і механізм. Це **�
 | `boxed` | `111` | session-local runtime-owned boxed handle; конкретний kind зберігається всередині boxed object |
 
 Ключова семантична межа навмисна: бітовий шаблон, історично названий
-`Tag::True`, лишається reserved legacy representation у target-contract v6,
+`Tag::True`, лишається reserved legacy representation у target-contract v8,
 але **не є другою істиною**. Канонічне WSM `t` — звичайний символ `t`, тобто
 `CANONICAL_T = Symbol(SYMBOL_ID_MAX)`. Runtime, hosted renderer, QEMU-validator
 і майбутні backends мають fail-closed відхиляти legacy immediate як семантичне
@@ -198,11 +210,18 @@ Value wsm_entry(RuntimeContext *context);
 `rdi` містить opaque runtime context, результат повертається в `rax`, стек
 вирівнюється до 16 байт перед call, red zone заборонений.
 
-Поточний contract v6 містить механічні imports `cons/car/cdr/eq/atom`, bounded
+Поточний contract v8 містить механічні imports `cons/car/cdr/eq/atom`, bounded
 closure operations, PCI/MMIO capability operations, ратифіковані Rational
 imports (`wsm_rational_new/numerator/denominator`) та структурований
 `wsm_fail(context, error_code, offending_value, source_id)`. Ці imports не
 створюють нових мовних примітивів.
+
+Target v8 також визначає `BoxedKind::PredicateBit = 5`: точний однобітний
+runtime-owned носій із канонічною singleton-ідентичністю в межах одного runtime
+context. Target-рівень переносить лише біт `0`/`1`; він не визначає NO/YES,
+truthiness чи семантику COND. Тому freestanding runtime трактує PredicateBit
+лише як представлення, а історичні `wsm_atom`/`wsm_eq` лишаються окремою
+compatibility-поведінкою.
 
 Capability має силу лише тоді, коли коректно декодується у поточний descriptor
 і збігається з активним nonce-bearing grant, виданим substrate. Старий numeric
