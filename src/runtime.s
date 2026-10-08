@@ -1421,6 +1421,9 @@ wsm_virtio_blk_prepare_queue0:
     jz .Lqueue0_no_flush
     movq $1, wsm_virtio_flush_supported(%rip)
 .Lqueue0_no_flush:
+.ifdef WSM_FORCE_VIRTIO_NO_FLUSH
+    movq $0, wsm_virtio_flush_supported(%rip)
+.endif
 
     # Driver accepts only VERSION_1 and, when offered, FLUSH.
     movl $1, 8(%rbx)
@@ -1441,6 +1444,9 @@ wsm_virtio_blk_prepare_queue0:
     # Queue 0, split ring size 8.
     movw $0, 22(%rbx)
     movzwl 24(%rbx), %eax
+.ifdef WSM_FORCE_VIRTIO_QUEUE_UNSUPPORTED
+    xorl %eax, %eax
+.endif
     cmpl $8, %eax
     jb .Lqueue0_fail_mark
     movw $8, 24(%rbx)
@@ -1488,6 +1494,10 @@ wsm_virtio_blk_prepare_queue0:
     testq $1, %rax                    # 16-bit notify write requires alignment
     jnz .Lqueue0_fail_mark
     movq %rax, wsm_virtio_queue0_notify_addr(%rip)
+.ifdef WSM_FORCE_VIRTIO_BAD_GEOMETRY
+    orq $1, wsm_virtio_queue0_notify_addr(%rip)
+    jmp .Lqueue0_fail_mark
+.endif
 
     mfence
     movw $1, 28(%rbx)                 # queue_enable
@@ -1612,6 +1622,16 @@ wsm_virtio_blk_prepare_queue0:
     jz .Lblk_submit_fail
     movw $0, (%rax)
 
+.ifdef WSM_FORCE_VIRTIO_TIMEOUT
+    # Test-only falsifier: exercise the same finite timeout outcome without
+    # permitting a fast QEMU completion to race the mutation.
+    movl $4096, %ecx
+.Lblk_forced_timeout:
+    pause
+    loop .Lblk_forced_timeout
+    jmp .Lblk_submit_fail
+.endif
+
     # Bounded completion wait. Expected used.idx = previous + 1 modulo u16.
     movl %r15d, %r14d
     incl %r14d
@@ -1636,6 +1656,9 @@ wsm_virtio_blk_prepare_queue0:
     jne .Lblk_submit_fail
 
     # Virtio block status byte: 0 == VIRTIO_BLK_S_OK.
+.ifdef WSM_FORCE_VIRTIO_BAD_STATUS
+    movb $1, 1024(%rbx)
+.endif
     cmpb $0, 1024(%rbx)
     jne .Lblk_submit_fail
 

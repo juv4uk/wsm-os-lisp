@@ -1,0 +1,41 @@
+name: M2 block falsifiers
+
+on:
+  push:
+    paths:
+      - "src/runtime.s"
+      - "artifacts/m2-sector-roundtrip-probe.s"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/check-m2-block-falsifiers.sh"
+      - ".github/workflows/m2-block-falsifiers.yml"
+  pull_request:
+    paths:
+      - "src/runtime.s"
+      - "artifacts/m2-sector-roundtrip-probe.s"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/check-m2-block-falsifiers.sh"
+      - ".github/workflows/m2-block-falsifiers.yml"
+  workflow_dispatch:
+
+jobs:
+  falsifiers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pure target dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 ovmf mtools dosfstools gdisk binutils
+      - name: Prove block fail-closed matrix
+        run: bash scripts/check-m2-block-falsifiers.sh
+      - name: Upload falsifier witness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-block-falsifiers
+          path: target/m2-block-falsifiers/
+          if-no-files-found: error
