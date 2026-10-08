@@ -2011,6 +2011,224 @@ wsm_virtio_blk_persist_sector0_verify:
     ret
 
 # ---------------------------------------------------------------------------
+# M2 / #95: canonical one-sector persistence envelope.
+#
+# Layout (all integers little-endian):
+#   +0   u8[8] magic = "WSMENV01"
+#   +8   u32   version = 1
+#   +12  u32   header_len = 32
+#   +16  u32   payload_len <= 480
+#   +20  u32   FNV-1a32(payload)
+#   +24  u64   reserved = 0
+#   +32  bytes payload, then zero padding through byte 511
+#
+# FNV-1a is the in-format corruption checksum only. CI records SHA-256 as
+# external artifact identity. These helpers assign no SENS meaning to payload.
+# ---------------------------------------------------------------------------
+
+# In: RDI=bytes, ECX=len. Out: EAX=FNV-1a32.
+.Lm2_fnv1a32:
+    movl $0x811C9DC5, %eax
+    testl %ecx, %ecx
+    jz .Lm2_fnv_done
+.Lm2_fnv_loop:
+    movzbl (%rdi), %edx
+    xorl %edx, %eax
+    imull $0x01000193, %eax, %eax
+    incq %rdi
+    decl %ecx
+    jnz .Lm2_fnv_loop
+.Lm2_fnv_done:
+    ret
+
+# In: RDI=512-byte buffer. Builds the first canonical #95 frame.
+.Lm2_envelope_build:
+    pushq %rbx
+    movq %rdi, %rbx
+
+    xorl %eax, %eax
+    movl $64, %ecx
+    cld
+    rep stosq
+
+    movabsq $0x3130564E454D5357, %rax  # ASCII "WSMENV01"
+    movq %rax, 0(%rbx)
+    movl $1, 8(%rbx)
+    movl $32, 12(%rbx)
+    movl $16, 16(%rbx)
+    movq $0, 24(%rbx)
+
+    # Exact first admitted opaque payload: ASCII "SENS-Q6B-PAYLOAD".
+    movabsq $0x4236512D534E4553, %rax
+    movq %rax, 32(%rbx)
+    movabsq $0x44414F4C5941502D, %rax
+    movq %rax, 40(%rbx)
+
+    leaq 32(%rbx), %rdi
+    movl $16, %ecx
+    call .Lm2_fnv1a32
+    movl %eax, 20(%rbx)
+
+    popq %rbx
+    ret
+
+# In: RDI=512-byte buffer. Out: EAX=1 iff framing/checksum is valid.
+.Lm2_envelope_validate:
+    pushq %rbx
+    pushq %r12
+    movq %rdi, %rbx
+
+    movabsq $0x3130564E454D5357, %rax
+    cmpq %rax, 0(%rbx)
+    jne .Lm2_env_invalid
+    cmpl $1, 8(%rbx)
+    jne .Lm2_env_invalid
+    cmpl $32, 12(%rbx)
+    jne .Lm2_env_invalid
+
+    movl 16(%rbx), %ecx
+    cmpl $480, %ecx
+    ja .Lm2_env_invalid
+    cmpq $0, 24(%rbx)
+    jne .Lm2_env_invalid
+
+    movl 20(%rbx), %r12d
+    leaq 32(%rbx), %rdi
+    call .Lm2_fnv1a32
+    cmpl %r12d, %eax
+    jne .Lm2_env_invalid
+
+    movl $1, %eax
+    jmp .Lm2_env_validate_done
+.Lm2_env_invalid:
+    xorl %eax, %eax
+.Lm2_env_validate_done:
+    popq %r12
+    popq %rbx
+    ret
+
+# Boot A: fresh sector -> canonical frame -> OUT -> FLUSH.
+.globl wsm_virtio_blk_persist_envelope_write
+.type wsm_virtio_blk_persist_envelope_write, @function
+wsm_virtio_blk_persist_envelope_write:
+    pushq %rbx
+    movq $0, wsm_virtio_persistence_stage(%rip)
+    movq $0, wsm_virtio_block_completed_requests(%rip)
+
+    movl wsm_virtio_blk_bdf(%rip), %edi
+    testl %edi, %edi
+    jnz .Lm2_env_write_have_bdf
+    call wsm_target_provision_mmio
+    movl wsm_virtio_blk_bdf(%rip), %edi
+.Lm2_env_write_have_bdf:
+    testl %edi, %edi
+    jz .Lm2_env_write_fail
+    call .Lraw_pci_enable_mem_busmaster
+    cmpl $1, %eax
+    jne .Lm2_env_write_fail
+
+    call wsm_virtio_blk_prepare_queue0
+    cmpl $1, %eax
+    jne .Lm2_env_write_fail
+    cmpq $1, wsm_virtio_flush_supported(%rip)
+    jne .Lm2_env_write_fail
+    movq $10, wsm_virtio_persistence_stage(%rip)
+
+    movl $0, %edi
+    call .Lvirtio_blk_submit_sector0
+    cmpl $1, %eax
+    jne .Lm2_env_write_fail
+
+    leaq wsm_dma_arena+512(%rip), %rbx
+    movl $64, %ecx
+.Lm2_env_zero_check:
+    cmpq $0, (%rbx)
+    jne .Lm2_env_write_fail
+    addq $8, %rbx
+    loop .Lm2_env_zero_check
+
+    leaq wsm_dma_arena+512(%rip), %rdi
+    call .Lm2_envelope_build
+    movq $11, wsm_virtio_persistence_stage(%rip)
+
+    movl $1, %edi
+    call .Lvirtio_blk_submit_sector0
+    cmpl $1, %eax
+    jne .Lm2_env_write_fail
+
+    movl $4, %edi
+    call .Lvirtio_blk_submit_sector0
+    cmpl $1, %eax
+    jne .Lm2_env_write_fail
+
+    movq $12, wsm_virtio_persistence_stage(%rip)
+    movl $1, %eax
+    jmp .Lm2_env_write_done
+.Lm2_env_write_fail:
+    xorl %eax, %eax
+.Lm2_env_write_done:
+    popq %rbx
+    ret
+
+# Boot B: fresh runtime/queue -> IN -> frame/checksum -> exact first payload.
+.globl wsm_virtio_blk_persist_envelope_verify
+.type wsm_virtio_blk_persist_envelope_verify, @function
+wsm_virtio_blk_persist_envelope_verify:
+    pushq %rbx
+    movq $0, wsm_virtio_persistence_stage(%rip)
+    movq $0, wsm_virtio_block_completed_requests(%rip)
+
+    movl wsm_virtio_blk_bdf(%rip), %edi
+    testl %edi, %edi
+    jnz .Lm2_env_verify_have_bdf
+    call wsm_target_provision_mmio
+    movl wsm_virtio_blk_bdf(%rip), %edi
+.Lm2_env_verify_have_bdf:
+    testl %edi, %edi
+    jz .Lm2_env_verify_fail
+    call .Lraw_pci_enable_mem_busmaster
+    cmpl $1, %eax
+    jne .Lm2_env_verify_fail
+    call wsm_virtio_blk_prepare_queue0
+    cmpl $1, %eax
+    jne .Lm2_env_verify_fail
+
+    leaq wsm_dma_arena+512(%rip), %rdi
+    xorl %eax, %eax
+    movl $64, %ecx
+    cld
+    rep stosq
+
+    movl $0, %edi
+    call .Lvirtio_blk_submit_sector0
+    cmpl $1, %eax
+    jne .Lm2_env_verify_fail
+
+    leaq wsm_dma_arena+512(%rip), %rdi
+    call .Lm2_envelope_validate
+    cmpl $1, %eax
+    jne .Lm2_env_verify_fail
+
+    leaq wsm_dma_arena+512(%rip), %rbx
+    cmpl $16, 16(%rbx)
+    jne .Lm2_env_verify_fail
+    movabsq $0x4236512D534E4553, %rax
+    cmpq %rax, 32(%rbx)
+    jne .Lm2_env_verify_fail
+    movabsq $0x44414F4C5941502D, %rax
+    cmpq %rax, 40(%rbx)
+    jne .Lm2_env_verify_fail
+
+    movq $20, wsm_virtio_persistence_stage(%rip)
+    movl $1, %eax
+    jmp .Lm2_env_verify_done
+.Lm2_env_verify_fail:
+    xorl %eax, %eax
+.Lm2_env_verify_done:
+    popq %rbx
+    ret
+
+# ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 # M2 / #84: translate one mapped kernel virtual address to guest physical.
 #
