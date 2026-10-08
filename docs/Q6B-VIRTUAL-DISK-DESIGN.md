@@ -36,9 +36,10 @@ launch scripts must record exact image path, size, kernel SHA, and transcript.
 ## Claim boundary / Межа твердження
 
 ```text
-Q6a  guest-memory read/write/flush       CONFIRMED
-Q6b  same-disk clean-restart persistence  OPEN
-Q7   crash/restart recovery               OPEN
+Q6a  guest-memory read/write/flush        CONFIRMED
+Q6b  same-disk clean-restart persistence  CONFIRMED
+Q6b  framed-envelope validation + parity  OPEN
+Q7   crash/restart recovery                OPEN
 ```
 
 Do not call a clean restart proof power-loss durability. Do not silently reuse
@@ -60,17 +61,28 @@ D2 device-negotiation slice: PCI/MMIO discovery plus COMMON_CFG STATUS
 ACKNOWLEDGE/readback. It did **not** establish a virtqueue or transfer sector
 payload bytes.
 
-The missing mechanism is tracked by **GitHub #82 /
-`WSM-OS-VIRTIO-BLK-DATA-IO-Q6B`**:
+The mechanism chain is now proven and closed through GitHub #82 /
+`WSM-OS-VIRTIO-BLK-DATA-IO-Q6B`:
 
 ```text
-existing D2 discovery/MMIO STATUS witness
-  -> one bounded virtqueue
-  -> one real 512-byte IN/OUT request
-  -> explicit completion/status
-  -> explicit FLUSH or fail-closed unsupported
-  -> Q6b same-disk clean restart
+D2 discovery/MMIO STATUS witness
+  -> #84 proved guest-physical DMA page
+  -> #88 bounded modern split-ring queue0
+  -> #89 real 512-byte IN/OUT/FLUSH + host digest
+  -> #90 fail-closed block falsifier matrix
+  -> #92 Boot A write+flush / Boot B fresh-read on the same raw disk
 ```
+
+Merge `721bf004e837aaaa938f1ae940a5fb1970f4c38c` confirms the narrow
+Q6b claim **same-disk clean-restart persistence**. Boot B reuses the exact same
+separate raw image, recreates runtime/virtqueue state, reads the persisted
+sector, verifies the exact bytes, and leaves the medium unchanged.
+
+This does **not** close the full #77 data-format/semantic ladder. The next Q6b
+slice still has to store and validate the canonical framed envelope
+(magic/version/length/checksum/payload), prove corruption/truncation negatives,
+reconstruct/evaluate through the F6 adapter boundary, and pass the SENS-owned
+L0→L3 parity witness.
 
 Production implementation follows ADR-004: Lisp owns device/request policy;
 x86-64 assembly owns irreducible PCI/MMIO/DMA/queue/fence mechanism. Retired
