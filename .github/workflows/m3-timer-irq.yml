@@ -1,0 +1,43 @@
+name: M3 timer IRQ substrate
+
+on:
+  push:
+    paths:
+      - "src/runtime.s"
+      - "artifacts/m3-timer-irq-probe.s"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/check-m3-timer-irq.sh"
+      - "contracts/qemu-m0-machine-profile.lisp"
+      - ".github/workflows/m3-timer-irq.yml"
+  pull_request:
+    paths:
+      - "src/runtime.s"
+      - "artifacts/m3-timer-irq-probe.s"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/check-m3-timer-irq.sh"
+      - "contracts/qemu-m0-machine-profile.lisp"
+      - ".github/workflows/m3-timer-irq.yml"
+  workflow_dispatch:
+
+jobs:
+  timer-irq:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pure target dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 ovmf mtools dosfstools gdisk binutils
+      - name: Prove PIT IRQ0 delivery and bounded masked negative
+        run: bash scripts/check-m3-timer-irq.sh
+      - name: Upload timer witness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3-timer-irq-witness
+          path: target/m3-timer-irq/
+          if-no-files-found: error
