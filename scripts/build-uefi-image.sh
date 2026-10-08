@@ -34,6 +34,21 @@ fi
 if [[ "${WSM_FORCE_DMA_NONCONTIGUOUS:-0}" == "1" ]]; then
   as_extra+=(--defsym WSM_FORCE_DMA_NONCONTIGUOUS=1)
 fi
+if [[ "${WSM_FORCE_VIRTIO_QUEUE_UNSUPPORTED:-0}" == "1" ]]; then
+  as_extra+=(--defsym WSM_FORCE_VIRTIO_QUEUE_UNSUPPORTED=1)
+fi
+if [[ "${WSM_FORCE_VIRTIO_BAD_GEOMETRY:-0}" == "1" ]]; then
+  as_extra+=(--defsym WSM_FORCE_VIRTIO_BAD_GEOMETRY=1)
+fi
+if [[ "${WSM_FORCE_VIRTIO_NO_FLUSH:-0}" == "1" ]]; then
+  as_extra+=(--defsym WSM_FORCE_VIRTIO_NO_FLUSH=1)
+fi
+if [[ "${WSM_FORCE_VIRTIO_TIMEOUT:-0}" == "1" ]]; then
+  as_extra+=(--defsym WSM_FORCE_VIRTIO_TIMEOUT=1)
+fi
+if [[ "${WSM_FORCE_VIRTIO_BAD_STATUS:-0}" == "1" ]]; then
+  as_extra+=(--defsym WSM_FORCE_VIRTIO_BAD_STATUS=1)
+fi
 
 # Assemble pure machine runtime and entry
 as --64 "${as_extra[@]}" "$ROOT_DIR/src/entry.s" -o "$BUILD_DIR/entry.o"
