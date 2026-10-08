@@ -238,12 +238,12 @@
 
    ("WSM-OS-M3-TIMER-IRQ-SUBSTRATE" .
     ((priority . 8.9)
-     (done . nil)
+     (done . t)
      (capabilities . (wsm-os x86_64 assembly qemu pit pic idt interrupt scheduler evidence))
      (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
      (origin . wsm-os-lisp)
      (github-issue . 78)
-     (context . "Created 2026-10-08 as the first mechanism-only slice of #78. Active branch issue-78-pit-irq-v1 installs one IDT gate for IRQ0, remaps the legacy PIC, programs PIT channel0 at ~1kHz, requires >=8 real bounded IRQ entries with EOI, and includes a masked-IRQ0 fail-closed mutation. The logical slot alternation is timer evidence only; no task context switch or scheduler policy is claimed by this slice.")
+     (context . "Completed 2026-10-08 in PR #98: the Pure Lisp + x86-64 ASM QEMU target installs one IDT gate for vector 32, remaps the legacy PIC, programs PIT channel0 mode3 divisor1193 (~1kHz), observes >=8 real bounded IRQ0 entries with explicit EOI, and passes a masked-IRQ0 fail-closed mutation. All pre-existing M0/M1/M2/PredicateBit gates remained GREEN. The logical slot alternation is timer evidence only; no task context switch or scheduler policy is claimed by this slice. Real saved-context/two-stack work belongs to #99.")
      (description . "Prove a bounded real timer interrupt source and acknowledged IRQ path on the current Pure Lisp + x86-64 ASM target before implementing task context save/restore. Timer/PIC/IDT mechanics are substrate facts and create no SENS/D2 meaning.")))
 
    ("WSM-OS-WSM-PCI-IDENTITY-D0" .
