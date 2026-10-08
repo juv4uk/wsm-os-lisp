@@ -124,6 +124,9 @@ wsm_virtio_block_roundtrip_stage:
 .globl wsm_virtio_block_completed_requests
 wsm_virtio_block_completed_requests:
     .skip 8
+.globl wsm_virtio_persistence_stage
+wsm_virtio_persistence_stage:
+    .skip 8
 
 .section .text
 .align 16
@@ -1788,6 +1791,145 @@ wsm_virtio_blk_sector0_roundtrip:
     popq %rbx
     ret
 
+# ---------------------------------------------------------------------------
+# M2 / #77: boot-A persistence writer over the already-proved #82 transport.
+#
+# Fresh sector0 -> OUT deterministic 512-byte payload -> FLUSH -> success.
+# Returns raw EAX=1/0 to a mechanism-only fixture. No filesystem semantics.
+# ---------------------------------------------------------------------------
+.globl wsm_virtio_blk_persist_sector0_write
+.type wsm_virtio_blk_persist_sector0_write, @function
+wsm_virtio_blk_persist_sector0_write:
+    pushq %rbx
+    pushq %r12
+
+    movq $0, wsm_virtio_persistence_stage(%rip)
+
+    # Discover the device before enabling DMA bus mastering.
+    movl wsm_virtio_blk_bdf(%rip), %edi
+    testl %edi, %edi
+    jnz .Lpersist_write_have_bdf
+    call wsm_target_provision_mmio
+    movl wsm_virtio_blk_bdf(%rip), %edi
+.Lpersist_write_have_bdf:
+    testl %edi, %edi
+    jz .Lpersist_write_fail
+    call .Lraw_pci_enable_mem_busmaster
+    cmpl $1, %eax
+    jne .Lpersist_write_fail
+
+    call wsm_virtio_blk_prepare_queue0
+    cmpl $1, %eax
+    jne .Lpersist_write_fail
+    cmpq $1, wsm_virtio_flush_supported(%rip)
+    jne .Lpersist_write_fail
+    movq $1, wsm_virtio_persistence_stage(%rip)
+
+    # Fresh persistence image must begin with an all-zero admitted sector.
+    movl $0, %edi
+    call .Lvirtio_blk_submit_sector0
+    cmpl $1, %eax
+    jne .Lpersist_write_fail
+    leaq wsm_dma_arena+512(%rip), %rbx
+    movl $64, %ecx
+.Lpersist_write_zero_check:
+    cmpq $0, (%rbx)
+    jne .Lpersist_write_fail
+    addq $8, %rbx
+    loop .Lpersist_write_zero_check
+
+    # Exact first persisted payload: b"SENSM2V1" * 64.
+    leaq wsm_dma_arena+512(%rip), %rdi
+    movabsq $0x3156324D534E4553, %rax
+    movl $64, %ecx
+    cld
+    rep stosq
+
+    movl $1, %edi
+    call .Lvirtio_blk_submit_sector0
+    cmpl $1, %eax
+    jne .Lpersist_write_fail
+    movq $2, wsm_virtio_persistence_stage(%rip)
+
+    movl $4, %edi
+    call .Lvirtio_blk_submit_sector0
+    cmpl $1, %eax
+    jne .Lpersist_write_fail
+    movq $3, wsm_virtio_persistence_stage(%rip)
+
+    movl $1, %eax
+    jmp .Lpersist_write_done
+
+.Lpersist_write_fail:
+    xorl %eax, %eax
+.Lpersist_write_done:
+    popq %r12
+    popq %rbx
+    ret
+
+# ---------------------------------------------------------------------------
+# M2 / #77: boot-B verifier over the same host raw-disk path/image.
+#
+# A new QEMU boot creates a new runtime/queue, reads sector0 once and succeeds
+# only when the exact boot-A payload survived the clean restart.
+# ---------------------------------------------------------------------------
+.globl wsm_virtio_blk_persist_sector0_verify
+.type wsm_virtio_blk_persist_sector0_verify, @function
+wsm_virtio_blk_persist_sector0_verify:
+    pushq %rbx
+    pushq %r12
+
+    movq $0, wsm_virtio_persistence_stage(%rip)
+
+    movl wsm_virtio_blk_bdf(%rip), %edi
+    testl %edi, %edi
+    jnz .Lpersist_verify_have_bdf
+    call wsm_target_provision_mmio
+    movl wsm_virtio_blk_bdf(%rip), %edi
+.Lpersist_verify_have_bdf:
+    testl %edi, %edi
+    jz .Lpersist_verify_fail
+    call .Lraw_pci_enable_mem_busmaster
+    cmpl $1, %eax
+    jne .Lpersist_verify_fail
+
+    call wsm_virtio_blk_prepare_queue0
+    cmpl $1, %eax
+    jne .Lpersist_verify_fail
+
+    # Destroy stale guest bytes before the read witness.
+    leaq wsm_dma_arena+512(%rip), %rdi
+    xorl %eax, %eax
+    movl $64, %ecx
+    cld
+    rep stosq
+
+    movl $0, %edi
+    call .Lvirtio_blk_submit_sector0
+    cmpl $1, %eax
+    jne .Lpersist_verify_fail
+
+    leaq wsm_dma_arena+512(%rip), %rbx
+    movabsq $0x3156324D534E4553, %r12
+    movl $64, %ecx
+.Lpersist_verify_pattern:
+    cmpq %r12, (%rbx)
+    jne .Lpersist_verify_fail
+    addq $8, %rbx
+    loop .Lpersist_verify_pattern
+
+    movq $1, wsm_virtio_persistence_stage(%rip)
+    movl $1, %eax
+    jmp .Lpersist_verify_done
+
+.Lpersist_verify_fail:
+    xorl %eax, %eax
+.Lpersist_verify_done:
+    popq %r12
+    popq %rbx
+    ret
+
+# ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 # M2 / #84: translate one mapped kernel virtual address to guest physical.
 #
