@@ -91,6 +91,9 @@ _start:
     call wsm_closure_new
 .Lgc_return_2:
     nop
+    call wsm_cons
+.Lgc_return_3:
+    nop
 wsm_cons:
     ret
 wsm_closure_new:
@@ -104,6 +107,8 @@ wsm_closure_new:
 .quad .Lgc_return_1
 .quad 2
 .quad .Lgc_return_2
+.quad 3
+.quad .Lgc_return_3
 """
     with tempfile.TemporaryDirectory(prefix="wsm-gc-pc-bind-") as tmp:
         tmp = Path(tmp)
@@ -143,6 +148,7 @@ def main() -> None:
 site id=0 label=.Lgc_return_0 allocator=wsm_cons kind=runtime-call-structured frame=64 stack=16,40 regs=%rdx,%rsi
 site id=1 label=.Lgc_return_1 allocator=wsm_cons kind=pack-rest-bounded frame=48 stack=8,24 regs=%rdx,%rsi
 site id=2 label=.Lgc_return_2 allocator=wsm_closure_new kind=closure-new-bounded frame=32 stack=- regs=%rdx
+site id=3 label=.Lgc_return_3 allocator=wsm_cons kind=quote-bounded frame=40 stack=16 regs=%rdx,%rsi
 """
     records = wire.parse_manifest(manifest)
 
@@ -151,8 +157,8 @@ site id=2 label=.Lgc_return_2 allocator=wsm_closure_new kind=closure-new-bounded
     low = parse_pc_bindings(low_data)
     high = parse_pc_bindings(high_data)
 
-    assert sorted(low) == [0, 1, 2]
-    assert sorted(high) == [0, 1, 2]
+    assert sorted(low) == [0, 1, 2, 3]
+    assert sorted(high) == [0, 1, 2, 3]
     assert all(high[site] - low[site] == 0x100000 for site in low)
 
     low_bound = bind_by_site_id(records, low)
@@ -165,6 +171,7 @@ site id=2 label=.Lgc_return_2 allocator=wsm_closure_new kind=closure-new-bounded
     assert table.lookup(low[0], "wsm_cons").status is abi.LookupStatus.CERTIFIED
     assert table.lookup(low[1], "wsm_cons").status is abi.LookupStatus.CERTIFIED
     assert table.lookup(low[2], "wsm_closure_new").status is abi.LookupStatus.CERTIFIED
+    assert table.lookup(low[3], "wsm_cons").status is abi.LookupStatus.CERTIFIED
     assert (
         table.lookup(low[2], "wsm_cons").status
         is abi.LookupStatus.ALLOCATOR_KIND_MISMATCH
@@ -198,6 +205,7 @@ site id=2 label=.Lgc_return_2 allocator=wsm_closure_new kind=closure-new-bounded
     print("PRODUCER-BINDING=ELF-RELOCATION")
     print("RUNTIME-KEY=FINAL-PC+ALLOCATOR-KIND")
     print("CLOSURE-NEW-POSITIVE=PASS")
+    print("QUOTE-BOUNDED-POSITIVE=PASS")
     print("SYMBOL-TABLE-LOOKUP=0")
     print("DISASSEMBLY-GUESSING=0")
     print("MISSING/EXTRA/DUPLICATE-BINDING=REJECTED")
