@@ -16,6 +16,8 @@ trap 'rm -rf "$BUILD_DIR"' EXIT
 # `WSM_FORCE_NO_PHYS_MAP` symbol consumed by src/runtime.s::wsm_boot_handoff to
 # witness the fail-closed MMIO path (issue #40). Production builds define none.
 as_extra=()
+BOXED_TAG="$(bash "$ROOT_DIR/scripts/target-contract-value.sh" boxed-tag)"
+as_extra+=(--defsym WSM_TAG_BOXED="$BOXED_TAG")
 if [[ "${WSM_OS_FORCE_NO_PHYS_MAP:-0}" == "1" ]]; then
   as_extra+=(--defsym WSM_FORCE_NO_PHYS_MAP=1)
 fi
