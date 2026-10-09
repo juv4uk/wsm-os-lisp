@@ -4,7 +4,7 @@
 ; from the pinned upstream file at test time; they are not copied here.
 (compiler-corpus-lock
   (source
-    (repository juv4uk/my-lisp)
+    (repository juv4uk/sens)
     (path tests/fixtures/conformance.my))
   (revision "4a5dba0d1d61103385406ef2821d76661442621c")
   ; Zero-based among records carrying (compiler-corpus . t).
