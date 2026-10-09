@@ -1,0 +1,30 @@
+name: QEMU never-ready serial transport regression
+
+on:
+  pull_request:
+    paths:
+      - "src/entry.s"
+      - "tests/serial-timeout-entry.s"
+      - "scripts/rebuild-and-run-serial-timeout-qemu.sh"
+      - ".github/workflows/qemu-serial-timeout.yml"
+  push:
+    paths:
+      - "src/entry.s"
+      - "tests/serial-timeout-entry.s"
+      - "scripts/rebuild-and-run-serial-timeout-qemu.sh"
+      - ".github/workflows/qemu-serial-timeout.yml"
+  workflow_dispatch:
+
+jobs:
+  serial-timeout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install freestanding image and QEMU tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 ovmf mtools dosfstools gdisk binutils
+      - name: Prove never-ready UART exits as transport failure
+        run: bash scripts/rebuild-and-run-serial-timeout-qemu.sh
