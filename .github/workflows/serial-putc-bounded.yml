@@ -1,0 +1,33 @@
+name: Serial UART bounded poll witness
+
+on:
+  pull_request:
+    paths:
+      - "src/entry.s"
+      - "scripts/check-serial-putc-bounded.sh"
+      - ".github/workflows/serial-putc-bounded.yml"
+  push:
+    paths:
+      - "src/entry.s"
+      - "scripts/check-serial-putc-bounded.sh"
+      - ".github/workflows/serial-putc-bounded.yml"
+  workflow_dispatch:
+
+jobs:
+  serial-bound:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble and verify finite COM1 polling and transport exit
+        run: bash scripts/check-serial-putc-bounded.sh
+      - name: Prove unbounded-loop mutation fails closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed 's/loop 1b/jmp 1b/' src/entry.s > "$RUNNER_TEMP/serial-unbounded.s"
+          if WSM_OS_ENTRY_SRC="$RUNNER_TEMP/serial-unbounded.s" bash scripts/check-serial-putc-bounded.sh; then
+            echo "SERIAL-POLL-BOUND: negative control unexpectedly accepted" >&2
+            exit 1
+          fi
+          echo "SERIAL-POLL-BOUND: negative control correctly rejected"
