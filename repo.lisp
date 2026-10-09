@@ -1,4 +1,4 @@
-; repo.my — Swarm Contract v0.1 scope declaration for wsm-os-lisp.
+; repo.lisp — Swarm Contract v0.1 scope declaration for wsm-os-lisp.
 ; Renamed 2026-09-02 from wsm-os: the owner started a new, independent
 ; clean-slate physical-platform lab (`juv4uk/wsm-os`) for `juv4uk/wsm`.
 ; This repository remains the my-lisp-lineage control target that owns the
