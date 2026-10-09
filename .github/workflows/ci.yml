@@ -21,6 +21,8 @@ jobs:
         run: bash scripts/check-no-rust.sh
       - name: Prove pure assembly runtime has no forbidden host imports
         run: bash scripts/check-runtime-symbols.sh
+      - name: Guard finite UART poll and distinct transport-failure exit (#31)
+        run: bash scripts/check-serial-transport-gate.sh
       - name: Prove target observer is bounded (issue #33)
         run: bash scripts/check-target-observer-bounded.sh
       - name: Verify CML fixture provenance
