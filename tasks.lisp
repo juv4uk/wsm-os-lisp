@@ -236,6 +236,16 @@
      (context . "Completed 2026-10-08. #84 provides one exact 4096-byte guest-physical DMA arena. #88 / 88d24ce7 configured modern PCI NOTIFY_CFG and split-ring queue0 size 8. #89 / c45b50e3 proved real IN fresh sector0 -> OUT exact 512B payload -> negotiated FLUSH -> IN exact payload with finite used-ring completion, explicit VIRTIO_BLK_S_OK and independent host raw-sector digest. #90 / b7bd40b9 closed the fail-closed matrix for unsupported queue geometry, missing FLUSH, finite completion timeout and nonzero device status while preserving all prior gates. GitHub #82 is closed completed; clean-restart persistence belongs to #77.")
      (description . "Graduate the D2 MMIO/status witness into actual block data I/O: configure one virtqueue, submit one bounded IN/OUT request, observe device completion/status, prove same-boot read-after-write payload digest, and expose the operation through the WSM package boundary without leaking virtqueue mechanics into SENS Core. This is the concrete prerequisite for Q6b clean-restart persistence.")))
 
+   ("WSM-OS-M3-TIMER-IRQ-SUBSTRATE" .
+    ((priority . 8.9)
+     (done . t)
+     (capabilities . (wsm-os x86_64 assembly qemu pit pic idt interrupt scheduler evidence))
+     (depends-on . (WSM-OS-FIRST-QEMU-PARITY-M4))
+     (origin . wsm-os-lisp)
+     (github-issue . 78)
+     (context . "Completed 2026-10-08 in PR #98: the Pure Lisp + x86-64 ASM QEMU target installs one IDT gate for vector 32, remaps the legacy PIC, programs PIT channel0 mode3 divisor1193 (~1kHz), observes >=8 real bounded IRQ0 entries with explicit EOI, and passes a masked-IRQ0 fail-closed mutation. All pre-existing M0/M1/M2/PredicateBit gates remained GREEN. The logical slot alternation is timer evidence only; no task context switch or scheduler policy is claimed by this slice. Real saved-context/two-stack work belongs to #99.")
+     (description . "Prove a bounded real timer interrupt source and acknowledged IRQ path on the current Pure Lisp + x86-64 ASM target before implementing task context save/restore. Timer/PIC/IDT mechanics are substrate facts and create no SENS/D2 meaning.")))
+
    ("WSM-OS-WSM-PCI-IDENTITY-D0" .
      ((priority . 9.2)
       (done . t)
