@@ -1,6 +1,9 @@
 ; language-contract.lisp — current machine-readable Level 1/2 contract.
 ;
 ; Contract 11.9 — owner-ratified whole D10 catalogue, preserving Contract 11.8 D1–D9 and D24+ numeric law.
+; Owner clarification 2026-10-13: binary machine default, D7 textual digits,
+; decimal human output only for explicit D24+ mathematics. #4248 binary
+; contract-source migration remains separate; this alist is not binary source.
 ; Owner paradigm: #2490. Implementation cutover: #2817 / #2822.
 ;
 ; Contract 11 preserves the observable PredicateBit / ATOM / EQ / COND law
@@ -28,6 +31,14 @@
  (invariants
    . ((binary-domain-identity
        . "Every canonical semantic object is identified by its exact binary number together with its exact domain and the proved or ratified law that interprets that object in that domain. Equal packed numeric payloads in different widths or domains are not thereby the same identity.")
+      (machine-binary-default
+       . "SENS machine semantics uses exact domain-qualified binary words directly. D1-D10 predicate, structure, function and text identities must never travel through decimal-number identifiers or any binary-to-decimal-to-binary conversion. Preserve exact width, leading zeroes, domain and law; host integers for indexing or transport have no semantic authority.")
+      (d7-digits-are-text
+       . "D7 seven-bit glyphs '0' through '9' and their sequences are TEXT DATA, not mathematical values, function coordinates or numeric literals. Quoted admitted objects resolve by their own ratified domain first, never by D7 fallback. A D7 string containing 101 is three glyphs, not D24 five or D3 101.")
+      (human-decimal-only-for-d24
+       . "Only admitted explicitly domain-qualified D24/D48/D96/D192/... mathematical values and their admitted signed or rational compositions may be formatted as decimal numbers for a HUMAN OUTPUT projection. D1-D10 binary identities may display names, yes/no or structural glyphs, but never decimal arithmetic numbers. No decimal presentation or host number can become source identity, evaluation intermediate or reverse implicit conversion.")
+      (canonical-literals-forbidden
+       . "Canonical source and machine evaluation shall not infer D24+ from decimal/scientific numeric literals, bare bits, quoted strings or D7 digit glyphs. No silent numeric coercion or intermediate decimal representation; historical host readers are non-authoritative compatibility only.")
       (domain-is-interpretation-boundary
        . "A domain is the stated carrier/admissibility context and laws that interpret its resident binary objects. A domain is not inferred from numeric payload, width, human spelling, host type, table position, or backend opcode.")
       (domain-non-inference
@@ -106,8 +117,8 @@
        . "At expression start, apostrophe is reader sugar for the already-admitted Core.D3 001 QUOTE identity. It must not create an intermediate human or legacy eight-bit semantic identity. Inside an identifier, apostrophe remains an ordinary Unicode character.")
       (reader-exact-width
        . "Canonical binary reading must preserve exact word width and payload. Source width may be evidence for an exact carrier only where the source-domain bridge explicitly admits it; width alone does not select semantic meaning. Historical exact-eight-bit source remains a bounded compatibility path during migration.")
-      (reader-decimal-separator
-       . "Dot and comma are equivalent decimal separators only for otherwise valid finite decimal/base-10 scientific numeric input. Numeric projection never creates Core domain identity.")
+      (reader-decimal-separator-legacy-only
+       . "Dot/comma decimal and scientific parsing belongs only to historical compatibility readers, never the canonical SENS source reader. Human decimal output is limited to explicitly typed D24+ mathematics; it grants no source identity or implicit number admission.")
       (error-classification
        . "Named error categories remain observable where separately admitted, but UnsatisfiedConditional is not the exhaustion law of Core.D3 110 COND. Any remaining three-part COND or alternate exhaustion behavior is migration/history debt, not alternate current law.")
       (structural-empty-non-alias
