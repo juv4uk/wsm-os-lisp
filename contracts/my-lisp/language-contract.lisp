@@ -2,7 +2,7 @@
 ;
 ; Contract 11.9 — owner-ratified whole D10 catalogue, preserving Contract 11.8 D1–D9 and D24+ numeric law.
 ; Owner clarification 2026-10-13: binary machine default, D7 textual digits,
-; decimal human output only for explicit D24+ mathematics. #4248 binary
+; decimal human source/output for explicit D24+ mathematics. #4248 binary
 ; contract-source migration remains separate; this alist is not binary source.
 ; Owner paradigm: #2490. Implementation cutover: #2817 / #2822.
 ;
@@ -36,9 +36,9 @@
       (d7-digits-are-text
        . "D7 seven-bit glyphs '0' through '9' and their sequences are TEXT DATA, not mathematical values, function coordinates or numeric literals. Quoted admitted objects resolve by their own ratified domain first, never by D7 fallback. A D7 string containing 101 is three glyphs, not D24 five or D3 101.")
       (human-decimal-only-for-d24
-       . "Only admitted explicitly domain-qualified D24/D48/D96/D192/... mathematical values and their admitted signed or rational compositions may be formatted as decimal numbers for a HUMAN OUTPUT projection. D1-D10 binary identities may display names, yes/no or structural glyphs, but never decimal arithmetic numbers. No decimal presentation or host number can become source identity, evaluation intermediate or reverse implicit conversion.")
+       . "Human-facing `.lisp` mathematics reads and displays numbers in ordinary decimal notation (including exact signed and fractional forms where admitted). Decimal spelling is a projection, never an opcode, domain key, D7 digit identity, or semantic intermediate. Source lowering must establish the D24/D48/D96/... domain and exact value before evaluation or T5M packing; if that evidence is unavailable, reject only that conversion. D1-D10 identities are never decimal arithmetic operands.")
       (canonical-literals-forbidden
-       . "Canonical source and machine evaluation shall not infer D24+ from decimal/scientific numeric literals, bare bits, quoted strings or D7 digit glyphs. No silent numeric coercion or intermediate decimal representation; historical host readers are non-authoritative compatibility only.")
+       . "Executable human `.lisp` forbids encoded machine/domain literals and raw binary call-heads (`#d`, `#b`, `#q2`, width tags, old SID8 slots). Names of executable admitted domain operations come from the full ratified `укр` column and Ukrainian keyboard surface. Ordinary decimal mathematical values are the sole numeric source projection, lowered with exact D24+ domain/value by the source converter, not guessed by the transport codec. No D7 text-digit coercion, hidden domain inference, or host-number semantic authority. Historical compatibility source is migration debt, not a pattern for new code.")
       (domain-is-interpretation-boundary
        . "A domain is the stated carrier/admissibility context and laws that interpret its resident binary objects. A domain is not inferred from numeric payload, width, human spelling, host type, table position, or backend opcode.")
       (domain-non-inference
@@ -120,7 +120,7 @@
       (reader-exact-width
        . "Canonical binary reading must preserve exact word width and payload. Source width may be evidence for an exact carrier only where the source-domain bridge explicitly admits it; width alone does not select semantic meaning. Historical exact-eight-bit source remains a bounded compatibility path during migration.")
       (reader-decimal-separator-legacy-only
-       . "Dot/comma decimal and scientific parsing belongs only to historical compatibility readers, never the canonical SENS source reader. Human decimal output is limited to explicitly typed D24+ mathematics; it grants no source identity or implicit number admission.")
+       . "Binary canonical reader remains exact-bit/typed; the human Ukrainian `.lisp` reader and source lowering may accept decimal mathematical input, using comma for the Ukrainian fractional separator where supported. Decimal input denotes a value only after an explicit admitted D24+ role/domain is established; ordinary quoted data, strings, D7 text and D1-D10 coordinates must not be silently parsed as arithmetic. T5M writes physical `.sens` from the resolved exact words and does not mint meanings, function identities or source numeric semantics.")
       (error-classification
        . "Named error categories remain observable where separately admitted, but UnsatisfiedConditional is not the exhaustion law of Core.D3 110 COND. Any remaining three-part COND or alternate exhaustion behavior is migration/history debt, not alternate current law.")
       (structural-empty-non-alias
