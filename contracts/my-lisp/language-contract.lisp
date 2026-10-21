@@ -1,26 +1,26 @@
-; language-contract.lisp — current machine-readable Level 1/2 contract.
+; language-contract.lisp — чинний машинно-читаний контракт рівня 1/2.
 ;
-; Contract 11.9 — owner-ratified whole D10 catalogue, preserving Contract 11.8 D1–D9 and D24+ numeric law.
-; Owner clarification 2026-10-13: binary machine default, D7 textual digits,
-; decimal human source/output for explicit D24+ mathematics. #4248 binary
-; contract-source migration remains separate; this alist is not binary source.
-; Owner paradigm: #2490. Implementation cutover: #2817 / #2822.
+; Контракт 11.9 — власницьки ратифікований повний каталог D10, що зберігає Контракт 11.8 D1–D9 і числовий закон D24+.
+; Уточнення власника 2026-10-13: бінарний машинний дефолт, текстові цифри D7,
+; десяткове людське джерело/вивід для явної математики D24+. #4248 міграція
+; контракт-джерела в бінарне лишається окремою; цей аліст не є бінарним джерелом.
+; Парадигма власника: #2490. Зріз реалізації: #2817 / #2822.
 ;
-; Contract 11 preserves the observable PredicateBit / ATOM / EQ / COND law
-; ratified in Contract 10 while replacing the superseded flat Function8
-; ontology with the current exact-domain ontology:
+; Контракт 11 зберігає спостережуваний закон PredicateBit / ATOM / EQ / COND,
+; ратифікований у Контракті 10, замінюючи застарілу пласку онтологію Function8
+; поточною онтологією точних доменів:
 ;
-;   semantic object
-;   = exact binary number
-;   + exact domain
-;   + proved / ratified law
+;   семантичний об'єкт
+;   = точне бінарне число
+;   + точний домен
+;   + доведений / ратифікований закон
 ;
-; The exact Contract 10.0 source is preserved as NON-NORMATIVE provenance at:
+; Точне джерело Контракту 10.0 збережено як НЕНОРМАТИВНЕ походження в:
 ;   docs/archive/historical/language-contract-10.0.lisp
 ;
-; Historical Sens8/Sid8/Function8 machinery may remain only as explicitly
-; bounded compatibility / transport / backend projection during migration.
-; It cannot mint or redefine canonical semantic identity.
+; Історичний механізм сенс8/сід8/Function8 може лишатися лише як явно
+; обмежена сумісність / транспорт / проєкція бекенда під час міграції.
+; Він не може карбувати чи перевизначати канонічну семантичну ідентичність.
 
 ((major . #d11) (minor . 9)
  (status . current-domain-qualified-authority)
