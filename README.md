@@ -1,16 +1,16 @@
 # wsm-os-lisp
 
 > [!IMPORTANT]
-> **ROLE IN ECOSYSTEM (MY-LISP EXECUTION QUARTET):**  
-> `wsm-os-lisp` is the **bare-metal control execution target** for the `my-lisp` lineage (`my-lisp` oracle → `cml` lowering → `wsm-os-lisp` freestanding UEFI target).  
-> **DO NOT MODERNIZE INTO `wsm-os`:** `wsm-os` (`juv4uk/wsm-os`) is a separate, independent physical-platform research laboratory for `juv4uk/wsm`. `wsm-os-lisp` owns its existing Lisp-machine target ABI/runtime, UEFI image, QEMU execution evidence, and the parity ledger for that pinned artifact. See `ecosystem/decisions/2026-09-05-my-lisp-execution-quartet-and-wsm-os-lisp-role.md`.
+> **ROLE IN ECOSYSTEM:**  
+> `wsm-os-lisp` is the **Lisp-owned OS/kernel/system line** and bare-metal execution target for the SENS-based Lisp Machine. It owns Lisp system policy, irreducible x86-64 assembly mechanisms, target ABI/runtime, UEFI image, and reproducible QEMU/physical execution evidence.  
+> **KEEP REPOSITORIES DISTINCT:** `wsm-os` (`juv4uk/wsm-os`) remains a separate physical-platform research laboratory for `juv4uk/wsm`; this repository does not absorb or redefine that project's scope. `wsm-os-lisp` continues its own OS/kernel roadmap under issue [#12](https://github.com/juv4uk/wsm-os-lisp/issues/12).
 
 Research and executable prototypes for a WSM-native Lisp machine control target.
 The architecture is strictly **Pure Lisp + x86-64 Assembly (Zero Rust, Zero C in production)** per [ADR-004](docs/ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md).
 
 The project starts with a clear, verified baseline: boot on UEFI, establish a
 minimal System V AMD64 assembly runtime (`src/runtime.s`), execute compiled WSM expressions,
-and prove 100% parity against the canonical `my-lisp` oracle in QEMU and on real hardware.
+and prove execution parity against canonical SENS-owned semantic witnesses in QEMU and on real hardware.
 
 
 ## Goal
@@ -43,7 +43,7 @@ and kept separate from this section on purpose.
 
 ## Authority boundaries
 
-- `my-lisp` owns WSM language semantics and remains the reference oracle.
+- `sens` owns WSM/SENS language semantics and canonical semantic witnesses; this repository consumes that authority without duplicating it.
 - `cml` owns portable lowering, semantic admission, and target code generation.
 - `wsm-os-lisp` owns this lineage's x86_64 target ABI/runtime, boot image,
   bounded QEMU execution evidence, and the parity ledger for a pinned artifact.
@@ -101,9 +101,9 @@ This is `QEMU-BOOT-PARITY`, not a physical-hardware claim.
 ## Про wsm-os-lisp / About wsm-os-lisp (Ukrainian)
 
 > [!IMPORTANT]
-> **РОЛЬ В ЕКОСИСТЕМІ (КВАРТЕТ ВИКОНАННЯ MY-LISP):**  
-> `wsm-os-lisp` є **контрольним bare-metal таргетом виконання** для лінії `my-lisp` (`my-lisp` оракул → `cml` lowering → `wsm-os-lisp` автономний UEFI таргет).  
-> **НЕ МОДЕРНІЗУВАТИ В `wsm-os`:** `wsm-os` (`juv4uk/wsm-os`) є окремою незалежною лабораторією дослідження фізичної платформи для `juv4uk/wsm`. `wsm-os-lisp` володіє своїм наявним target ABI/runtime, UEFI-образом, QEMU-доказами виконання та ledger-ом parity для зафіксованого артефакту. Див. `ecosystem/decisions/2026-09-05-my-lisp-execution-quartet-and-wsm-os-lisp-role.md`.
+> **РОЛЬ В ЕКОСИСТЕМІ:**  
+> `wsm-os-lisp` — це **лінія Lisp-власної ОС/ядра/системи** та bare-metal таргет виконання для Lisp-машини на основі SENS. Репозиторій володіє системною політикою Lisp, незвідними механізмами x86-64 Assembly, target ABI/runtime, UEFI-образом і відтворюваними доказами виконання в QEMU/на фізичному обладнанні.  
+> **РЕПОЗИТОРІЇ ЗАЛИШАЮТЬСЯ ОКРЕМИМИ:** `wsm-os` (`juv4uk/wsm-os`) залишається окремою лабораторією дослідження фізичної платформи для `juv4uk/wsm`; цей репозиторій не поглинає й не перевизначає її межі. Власний roadmap ОС/ядра `wsm-os-lisp` ведеться в issue [#12](https://github.com/juv4uk/wsm-os-lisp/issues/12).
 
 Дослідження та виконувані прототипи контрольного таргета WSM-нативної Lisp-машини.
 Архітектура є виключно **Чистий Lisp + x86-64 асемблер (нуль Rust, нуль C у production)** згідно з [ADR-004](docs/ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md).
@@ -144,7 +144,7 @@ bootstrap-до-self-hosting, GPU compute як окремий фронтир) д�
 
 ## Межі відповідальності
 
-- `my-lisp` володіє семантикою мови WSM і залишається еталонним оракулом.
+- `sens` володіє семантикою мови SENS/WSM та канонічними семантичними свідками; цей репозиторій споживає цю владу, не дублюючи її.
 - `cml` відповідає за переносиме lowering, семантичний допуск і генерацію
   target-коду.
 - `wsm-os-lisp` володіє x86_64 target ABI/runtime цієї лінії, boot-образом,
