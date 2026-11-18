@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > **ROLE IN ECOSYSTEM:**  
-> `wsm-os-lisp` is the **Lisp-owned OS/kernel/system line** and bare-metal execution target for the SENS-based Lisp Machine. It owns Lisp system policy, irreducible x86-64 assembly mechanisms, target ABI/runtime, UEFI image, and reproducible QEMU/physical execution evidence.  
+> `wsm-os-lisp` is the **Lisp-owned OS/kernel/system line** and bare-metal execution target for the SENS-based Lisp Machine. It owns Lisp system policy, irreducible x86-64 assembly mechanisms, target ABI/runtime, UEFI image, reproducible QEMU evidence, and a separately gated physical-hardware graduation path.  
 > **KEEP REPOSITORIES DISTINCT:** `wsm-os` (`juv4uk/wsm-os`) remains a separate physical-platform research laboratory for `juv4uk/wsm`; this repository does not absorb or redefine that project's scope. `wsm-os-lisp` continues its own OS/kernel roadmap under issue [#12](https://github.com/juv4uk/wsm-os-lisp/issues/12).
 
 Research and executable prototypes for a WSM-native Lisp machine control target.
@@ -102,7 +102,7 @@ This is `QEMU-BOOT-PARITY`, not a physical-hardware claim.
 
 > [!IMPORTANT]
 > **РОЛЬ В ЕКОСИСТЕМІ:**  
-> `wsm-os-lisp` — це **лінія Lisp-власної ОС/ядра/системи** та bare-metal таргет виконання для Lisp-машини на основі SENS. Репозиторій володіє системною політикою Lisp, незвідними механізмами x86-64 Assembly, target ABI/runtime, UEFI-образом і відтворюваними доказами виконання в QEMU/на фізичному обладнанні.  
+> `wsm-os-lisp` — це **лінія Lisp-власної ОС/ядра/системи** та bare-metal таргет виконання для Lisp-машини на основі SENS. Репозиторій володіє системною політикою Lisp, незвідними механізмами x86-64 Assembly, target ABI/runtime, UEFI-образом, відтворюваними доказами в QEMU та окремим воротом graduation для фізичного обладнання.  
 > **РЕПОЗИТОРІЇ ЗАЛИШАЮТЬСЯ ОКРЕМИМИ:** `wsm-os` (`juv4uk/wsm-os`) залишається окремою лабораторією дослідження фізичної платформи для `juv4uk/wsm`; цей репозиторій не поглинає й не перевизначає її межі. Власний roadmap ОС/ядра `wsm-os-lisp` ведеться в issue [#12](https://github.com/juv4uk/wsm-os-lisp/issues/12).
 
 Дослідження та виконувані прототипи контрольного таргета WSM-нативної Lisp-машини.
