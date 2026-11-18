@@ -64,7 +64,7 @@ QEMU x86_64 boot
   -> bounded allocator
   -> minimal WSM execution/runtime boundary
   -> evaluate a frozen expression
-  -> compare result with canonical my-lisp
+  -> compare result with the pinned upstream SENS witness
 ```
 
 See [docs/BOOTSTRAP-PLAN.md](docs/BOOTSTRAP-PLAN.md).
@@ -92,7 +92,7 @@ is documented in [`docs/DEFINITION-CAPSULE.md`](docs/DEFINITION-CAPSULE.md).
 ## Current evidence
 
 The frozen `(cons (quote A) (quote B))` fixture now passes the complete first
-execution chain: pinned my-lisp oracle, CML-generated object, hosted runtime,
+execution chain: pinned upstream semantic witness, CML-generated object, hosted runtime,
 freestanding UEFI image, and bounded QEMU execution all agree on `(A . B)`.
 This is `QEMU-BOOT-PARITY`, not a physical-hardware claim.
 
@@ -110,7 +110,7 @@ This is `QEMU-BOOT-PARITY`, not a physical-hardware claim.
 
 Проєкт починається з чіткого верифікованого фундаменту: завантаження через UEFI,
 встановлення мінімального асемблерного рантайму System V AMD64 (`src/runtime.s`), виконання
-скомпільованих виразів WSM та доведення 100% відповідності канонічному оракулу `my-lisp`
+скомпільованих виразів WSM та доведення відповідності закріпленим семантичним свідкам SENS
 у QEMU та на реальному залізі.
 
 
@@ -167,7 +167,7 @@ QEMU x86_64 boot
   -> bounded (обмежений) алокатор
   -> мінімальна межа виконання/середовища виконання WSM
   -> обчислення замороженого виразу
-  -> порівняння результату з канонічним my-lisp
+  -> порівняння результату із закріпленим свідком SENS
 ```
 
 Дивіться [docs/BOOTSTRAP-PLAN.md](docs/BOOTSTRAP-PLAN.md).
@@ -195,7 +195,7 @@ QEMU x86_64 boot
 ## Поточні докази
 
 Заморожений тестовий вираз `(cons (quote A) (quote B))` тепер проходить повний
-перший ланцюжок виконання: зафіксований оракул my-lisp, CML-згенерований
+перший ланцюжок виконання: зафіксований семантичний свідок SENS, CML-згенерований
 об'єкт, hosted-середовище виконання, автономний (freestanding) UEFI-образ
 та обмежене виконання в QEMU погоджуються щодо результату `(A . B)`.
 Це `QEMU-BOOT-PARITY`, а не твердження про роботу на фізичному обладнанні.
