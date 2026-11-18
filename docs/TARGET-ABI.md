@@ -1,5 +1,18 @@
 # wsm-os-lisp x86_64 target ABI — contract v8
 
+> [!WARNING]
+> **SENS Contract 12.0 migration is incomplete.** This document records the existing
+> target ABI v8 representation; it is not a SENS language contract and does not
+> attest Contract 12.0 conformance. The pinned v8 projection still contains the
+> historical `sid8` boxed kind, and the current runtime's `wsm_atom`/`wsm_eq`
+> return legacy WSM `t`/()` values. The PredicateBit carrier is only a
+> representation witness; it does not by itself prove SENS D1 predicate
+> semantics. None of these paths may be treated as SID8 authority or as a
+> substitute for exact D1 PredicateBit results. Migration and negative
+> witnesses are tracked in [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109);
+> normative language authority is
+> [SENS Contract 12.0](https://github.com/juv4uk/sens/blob/main/contracts/language-contract-12.lisp).
+
 The source of truth is the dependency-free `no_std`
 [`wsm-os-target`](https://github.com/juv4uk/wsm-target-contract) crate in the
 neutral `wsm-target-contract` repository. Its `target-contract.lisp` is a
@@ -7,7 +20,7 @@ generated projection checked byte-for-byte by crate tests. CML and this
 runtime consume that package rather than carrying separate numeric copies.
 
 The target ABI describes representation and mechanism. It is **not** a second
-language specification: `my-lisp` owns WSM meaning, while `cml` admits and
+language specification: `sens` owns SENS/WSM meaning, while `cml` admits and
 lowers that meaning into this target representation.
 
 ## Value word
@@ -132,7 +145,7 @@ narrowed or coerced through `f32`/`f64` in the semantic runtime path.
 (cons (quote A) (quote B))
 ```
 
-Canonical my-lisp result:
+Pinned upstream semantic-witness result:
 
 ```text
 (A . B)
@@ -146,6 +159,17 @@ a separate evidence graduation for the same pinned artifact.
 
 # wsm-os-lisp x86_64 цільовий ABI — контракт v8
 
+> [!WARNING]
+> **Міграція на SENS Contract 12.0 не завершена.** Цей документ описує наявне
+> представлення target ABI v8; це не мовний контракт SENS і не доказ відповідності
+> Contract 12.0. Закріплена v8-проєкція досі містить історичний boxed kind
+> `sid8`, а поточний runtime `wsm_atom`/`wsm_eq` повертає застарілі WSM
+> `t`/()`. Носій PredicateBit поки є лише доказом представлення, а не
+> повної семантики предикатів SENS D1. Жоден із цих шляхів не можна трактувати
+> як SID8-владу або заміну точних D1 PredicateBit результатів. Міграція та
+> негативні свідки ведуться в [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109);
+> нормативне джерело мови — [SENS Contract 12.0](https://github.com/juv4uk/sens/blob/main/contracts/language-contract-12.lisp).
+
 Джерелом істини є незалежний `no_std`-крейт
 [`wsm-os-target`](https://github.com/juv4uk/wsm-target-contract) у нейтральному
 репозиторії `wsm-target-contract`. Його `target-contract.lisp` є згенерованою
@@ -153,7 +177,7 @@ a separate evidence graduation for the same pinned artifact.
 один пакет замість локальних копій числових констант.
 
 Target ABI описує представлення і механізм. Це **не друга специфікація мови**:
-`my-lisp` володіє значенням WSM, а `cml` лише допускає і знижує його в це
+`sens` володіє значенням SENS/WSM, а `cml` лише допускає і знижує його в це
 машинне представлення.
 
 ## Слово значення
