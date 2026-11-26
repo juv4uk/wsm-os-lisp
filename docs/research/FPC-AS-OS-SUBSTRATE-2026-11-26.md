@@ -110,12 +110,52 @@ T4 — це перевірка меж довіри, а не наперед за�
 
 ---
 
-## 8. Джерела
+## 8. FPC як мова інструментів: GUI, TUI, CLI
+
+Окрема теза, яку варто перевірити, бо вона часто з'являється поруч із попередньою: «FPC закриває весь спектр інтерфейсів, отже він гнучкий інструмент для побудови Lisp-машини». Перша половина правильна, друга — ні, і це не дрібниця.
+
+### 8.1. Що підтверджується, а що застаріло
+
+| Твердження | Стан на 2026-11-26 |
+| :--- | :--- |
+| LCL дає єдиний код для GUI на різних платформах | **Так.** LCL — це набір компонентів над RTL/FCL із прив'язками до різних віджетів |
+| GTK2 і GTK3 — «стандартний вибір для Linux» | **Напівправда.** GTK2 — основний Linux-інтерфейс; GTK3 позначений як робочий, але такий, що потребує важкого тестування |
+| Qt 4 і 5 | **Неповно.** Є Qt4, Qt5 **і Qt6**; Qt6 у списку відсутній |
+| WinAPI для Windows | **Так**, Win32/Win64 |
+| **Carbon для сумісності з macOS** | **Застаріло.** Carbon позначений як *stalled (deprecated)* і вилучений з macOS 10.15. Актуальний macOS-інтерфейс — **Cocoa** (64-bit) |
+| Free Vision як спадкоємець Turbo Vision | **Так**, входить до пакунків FPC; це реальна TUI-спадщина |
+| «TUI Components з візуальним дизайнером» | **Не перевірено** в цьому проході — формулювання без назви проєкту |
+| `cli-fp`, `pascli` | **Не перевірено** в цьому проході: назви правдоподібні, первинних джерел не відкривав |
+
+Тобто перелік віджетів у тексті відстає років на шість: Carbon замість Cocoa, без Qt6, з GTK3, поданим як рівноцінний GTK2.
+
+### 8.2. Що з цього вже зроблено в наших репозиторіях
+
+Це важливіше за будь-який загальний перелік. `wsm-lazarus` уже має робочу LCL-практику, і вона дисциплінованіша за текст:
+
+- `gui/sens-paired-witness.lpr` — інспектор, який показує українську `.lisp`-проєкцію та фізичний `.sens` і **доводить** побайтову відповідність на підтриманому піднаборі;
+- `ide/sens_ide_map.lpk` — тонкий IDE-пакунок, який **не** містить evaluator-а, реєстру законів чи власного runtime;
+- правило з `AGENTS.md`: «Headless FPC і CLI мають залишатися придатними до збирання **без LCL**», і «жодного evaluator у GUI»;
+- GTK2/Xvfb-гейт існував, але його воркфлоу **винесено** з активних і позначено як історичний — тобто навіть тут межа між «доведено» і «колись працювало» проведена.
+
+### 8.3. Чому «гнучкий GUI» не робить FPC основою машини
+
+Це різні питання, і змішувати їх означає повторювати ту саму помилку, що й зі швидкістю компіляції:
+
+- **Інструменти навколо проєкту** (інспектор свідчень, IDE-пакунок, CLI для пакування `.sens`) — тут FPC справді зручний, і це вже працює в `wsm-lazarus`.
+- **Основа машини** — тут вирішує ADR-004: Lisp + x86-64 асемблер, нуль Rust, нуль C. Наявність LCL-віджетів не додає жодного аргументу ні за, ні проти: GUI-стек не бере участі в тому, як машина виконує код.
+
+Практичний висновок, який не потребує рішення власника: **не заводити другий GUI-стек**. У `wsm-os-lisp` немає і не має бути GUI; інструменти живуть у `wsm-lazarus` і в `my-idea`. Другий стек — це друга поверхня обслуговування без жодного нового свідка.
+
+## 9. Джерела
 
 - [FPOS README](https://github.com/rezgui/fpos) — реалізовані частини та авторські застереження щодо непридатних файлів.
 - [TORO unikernel README](https://github.com/torokernel/torokernel) та [окремий ToroOS README](https://github.com/torokernel/ToroOS) — різні архітектури й обмеження.
 - [Ultibo Core README](https://github.com/ultibohub/Core), [FAQ](https://ultibo.org/faq/) та [Current Status](https://ultibo.org/wiki/Current_Status) — мова реалізації, C/C++ API та перевірені версії.
 - [FPC official FAQ](https://www.freepascal.org/faq.html) і [development page](https://www.freepascal.org/develop.html) — stable 3.2.2 та розвиток 3.3.x.
+- Віджети LCL: [Lazarus Roadmap](https://wiki.freepascal.org/Roadmap) (Carbon — *stalled (deprecated)*, Cocoa — working, GTK3 — working із потребою важкого тестування, Qt6 — working) і [Lazarus git README](https://sourceforge.net/p/lazarus/laz.git/ci/main/tree/).
+- Стан Carbon на macOS: [FPC/Lazarus wiki, Other Interfaces](https://wiki.freepascal.org/Template:Other_Interfaces) — «deprecated; removed from macOS 10.15».
+- LCL-практика в наших репозиторіях: `wsm-lazarus/gui/sens-paired-witness.lpr`, `wsm-lazarus/ide/sens_ide_map.lpk`, `wsm-lazarus/AGENTS.md` (правило «headless FPC без LCL»), `wsm-lazarus/docs/lcl-exact-pair-check.uk.md`.
 - Час ітерації — `wsm-lazarus/docs/chas-iteratsii.uk.md`, 26.11.2026 (протокол, нуль замірів)
 - FPC-вертикаль свідка — `wsm-lazarus/docs/decisions/2026-09-18-fpc-first-vertical-ADR.md` (PROPOSED)
 - Межа production-цілі — [`ADR-004`](../ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md); межа довіри — [`ADR-005`](../ADR-005-TRUST-BOUNDARY-ARBITER-NOT-KERNELLESS.md)
