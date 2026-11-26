@@ -360,11 +360,47 @@
      (description . "Capture allocator-entry root state before the prologue clobbers the certified registers, and classify it against a registered root map keyed by (final_pc, allocator_kind). Three outcomes stay distinct: CERTIFIED, NOT-A-SAFEPOINT and INVALID; absence of metadata is never read as an empty certificate, and contradictory metadata fails closed with a GC-family ABI source code. No collector runs.")
      (context . "Completed 2026-11-26. wsm_gc_safepoint save area (48 bytes) written as the first instruction of wsm_cons and wsm_closure_new: return_pc, caller_rsp_at_call, entry rsi, entry rdx, allocator_kind, state, captures. wsm_gc_root_map_register installs a 16-byte-entry map (pc_offset, kind, rsi_root, rdx_root); offsets rather than absolute addresses, so a map survives any link layout. Gate scripts/check-gc-safepoint-capture.sh = 4/4 PASS: certified and absent both allocate normally with value=(sym1 . sym2); kind-mismatch -> kind=ABI source=1195573249 (0x47430001) value=55 (site offset 0x40-0x9, cross-checked with objdump); closure-rsi -> kind=ABI source=1195573250 (0x47430002) value=0. Baseline M0/M1 transcript unchanged, runtime stays host-import free. SCOPE: maps are hand-written in the fixtures (fixture-provenance = hand-written-assembly); consuming a real CML_GC_ROOT_MAP_V1 is #64; no mark, sweep, free list or stack scan.")))
 
+   ("WSM-OS-FPC-TOOLCHAIN-PROBE" .
+    ((priority . 9.95)
+     (capabilities . (wsm-os pascal toolchain freestanding adr-006 qemu))
+     (origin . wsm-os-lisp)
+     (depends-on . ())
+     (context . "Probe run 2026-11-26, see docs/research/FPC-TOOLCHAIN-PROBE-2026-11-26.md. FPC 3.2.2 (-Tlinux, x86_64) compiles and exports wsm_probe_entry correctly. Freestanding link with src/linker.ld FAILS on five RTL hooks: fpc_initializeunits, fpc_do_exit, INIT$SYSTEM, FINALIZE$OBJPAS, THREADVARLIST$SYSTEM$indirect. Trivial program is 144592 text / 39448 data (~190 KB). Verdict: NOT GREEN - an own minimal RTL is required, and its size is unknown until P1."))
+     (description . "ADR-006 P0: pin an exact FPC version and prove it can produce a freestanding x86_64 object that links with src/linker.ld and contains no RTL calls. Name the RTL cost the FPC wiki documents (no special RTL exists; rtl/embedded has no x86_64) before any kernel work starts. Evidence: object dump, undefined-symbol list, link map.")))
+
+   ("WSM-OS-FPC-KERNEL-SKELETON" .
+    ((priority . 9.9)
+     (capabilities . (wsm-os pascal kernel boot uefi adr-006 qemu))
+     (origin . wsm-os-lisp)
+     (depends-on . (WSM-OS-FPC-TOOLCHAIN-PROBE))
+     (description . "ADR-006 P1: a Pascal kernel stub receives the existing UEFI handoff and emits the unchanged WSM-OS BOOT schema=1 arch=x86_64 status=ok line on COM1. No Lisp evaluation yet. Fail closed on a missing or unparsable handoff record.")))
+
+   ("WSM-OS-FPC-MECHANISM-MIGRATION" .
+    ((priority . 9.5)
+     (capabilities . (wsm-os pascal allocator gc roots migration adr-006 qemu))
+     (origin . wsm-os-lisp)
+     (depends-on . (WSM-OS-FPC-PARITY-VERTICAL-W3))
+     (description . "ADR-006 P3: move the allocators, arenas and GC root machinery into Pascal behind the same target ABI, keeping the #71 and #64 witnesses green with unchanged transcripts. Any behavioural difference is a defect in the migration, not a new design.")))
+
+   ("WSM-OS-ASM-RETIREMENT" .
+    ((priority . 8.5)
+     (capabilities . (wsm-os assembly retirement adr-006 qemu))
+     (origin . wsm-os-lisp)
+     (depends-on . (WSM-OS-FPC-MECHANISM-MIGRATION))
+     (description . "ADR-006 P4: shrink src/runtime.s to the level-1 bootstrap minimum (context switch, interrupt entry, atomics) and delete the duplicated mechanism. Every deletion must be covered by a green witness on the Pascal side; nothing is removed on the strength of a plan.")))
+
+   ("WSM-OS-FPC-C-FFI-BOUNDARY" .
+    ((priority . 8.0)
+     (capabilities . (wsm-os c ffi trust-boundary adr-006 policy))
+     (origin . wsm-os-lisp)
+     (depends-on . ())
+     (description . "ADR-006 §3.3: decide and enforce what C may cross into the image. Today scripts/check-no-rust.sh allows C only under third_party/; this task turns that into a named policy with a witness (which libraries, which ABI, what happens on a missing symbol) instead of a directory rule.")))
+
    ("WSM-OS-FPC-PARITY-VERTICAL-W3" .
     ((priority . 7.0)
      (capabilities . (research substrate parity measurement adr-006 qemu))
      (origin . wsm-os-lisp)
-     (depends-on . ())
+     (depends-on . (WSM-OS-FPC-KERNEL-SKELETON))
      (description . "ADR-006 measurement step W3: build the same vertical scenario (UEFI boot -> one Lisp form -> one allocation -> one named failure exit) twice - once on the current Lisp+ASM mechanism and once on a Free Pascal substrate - and compare transcripts plus the measured edit->build->verify cycle. The result is evidence for or against ADR-006; it does not ratify it and does not change ADR-004.")))
 
    ("WSM-OS-GC-ROOT-MAP-WIRE" .

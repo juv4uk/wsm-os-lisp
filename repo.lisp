@@ -9,6 +9,7 @@
   (role my-lisp-bare-metal-control-target)
   (exports x86_64-target-contract boot-runtime boot-image qemu-execution-evidence physical-parity-ledger)
   (imports language-semantics compiler-middle-end cml-ir)
-  (capabilities x86_64 assembly rust compiler boot qemu testing proof)
+  (production-languages asm pascal c-external lisp)
+  (capabilities x86_64 assembly pascal c compiler boot qemu testing proof)
   (authorities target-abi boot-runtime boot-image qemu-execution-evidence physical-parity-ledger)
   (non-authorities language-semantics cml-ir fpga-isa cuda-runtime physical-platform-research))

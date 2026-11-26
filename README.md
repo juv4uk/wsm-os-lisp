@@ -100,10 +100,14 @@ three of the six original names have first-party evidence (FPOS, Toro, Ultibo);
 FP-RTOS, Asuro, and Jacqueline remain unverified, and FPC iteration speed is
 still unmeasured.
 
-Making Free Pascal the host language would supersede ADR-004, so it is filed as
-a proposal rather than an instruction:
-[docs/ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md](docs/ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md)
-(PROPOSED, not accepted).
+Free Pascal is the host language of this repository by owner directive:
+[docs/ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md](docs/ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md) (ACCEPTED,
+2026-11-26, supersedes ADR-004). The transition is phased (P0-P4) and each phase
+closes only with its own evidence; until the Pascal parity witness is green,
+`src/runtime.s` remains the working mechanism and the target is not "already on
+Pascal". The first probe is measured, not quoted: freestanding linking currently
+fails on five RTL hooks and an empty program is ~190 KB
+([probe](docs/research/FPC-TOOLCHAIN-PROBE-2026-11-26.md)).
 
 Executable swarm work is tracked in [`tasks.lisp`](tasks.lisp).
 
