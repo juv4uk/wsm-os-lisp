@@ -88,6 +88,11 @@ its prior-art survey is
 and the branch state it depends on is
 [docs/BRANCH-INVENTORY-2026-11-26.md](docs/BRANCH-INVENTORY-2026-11-26.md).
 
+The enforceable-policy registry that ADR-005 requires is
+[`policy-enforcement.lisp`](policy-enforcement.lisp): a policy is citable only
+with an enforcement point, a witness and a CI gate, and
+`scripts/check-policy-enforcement.py` re-checks each record against the tree.
+
 Executable swarm work is tracked in [`tasks.lisp`](tasks.lisp).
 
 The first machine-readable ABI and its generated WSM projection are documented
@@ -197,6 +202,11 @@ QEMU x86_64 boot
 [docs/research/PRIOR-ART-NO-KERNEL-2026-11-26.md](docs/research/PRIOR-ART-NO-KERNEL-2026-11-26.md),
 а стан гілок, від якого він залежить, — у
 [docs/BRANCH-INVENTORY-2026-11-26.md](docs/BRANCH-INVENTORY-2026-11-26.md).
+
+Реєстр політик, якого вимагає ADR-005, — це
+[`policy-enforcement.lisp`](policy-enforcement.lisp): політику можна цитувати лише
+з точкою примусу, свідком і гейтом у CI, а `scripts/check-policy-enforcement.py`
+повторно перевіряє кожен запис проти дерева.
 
 Робота рою агентів над виконуваними завданнями відстежується у [`tasks.lisp`](tasks.lisp).
 
