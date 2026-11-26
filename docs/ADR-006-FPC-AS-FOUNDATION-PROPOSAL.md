@@ -255,10 +255,10 @@ Value wsm_mmio_capability(RuntimeContext *);
 
 ## 9. Migration plan and first evidence / План переходу і перше свідчення
 
-| Фаза | Задача | Що доводить |
+| Фаза | Задача | Acceptance evidence |
 | --- | --- | --- |
-| P0 | `WSM-OS-FPC-TOOLCHAIN-PROBE` | FPC збирає об'єкт під нашу ціль; названа ціна RTL |
-| P1 | `WSM-OS-FPC-KERNEL-SKELETON` | Pascal-стаб проходить UEFI handoff і друкує той самий BOOT-рядок |
+| P0 | `WSM-OS-FPC-TOOLCHAIN-PROBE` / [#113](https://github.com/juv4uk/wsm-os-lisp/issues/113) | Pin SHA-256 саме `x86_64-embedded` snapshot; compile object саме для `OS_TARGET=embedded`; exports, undefined symbols, startup/runtime surface, linker map і bounded QEMU witness. `-Tlinux` лишається окремим control |
+| P1 | `WSM-OS-FPC-KERNEL-SKELETON` | Після P0: Pascal entry отримує/перевіряє визначений UEFI handoff, відхиляє missing/malformed handoff named ABI condition і виводить незмінний BOOT transcript |
 | P2 | `WSM-OS-FPC-PARITY-VERTICAL-W3` | той самий сценарій на Pascal і на ASM+Lisp, порівняння транскриптів |
 | P3 | `WSM-OS-FPC-MECHANISM-MIGRATION` | алокатори, арени й корені GC у Pascal за тим самим ABI |
 | P4 | `WSM-OS-ASM-RETIREMENT` | `src/runtime.s` скорочується до рівня 1 |
@@ -268,14 +268,11 @@ FPC 3.2.2 з `-Tlinux` компілює ELF object і експортує `wsm_pr
 
 Upstream опублікував FPC 3.3.1 `x86_64-embedded` snapshot, зібраний з `OS_TARGET=embedded CPU_TARGET=x86_64` (source commit `e3155f6eccd98f003c33a620996786e83ac79cd1`). Його сумісність із нашим UEFI handoff, ABI та linker script ще не перевірена; це окремий P0 доказ у [#113](https://github.com/juv4uk/wsm-os-lisp/issues/113). **P0 лишається незавершеним для production-цілі.** До завершення #113 не робити висновку про необхідність переписати весь RTL; визначити лише конкретні відсутні механізми.
 
-**P1 виконано 2026-11-27** (`docs/FPC-KERNEL-SKELETON.md`): `src/pascal_probe.pas`
-експортує `wsm_entry`, викликає асемблерний `wsm_cons` через незмінний ABI, а
-`src/rtl_min.s` реалізує рівно п'ять хуків як no-op. Гейт вимагає порожній
-`nm -u` на фінальному ядрі й побайтового збігу транскрипта з рукописною
-асемблерною фікстурою. Обсяг RTL виміряно: п'ять символів, нуль послуг.
+**P1 має лише частковий прототип, а не завершений acceptance** (`docs/FPC-KERNEL-SKELETON.md`, commit `e9737fd`, уточнений 2026-11-26). `src/pascal_probe.pas` компілюється FPC 3.2.2 з `-Tlinux`, експортує `wsm_entry(ctx)`, викликає асемблерний `wsm_cons` і повертає tagged cons у тому самому UEFI/QEMU-образі. Гейт перевіряє порожній `nm -u` фінального образу й звіряє QEMU-рядки з committed transcript.
 
-Доки P2 не зелений, `src/runtime.s` лишається чинним механізмом, і твердження
-«машина вже на Pascal» не є істинним.
+Це не закриває P1: використано Linux-target, а не pinned `x86_64-embedded`; ASM `_start` сам обробляє BootInfo і передає Pascal лише `RuntimeContext*`; missing/malformed handoff не має Pascal-side негативних свідків. `src/rtl_min.s` додає п'ять no-op **link satisfiers**, а не реалізує п'ять RTL-сервісів. У цьому вузькому fixture вони не є частиною виконуваного шляху, бо ASM entry напряму викликає `wsm_entry`, а не FPC program-main/init/finalize lifecycle. Цей прототип доводить тільки обмежений Linux-target ABI/QEMU slice.
+
+**P0 залишається відкритим** до checksum і реального `OS_TARGET=embedded` compile/link evidence за #113. P1 залежить від P0 і лишається відкритим, поки Pascal не пройде визначену handoff-межу та negative witnesses. Доки P2 не зелений, `src/runtime.s` лишається чинним механізмом, і твердження «машина вже на Pascal» не є істинним.
 
 **Відкат**: `git revert` цього ADR, повернення ADR-004 у `ACCEPTED` і
 `check-no-rust.sh` до заборони Pascal.
