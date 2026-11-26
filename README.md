@@ -113,7 +113,9 @@ The first measurement under the `wsm-lazarus` iteration-time protocol is in
 [docs/research/ITERATION-TIME-GATE-SUITE-2026-11-27.md](docs/research/ITERATION-TIME-GATE-SUITE-2026-11-27.md):
 the static gate suite takes a median 3855 ms and p90 3946 ms on a 2-vCPU
 container, and the measurement itself found that one gate was costing 11.5 s and
-dominating the suite.
+dominating the suite. A second tier measures the mechanism build itself:
+assemble plus link is a median 168 ms, which is what the "FPC compiles in seconds"
+argument has to be compared against.
 
 Executable swarm work is tracked in [`tasks.lisp`](tasks.lisp).
 
@@ -244,7 +246,9 @@ FPC досі не виміряна.
 Перший замір за протоколом часу ітерації з `wsm-lazarus` — у
 [docs/research/ITERATION-TIME-GATE-SUITE-2026-11-27.md](docs/research/ITERATION-TIME-GATE-SUITE-2026-11-27.md):
 статичний набір гейтів — медіана 3855 мс і p90 3946 мс на контейнері з 2 vCPU, і
-сам замір показав, що один гейт коштував 11,5 с і з'їдав більшу частину набору.
+сам замір показав, що один гейт коштував 11,5 с і з'їдав більшу частину набору. Другий ярус міряє саме збирання механізму:
+assemble плюс link — медіана 168 мс, і саме з цим числом треба порівнювати
+аргумент «FPC компілює за секунди».
 
 Робота рою агентів над виконуваними завданнями відстежується у [`tasks.lisp`](tasks.lisp).
 
