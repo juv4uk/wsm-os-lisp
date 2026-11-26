@@ -118,6 +118,15 @@
    (status proved))
 
   (policy
+   (id no-new-branches)
+   (claim "No branch is created outside the recorded disposition, and no frozen branch tip moves: finished work lands in main.")
+   (enforcement literal "AGENTS.md" "Заборонено створювати будь-які нові гілки")
+   (witness runtime)
+   (gate "scripts/check-branch-policy.py")
+   (note "Detective, not preventive. Prevention needs repository admin rights: contracts/github-ruleset-no-new-branches.json is the importable ruleset with the Restrict creations rule, and only the owner can apply it. A listed branch that disappears is a warning, because deleting them is the intended end state.")
+   (status proved))
+
+  (policy
    (id documentation-authority-gate-always-runs)
    (claim "The workflow that polices documentation runs on every commit and is never narrowed by a paths filter, so a docs-only change cannot pass unread.")
    (enforcement literal ".github/workflows/ci.yml" "bash scripts/check-role-authority.sh")

@@ -1,0 +1,29 @@
+name: Branch policy
+
+# Detective control for the owner directive of 2026-10-11: no new branches, all
+# work lands in main. Prevention needs repository admin rights (a ruleset with
+# the "Restrict creations" rule); this job needs only read access, so it can run
+# on a schedule and tell us when the rule was broken instead of hoping nobody
+# notices. It also fails when a frozen branch tip moves.
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - "branch-disposition.lisp"
+      - "scripts/check-branch-policy.py"
+      - ".github/workflows/branch-policy.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  branch-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare remote branches with the recorded disposition
+        run: python3 scripts/check-branch-policy.py
