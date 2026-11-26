@@ -57,6 +57,15 @@
    "Pre-ADR-004 script: consumes a provenance bundle produced by the cargo-based oracle scripts, so it cannot run either. Header marked LEGACY 2026-11-26."
    "Image determinism is currently unproven in CI. Rewrite against the current build path, then gate it."))
 
+ (arbiter-budget
+  ; ADR-005 W5: the arbiter's share of hand-written code is a published number
+  ; with a ceiling, not an adjective. The owner may change max-share; an agent
+  ; may not. Crossing the ceiling fails the build, so growth needs a decision.
+  (max-share 0.40)
+  (arbiter-glob "src/*.s")
+  (code-extensions ".s" ".lisp" ".sh" ".py")
+  (excluded-prefix "artifacts/"))
+
  (policies
 
   (policy

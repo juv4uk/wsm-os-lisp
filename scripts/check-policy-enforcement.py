@@ -288,6 +288,78 @@ def read_ungated_declarations() -> dict[str, tuple[str, str]]:
     return declared
 
 
+def read_arbiter_budget() -> dict:
+    tree = parse(REGISTRY.read_text(encoding="utf-8"))
+    block = find(tree[0], "arbiter-budget")
+    if block is None:
+        raise GateError("registry has no (arbiter-budget ...) block; ADR-005 W5 would be unenforced")
+
+    def field(name):
+        node = find(block, name)
+        if node is None or len(node) < 2:
+            raise GateError(f"arbiter-budget: missing ({name} ...)")
+        return node[1:]
+
+    share_node = field("max-share")
+    try:
+        max_share = float(atom(share_node[0]) or string(share_node[0]) or "")
+    except ValueError:
+        raise GateError("arbiter-budget: max-share must be a number")
+    if not 0 < max_share <= 1:
+        raise GateError("arbiter-budget: max-share must be a fraction between 0 and 1")
+
+    glob_node = field("arbiter-glob")
+    arbiter_glob = string(glob_node[0]) or atom(glob_node[0])
+    ext_node = field("code-extensions")
+    extensions = [string(x) or atom(x) for x in ext_node]
+    pref_node = field("excluded-prefix")
+    excluded = string(pref_node[0]) or atom(pref_node[0])
+    return {
+        "max_share": max_share,
+        "arbiter_glob": arbiter_glob,
+        "extensions": [e for e in extensions if e],
+        "excluded": excluded,
+    }
+
+
+def count_lines(path: Path) -> int:
+    try:
+        return len(path.read_text(encoding="utf-8", errors="replace").splitlines())
+    except OSError:
+        return 0
+
+
+def check_arbiter_budget(budget: dict) -> tuple[float, int, int]:
+    arbiter_files = sorted(ROOT.glob(budget["arbiter_glob"]))
+    if not arbiter_files:
+        raise GateError(f"arbiter-budget: glob {budget['arbiter_glob']} matched no file")
+    arbiter_lines = sum(count_lines(p) for p in arbiter_files)
+
+    tracked = subprocess.run(
+        ["git", "-C", str(ROOT), "ls-files"], capture_output=True, text=True
+    )
+    if tracked.returncode != 0:
+        raise GateError("arbiter-budget: git ls-files failed, cannot measure the denominator")
+    total = 0
+    for rel in tracked.stdout.splitlines():
+        if budget["excluded"] and rel.startswith(budget["excluded"]):
+            continue
+        if not any(rel.endswith(ext) for ext in budget["extensions"]):
+            continue
+        total += count_lines(ROOT / rel)
+    if total <= 0:
+        raise GateError("arbiter-budget: denominator is zero, cannot measure a share")
+
+    share = arbiter_lines / total
+    if share > budget["max_share"]:
+        raise GateError(
+            f"arbiter-budget: the arbiter is {arbiter_lines}/{total} lines = {share:.1%} "
+            f"of hand-written code, above the declared ceiling of {budget['max_share']:.0%} — "
+            "shrink it, or change the ceiling as an explicit owner decision"
+        )
+    return share, arbiter_lines, total
+
+
 def check_vocabulary(reserved: dict[str, str]) -> tuple[int, int]:
     """Every constant defined in the mechanism layer is emitted, or declared reserved.
 
@@ -389,6 +461,13 @@ def main() -> int:
         return 1
 
     try:
+        budget = read_arbiter_budget()
+        share, arbiter_lines, total_lines = check_arbiter_budget(budget)
+    except GateError as exc:
+        print(f"POLICY-ENFORCEMENT-FAIL: {exc}", file=sys.stderr)
+        return 1
+
+    try:
         defined, unemitted = check_vocabulary(reserved)
     except GateError as exc:
         print(f"POLICY-ENFORCEMENT-FAIL: {exc}", file=sys.stderr)
@@ -445,7 +524,9 @@ def main() -> int:
     print(
         f"POLICY-ENFORCEMENT-PASS: {len(records)} proved policies re-checked, "
         f"{len(gaps)} with a declared gate gap, {len(ungated)} check scripts without an automated gate; "
-        f"{unemitted}/{defined} mechanism constants are reserved-but-unemitted."
+        f"{unemitted}/{defined} mechanism constants are reserved-but-unemitted; "
+        f"arbiter {arbiter_lines}/{total_lines} lines = {share:.1%} of hand-written code "
+        f"(ceiling {budget['max_share']:.0%})."
     )
     return 0
 
