@@ -124,6 +124,15 @@
    (status proved))
 
   (policy
+   (id fpc-parity-witness)
+   (claim "The Pascal entry produces a RESULT line byte-identical to the hand-written assembly fixture, with zero undefined symbols in the linked kernel.")
+   (enforcement literal "scripts/check-fpc-kernel-skeleton.sh" "parity broken:")
+   (witness transcript "artifacts/nucleus-witness-pascal-entry-qemu-serial-transcript.txt" "WSM-OS RESULT schema=1 value=(sym1 . sym2) status=ok")
+   (gate "scripts/check-fpc-kernel-skeleton.sh")
+   (note "Compiled with -Tlinux -Cn, so this proves an x86-64 object from FPC links against our linker and calls our ABI; it does not prove the embedded RTL is usable. The comparison itself was added on 2026-11-27: before that the claim lived in the script header while the script only printed the last line.")
+   (status proved))
+
+  (policy
    (id adr-ratification-provenance)
    (claim "An ADR is marked ACCEPTED only by an owner-authored commit or by an owner-authored confirmation in docs/decisions/OWNER-CONFIRMATIONS.lisp.")
    (enforcement literal "scripts/check-adr-ratification.sh" "An ADR marked ACCEPTED without the owner is an agent ratifying architecture.")

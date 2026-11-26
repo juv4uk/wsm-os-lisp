@@ -79,13 +79,28 @@ kernel="target/kernel-x86_64"
 undefined="$(nm -u "$kernel" | tr -d '\r')"
 [[ -z "$undefined" ]] || fail "undefined symbols in the linked kernel: $undefined"
 
-# --- 3/4. boot and compare the transcript ---------------------------------
+# --- 3/4. boot, then actually compare with the asm fixture ----------------
+# Claim 4 used to be asserted in the header and never checked: the script wrote
+# the transcript and printed the last line, so a Pascal probe that emitted only
+# the BOOT line would still have passed. The comparison is the claim.
+asm_fixture="artifacts/qemu-serial-transcript.txt"
+[[ -s "$asm_fixture" ]] || fail "asm fixture transcript $asm_fixture is missing; parity cannot be checked"
+
 WSM_QEMU_TRANSCRIPT="$transcript" \
 WSM_QEMU_RAW_SERIAL_COPY="$out_dir/pascal-serial.log" \
   bash scripts/run-qemu-uefi.sh "$out_dir/pascal.img" >/dev/null \
   || fail "qemu witness failed"
 
-printf 'PASS pascal-entry  %s\n' \
-  "$(tr -d '\r' < "$out_dir/pascal-serial.log" | grep '^WSM-OS ' | tail -1)"
+observed="$(tr -d '\r' < "$out_dir/pascal-serial.log" | grep '^WSM-OS RESULT' || true)"
+[[ -n "$observed" ]] || fail "pascal probe emitted no WSM-OS RESULT line; a BOOT line alone is not a parity witness"
+
+expected="$(tr -d '\r' < "$asm_fixture" | grep '^WSM-OS RESULT' | head -1)"
+[[ -n "$expected" ]] || fail "asm fixture $asm_fixture has no WSM-OS RESULT line to compare against"
+
+[[ "$observed" == "$expected" ]] \
+  || fail "parity broken: pascal emitted '$observed', asm fixture has '$expected'"
+
+printf 'PASS pascal-entry  %s\n' "$observed"
+printf 'PASS parity        byte-identical to %s\n' "$asm_fixture"
 printf 'PASS undefined     none (nm -u on %s is empty)\n' "$kernel"
-echo "FPC-KERNEL-SKELETON-PASS: FPC $got_version, freestanding link, transcript parity with the asm fixture"
+echo "FPC-KERNEL-SKELETON-PASS: FPC $got_version, freestanding link, RESULT line identical to the asm fixture"
