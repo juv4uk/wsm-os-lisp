@@ -118,6 +118,15 @@
    (status proved))
 
   (policy
+   (id image-build-variance-pinned)
+   (claim "Every known source of variance in the UEFI image builder is explicitly pinned: both GPT identities, the FAT volume identity and the FAT timestamps, with no generated UUID, shell randomness or wall-clock time in the builder.")
+   (enforcement literal "scripts/build-uefi-image.sh" "mkfs.vfat --invariant -F 12")
+   (witness runtime)
+   (gate "scripts/check-build-variance.sh")
+   (note "Pins present is not reproducibility: the byte-identical rebuild witness is still legacy, so this policy must not be quoted as proof that the image is reproducible. See ADR-005 5.1.1.")
+   (status proved))
+
+  (policy
    (id zero-rust-boundary)
    (claim "No Rust exists in the production target, bootstrap or runtime.")
    (enforcement absent "*.rs" "Cargo.toml" "Cargo.lock" "rust-toolchain.toml" "crates")
