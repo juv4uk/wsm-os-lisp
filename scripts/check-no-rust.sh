@@ -18,7 +18,7 @@ fail() {
   exit 1
 }
 
-adr="docs/ADR-006-FPC-HOST-LANGUAGE.md"
+adr="docs/ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md"
 [[ -s "$adr" ]] || fail "missing $adr"
 grep -Fq -- "**Status/Статус**: **ACCEPTED**" "$adr" \
   || fail "ADR-006 is not ACCEPTED; Pascal is not admissible in the production boundary"
