@@ -4,3 +4,5 @@
 *.bin
 !src/bootloader-config.bin
 *.log
+__pycache__/
+*.pyc

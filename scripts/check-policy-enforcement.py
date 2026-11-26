@@ -1,0 +1,311 @@
+#!/usr/bin/env python3
+"""Policy-enforcement gate (ADR-005, D2).
+
+A policy is a property of this system only when three parts exist:
+
+  1. an enforcement point in the mechanism layer,
+  2. a witness where the policy actually refused something,
+  3. a gate that runs in CI.
+
+This script re-checks every record in policy-enforcement.lisp against the tree.
+It does not trust the registry: a record that cannot be re-checked fails the
+build instead of being cited. Written as a real s-expression reader rather than
+a shell/awk pattern match, because a gate that mis-parses is worse than none.
+"""
+
+from __future__ import annotations
+
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+REGISTRY = ROOT / "policy-enforcement.lisp"
+WORKFLOWS = ROOT / ".github" / "workflows"
+SELF = "scripts/check-policy-enforcement.py"
+
+REQUIRED = ("id", "claim", "enforcement", "witness", "gate", "status")
+
+
+class GateError(Exception):
+    pass
+
+
+# --- minimal s-expression reader -------------------------------------------
+
+
+def tokenize(text: str):
+    i, n = 0, len(text)
+    while i < n:
+        ch = text[i]
+        if ch == ";":
+            while i < n and text[i] != "\n":
+                i += 1
+        elif ch.isspace():
+            i += 1
+        elif ch in "()":
+            yield ch
+            i += 1
+        elif ch == '"':
+            i += 1
+            buf = []
+            while i < n and text[i] != '"':
+                if text[i] == "\\" and i + 1 < n:
+                    buf.append(text[i + 1])
+                    i += 2
+                    continue
+                buf.append(text[i])
+                i += 1
+            if i >= n:
+                raise GateError("unterminated string literal in registry")
+            i += 1
+            yield ("str", "".join(buf))
+        else:
+            start = i
+            while i < n and not text[i].isspace() and text[i] not in "()":
+                i += 1
+            yield ("atom", text[start:i])
+
+
+def parse(text: str):
+    stack: list[list] = [[]]
+    for tok in tokenize(text):
+        if tok == "(":
+            stack.append([])
+        elif tok == ")":
+            if len(stack) < 2:
+                raise GateError("unbalanced ')' in registry")
+            done = stack.pop()
+            stack[-1].append(done)
+        else:
+            kind, value = tok
+            stack[-1].append(value if kind == "str" else ("atom", value))
+    if len(stack) != 1:
+        raise GateError("unbalanced '(' in registry")
+    return stack[0]
+
+
+def atom(node) -> str | None:
+    if isinstance(node, tuple) and node[0] == "atom":
+        return node[1]
+    return None
+
+
+def string(node) -> str | None:
+    return node if isinstance(node, str) else None
+
+
+def find(node, name: str):
+    """First child list of `node` whose head atom is `name`."""
+    if not isinstance(node, list):
+        return None
+    for child in node:
+        if isinstance(child, list) and child and atom(child[0]) == name:
+            return child
+    return None
+
+
+def find_all(node, name: str) -> list:
+    out = []
+    if isinstance(node, list):
+        for child in node:
+            if isinstance(child, list) and child and atom(child[0]) == name:
+                out.append(child)
+    return out
+
+
+# --- verification ----------------------------------------------------------
+
+
+def read_records() -> list[dict]:
+    if not REGISTRY.is_file():
+        raise GateError(f"registry {REGISTRY.relative_to(ROOT)} is missing")
+    tree = parse(REGISTRY.read_text(encoding="utf-8"))
+    if len(tree) != 1:
+        raise GateError("registry must contain exactly one top-level form")
+    top = tree[0]
+    if atom(top[0]) != "policy-enforcement-registry":
+        raise GateError("top-level form must be (policy-enforcement-registry ...)")
+
+    policies = find(top, "policies")
+    if policies is None:
+        raise GateError("registry has no (policies ...) section")
+
+    records = []
+    for entry in find_all(policies, "policy"):
+        rec: dict = {}
+        for name in REQUIRED:
+            node = find(entry, name)
+            rec[name] = node[1:] if node else None
+        rec["gate-gap"] = (find(entry, "gate-gap") or [None, None])[1:]
+        records.append(rec)
+    return records
+
+
+def check_enforcement(rid: str, node) -> str:
+    if not node:
+        raise GateError(f"{rid}: enforcement is missing")
+    kind = atom(node[0])
+    if kind == "literal":
+        if len(node) < 3:
+            raise GateError(f"{rid}: (enforcement literal <file> \"<text>\") needs a file and a literal")
+        rel, literal = string(node[1]), string(node[2])
+        if not rel or literal is None:
+            raise GateError(f"{rid}: enforcement literal needs quoted file and text")
+        path = ROOT / rel
+        if not path.is_file():
+            raise GateError(f"{rid}: enforcement file {rel} does not exist")
+        if literal not in path.read_text(encoding="utf-8", errors="replace"):
+            raise GateError(
+                f"{rid}: enforcement literal {literal!r} is not present in {rel} — "
+                "the claim has no mechanism behind it"
+            )
+        return f"literal {rel}"
+    if kind == "absent":
+        patterns = [string(p) or atom(p) for p in node[1:]]
+        patterns = [p for p in patterns if p]
+        if not patterns:
+            raise GateError(f"{rid}: (enforcement absent ...) needs at least one pattern")
+        for pattern in patterns:
+            hits = [
+                p
+                for p in ROOT.rglob(pattern)
+                if ".git" not in p.parts
+            ][:3]
+            if hits:
+                joined = ", ".join(str(h.relative_to(ROOT)) for h in hits)
+                raise GateError(f"{rid}: forbidden path {pattern!r} exists ({joined}) — absence claim is false")
+        return f"absent {' '.join(patterns)}"
+    raise GateError(f"{rid}: unknown enforcement kind {kind!r} (expected literal or absent)")
+
+
+def check_witness(rid: str, node) -> str:
+    if not node:
+        raise GateError(f"{rid}: witness is missing")
+    kind = atom(node[0])
+    if kind == "transcript":
+        if len(node) < 3:
+            raise GateError(f"{rid}: (witness transcript <file> \"<text>\") needs a file and a literal")
+        rel, literal = string(node[1]), string(node[2])
+        if not rel or literal is None:
+            raise GateError(f"{rid}: witness transcript needs quoted file and text")
+        path = ROOT / rel
+        if not path.is_file():
+            raise GateError(f"{rid}: witness file {rel} does not exist")
+        if literal not in path.read_text(encoding="utf-8", errors="replace"):
+            raise GateError(
+                f"{rid}: witness literal {literal!r} is not present in {rel} — "
+                "the policy was never observed refusing anything"
+            )
+        return f"transcript {rel}"
+    if kind == "runtime":
+        return "runtime (produced by the gate itself)"
+    raise GateError(f"{rid}: unknown witness kind {kind!r} (expected transcript or runtime)")
+
+
+def workflow_references(rel: str) -> list[str]:
+    hits = []
+    if not WORKFLOWS.is_dir():
+        return hits
+    for wf in sorted(WORKFLOWS.glob("*.y*ml")):
+        if rel in wf.read_text(encoding="utf-8", errors="replace"):
+            hits.append(wf.name)
+    return hits
+
+
+def check_gate(rid: str, node, gap) -> tuple[str, str | None]:
+    if not node:
+        raise GateError(f"{rid}: gate is missing")
+    value = string(node[0]) or atom(node[0])
+    if value == "manual":
+        why = string(gap[0]) if gap else None
+        if not why:
+            raise GateError(f"{rid}: manual gate must declare (gate-gap \"...\")")
+        return "manual", why
+    if not value:
+        raise GateError(f"{rid}: gate must name a script or be manual")
+    path = ROOT / value
+    if not path.is_file():
+        raise GateError(f"{rid}: gate script {value} does not exist")
+    wfs = workflow_references(value)
+    if not wfs:
+        raise GateError(
+            f"{rid}: gate script {value} is not referenced by any workflow under "
+            ".github/workflows — it never runs"
+        )
+    return value, None
+
+
+def main() -> int:
+    try:
+        records = read_records()
+    except GateError as exc:
+        print(f"POLICY-ENFORCEMENT-FAIL: {exc}", file=sys.stderr)
+        return 1
+
+    if not records:
+        print(
+            "POLICY-ENFORCEMENT-FAIL: registry contains no policy record; the gate would pass vacuously",
+            file=sys.stderr,
+        )
+        return 1
+
+    gaps: list[str] = []
+    seen: set[str] = set()
+    try:
+        for rec in records:
+            rid = atom(rec["id"][0]) if rec["id"] else None
+            if not rid:
+                raise GateError("a record has no (id ...)")
+            if rid in seen:
+                raise GateError(f"{rid}: duplicate policy id")
+            seen.add(rid)
+
+            claim = string(rec["claim"][0]) if rec["claim"] else None
+            if not claim:
+                raise GateError(f"{rid}: claim is empty")
+
+            status = atom(rec["status"][0]) if rec["status"] else None
+            if status != "proved":
+                raise GateError(
+                    f"{rid}: status is {status!r} — intentions belong in docs/VISION.md, not in the registry"
+                )
+
+            check_enforcement(rid, rec["enforcement"])
+            check_witness(rid, rec["witness"])
+            _, gap = check_gate(rid, rec["gate"], rec["gate-gap"])
+            if gap:
+                gaps.append(f"  {rid}: {gap}")
+    except GateError as exc:
+        print(f"POLICY-ENFORCEMENT-FAIL: {exc}", file=sys.stderr)
+        return 1
+
+    # Visibility, not failure: check scripts that no workflow runs are debt.
+    ungated = []
+    for script in sorted((ROOT / "scripts").glob("check-*")):
+        rel = f"scripts/{script.name}"
+        if rel == SELF or script.suffix not in {".sh", ".py"}:
+            continue
+        if not workflow_references(rel):
+            ungated.append(rel)
+
+    if ungated:
+        print("POLICY-ENFORCEMENT: check scripts that no workflow references (declared debt):", file=sys.stderr)
+        for rel in ungated:
+            print(f"  {rel}", file=sys.stderr)
+
+    if gaps:
+        print("POLICY-ENFORCEMENT: policies with a declared gate gap:", file=sys.stderr)
+        for line in gaps:
+            print(line, file=sys.stderr)
+
+    print(
+        f"POLICY-ENFORCEMENT-PASS: {len(records)} proved policies re-checked, "
+        f"{len(gaps)} with a declared gate gap, {len(ungated)} check scripts without an automated gate."
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
