@@ -68,6 +68,27 @@ CELL pascal oom    build= 3545ms boot=12311ms  WSM-OS CONDITION schema=1 kind=OO
 
 ## 4. Що це змінює в ADR-006
 
+### Перевірка ідентичності пінів
+
+Два піни для `value`-сценарію (`artifacts/qemu-serial-transcript.txt` для
+асемблера і `artifacts/nucleus-witness-pascal-entry-qemu-serial-transcript.txt`
+для Pascal) існують тому, що субстрати пінилися незалежно. Сам по собі це
+слабке місце: якщо відредагувати один і не відредагувати другий, «паритет» тихо
+стане двома різними очікуваннями, які просто схожі.
+
+Тому гейт перевіряє їхню ідентичність явно (`cmp -s`) і падає на розбіжності:
+
+```text
+PIN-IDENTITY-PASS: artifacts/qemu-serial-transcript.txt ==
+                   artifacts/nucleus-witness-pascal-entry-qemu-serial-transcript.txt (byte-identical)
+```
+
+Перевірено і в зворотний бік: дописаний рядок в один пін дає
+`FPC-PARITY-FAIL: value pins diverged` до того, як почнеться будь-яка збірка.
+
+Порівняння субстратів теж посилено: звіряються **всі** рядки `WSM-OS`, а не лише
+останній — інакше різниця в проміжному рядку пройшла б непоміченою.
+
 Вимір не змінює архітектурного рішення й не закриває P2. Він частково перевіряє лише аргумент про compile time: у цьому вузькому сценарії мова дає близько 1% циклу, тож вузьке місце — образ і verify path. Повне W3 acceptance залишається відкритим до embedded-target і Pascal-side handoff-свідків.
 
 ## 5. Відтворення

@@ -3,7 +3,13 @@
 #
 # Two substrates (assembly, Pascal) x two scenarios (a value, a named failure).
 # All four cells must produce the transcript pinned for their scenario, and the
-# two substrates must agree with each other, not merely with themselves.
+# two substrates must agree with each other line for line, not merely on their
+# last line.
+#
+# Two pins exist for the value scenario because the two substrates were pinned
+# independently. They must remain the SAME bytes: if one is edited and the other
+# is not, the "parity" would silently become two different expectations that
+# happen to look alike. The gate therefore checks their identity explicitly.
 #
 # The same run records the number the FPC decision never had: how long a change
 # costs on each substrate. It is split on purpose, because lumping it together
@@ -24,7 +30,8 @@ out_dir="${WSM_P2_OUT_DIR:-target/fpc-parity}"
 repeats="${WSM_P2_REPEATS:-1}"
 expected_version="${WSM_FPC_VERSION:-3.2.2}"
 
-value_transcript="artifacts/nucleus-witness-pascal-entry-qemu-serial-transcript.txt"
+value_pin_asm="artifacts/qemu-serial-transcript.txt"
+value_pin_pascal="artifacts/nucleus-witness-pascal-entry-qemu-serial-transcript.txt"
 oom_transcript="artifacts/nucleus-witness-alloc-oom-fixture-qemu-serial-transcript.txt"
 
 fail() {
@@ -33,6 +40,13 @@ fail() {
 }
 
 now_ms() { python3 -c 'import time; print(int(time.monotonic()*1000))'; }
+
+# --- the two value pins must be one expectation, not two lookalikes --------
+for pin in "$value_pin_asm" "$value_pin_pascal" "$oom_transcript"; do
+  [[ -s "$pin" ]] || fail "missing pin $pin"
+done
+cmp -s "$value_pin_asm" "$value_pin_pascal" \
+  || fail "value pins diverged: $value_pin_asm and $value_pin_pascal must stay byte-identical"
 
 ppc="${FPC_PPCX64:-}"
 [[ -z "$ppc" ]] && ppc="$(command -v ppcx64 || true)"
@@ -121,18 +135,22 @@ for _ in $(seq 1 "$repeats"); do
   printf 'asm\t%s\nasm\t%s\npascal\t%s\npascal\t%s\n' \
     "$asm_value_ms" "$asm_oom_ms" "$pas_value_ms" "$pas_oom_ms" >> "$out_dir/compile.tsv"
 
-  run_cell asm    value "$asm_value" "$value_transcript"
+  run_cell asm    value "$asm_value" "$value_pin_asm"
   run_cell asm    oom   "$asm_oom"   "$oom_transcript"
-  run_cell pascal value "$pas_value" "$value_transcript"
+  run_cell pascal value "$pas_value" "$value_pin_pascal"
   run_cell pascal oom   "$pas_oom"   "$oom_transcript"
 done
 
-# --- the two substrates must agree with each other, not just with the pin --
+# --- the two substrates must agree with each other, line for line ----------
 for scenario in value oom; do
-  asm_line=$(tr -d '\r' < "$out_dir/asm_${scenario}.log" | grep '^WSM-OS ' | tail -1)
-  pas_line=$(tr -d '\r' < "$out_dir/pascal_${scenario}.log" | grep '^WSM-OS ' | tail -1)
-  [[ "$asm_line" == "$pas_line" ]] \
-    || fail "substrates disagree on ${scenario}: asm='${asm_line}' pascal='${pas_line}'"
+  asm_lines=$(tr -d '\r' < "$out_dir/asm_${scenario}.log" | grep '^WSM-OS ')
+  pas_lines=$(tr -d '\r' < "$out_dir/pascal_${scenario}.log" | grep '^WSM-OS ')
+  [[ "$asm_lines" == "$pas_lines" ]] \
+    || fail "substrates disagree on ${scenario}:
+asm:
+${asm_lines}
+pascal:
+${pas_lines}"
 done
 
 median() { # column $1 of cycle.tsv for substrate $2
@@ -145,7 +163,8 @@ compile_median() { # substrate
     | sort -n | awk '{a[NR]=$1} END {print (NR%2) ? a[(NR+1)/2] : int((a[NR/2]+a[NR/2+1])/2)}'
 }
 
-echo "FPC-PARITY-PASS: 4/4 cells; asm and Pascal agree on both scenarios"
+echo "FPC-PARITY-PASS: 4/4 cells; asm and Pascal agree line for line on both scenarios"
+echo "PIN-IDENTITY-PASS: ${value_pin_asm} == ${value_pin_pascal} (byte-identical)"
 printf 'COMPILE asm    median %4sms  (as --64)\n' "$(compile_median asm)"
 printf 'COMPILE pascal median %4sms  (ppcx64 -Cn)\n' "$(compile_median pascal)"
 printf 'CYCLE   asm    build %4sms  boot %5sms\n' "$(median 3 asm)" "$(median 4 asm)"
