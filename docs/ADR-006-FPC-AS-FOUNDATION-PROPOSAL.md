@@ -128,9 +128,14 @@ Value wsm_mmio_capability(RuntimeContext *);
 
 Практично це означає: **хост-мова FPC для ядра = власний RTL**, який треба написати й утримувати. Це не аргумент проти — Ultibo саме так і зробив — але це обсяг роботи, який має бути названий до підпису, а не виявлений на третьому місяці.
 
-Стан інструментарію на 2026-11-26: стабільна гілка — 3.2.2 (3.2.4 RC2 готується з квітня 2026), розробка — 3.3.x trunk; з'явилися щоденні збірки `x86_64-embedded`, але в дереві `rtl/embedded` є aarch64, arm, avr, i386, riscv32, xtensa — **окремого x86_64 RTL там немає**. Тобто наша цільова архітектура — не та, де в FPC вже все готово.
+Стан інструментарію на 2026-11-26 треба описувати точніше:
 
-Джерела: wiki.freepascal.org/Minimal_RTL; freepascal.org/develop.html; gitlab.com/freepascal.org/fpc/source/-/tree/main/rtl/embedded; downloads.freepascal.org/fpc/snapshot/trunk/x86_64-embedded/.
+- **Stable:** офіційна сторінка завантажень і далі називає 3.2.2 останнім офіційним релізом. 3.2.4 RC2 був опублікований **7 вересня 2026 року**; у повідомленні супровідника очікувався фінальний реліз на початку листопада, але станом на 26 листопада офіційна сторінка релізів усе ще показує 3.2.2. Отже, 3.2.4 RC2 — prerelease, а не підтверджений stable.
+- **x86_64-embedded існує як реальний upstream snapshot:** 26.11.2026 о 13:56 опубліковано FPC 3.3.1 snapshot, зібраний командою `make singlezipinstall OS_TARGET=embedded CPU_TARGET=x86_64`. Його README фіксує source commit `e3155f6eccd98f003c33a620996786e83ac79cd1`. Тому відсутність каталогу `rtl/embedded/x86_64` сама по собі **не доводить відсутності RTL для цієї цілі**.
+- `rtl/embedded/Makefile.fpc` задає `PROCINC=$(RTL)/$(CPU_TARGET)`: target-specific процесорні include-файли беруться з `rtl/x86_64`, а не обов'язково з підкаталогу `rtl/embedded`. Це узгоджується з опублікованою x86_64-embedded збіркою.
+- **Межа доказу:** наявність compiler+RTL snapshot доводить, що upstream збирає цю ціль. Вона ще не доводить сумісність із нашим UEFI handoff, target ABI, таблицями переривань, MMIO, драйверами або вимогами до розміру/старту ядра. Для цього потрібен окремий мінімальний cross-build і запуск власного образу; до такого свідка FPC-підтримка нашого target лишається *неперевіреною*, а не «відсутньою».
+
+Першоджерела: [FPC 3.2.4 RC2 announcement (07.09.2026)](https://www.mail-archive.com/fpc-pascal%40lists.freepascal.org/msg58288.html); [official download page](https://www.freepascal.org/download.html); [daily x86_64-embedded snapshot](https://downloads.freepascal.org/fpc/snapshot/trunk/x86_64-embedded/); [snapshot build README (26.11.2026)](https://downloads.freepascal.org/fpc/snapshot/trunk/x86_64-embedded/README-fpc-3.3.1.x86_64-embedded.built.on.x86_64-linux); [embedded RTL Makefile](https://gitlab.com/freepascal.org/fpc/source/-/blob/main/rtl/embedded/Makefile.fpc); [Minimal RTL notes](https://wiki.freepascal.org/Minimal_RTL).
 
 ---
 
