@@ -96,8 +96,9 @@ with an enforcement point, a witness and a CI gate, and
 The proposal to use Free Pascal as the OS foundation is assessed, claim by
 claim, in
 [docs/research/FPC-AS-OS-SUBSTRATE-2026-11-26.md](docs/research/FPC-AS-OS-SUBSTRATE-2026-11-26.md):
-four of the six cited projects are confirmed, two are not found, and the
-strongest argument (iteration speed) is currently unmeasured.
+three of the six original names have first-party evidence (FPOS, Toro, Ultibo);
+FP-RTOS, Asuro, and Jacqueline remain unverified, and FPC iteration speed is
+still unmeasured.
 
 Executable swarm work is tracked in [`tasks.lisp`](tasks.lisp).
 
@@ -216,8 +217,9 @@ QEMU x86_64 boot
 
 Пропозицію зробити Free Pascal основою ОС розібрано за твердженнями у
 [docs/research/FPC-AS-OS-SUBSTRATE-2026-11-26.md](docs/research/FPC-AS-OS-SUBSTRATE-2026-11-26.md):
-чотири з шести названих проєктів підтверджуються, два не знайдені, а
-найсильніший аргумент (швидкість ітерації) наразі не виміряний.
+три з шести початкових назв мають першоджерела (FPOS, Toro, Ultibo);
+FP-RTOS, Asuro та Jacqueline лишаються непідтвердженими, а швидкість ітерації
+FPC досі не виміряна.
 
 Робота рою агентів над виконуваними завданнями відстежується у [`tasks.lisp`](tasks.lisp).
 
