@@ -18,7 +18,7 @@ new_repo() {
   git -C "$repo" config user.name "Docs Gate Test"
   git -C "$repo" config user.email "docs-gate@example.invalid"
   mkdir -p "$repo/src" "$repo/docs" "$repo/scripts"
-  printf 'baseline\\n' > "$repo/README.md"
+  printf 'baseline\n' > "$repo/README.md"
   git -C "$repo" add README.md
   git -C "$repo" commit -q -m "baseline"
   BASE="$(git -C "$repo" rev-parse HEAD)"
@@ -27,7 +27,7 @@ new_repo() {
 write_and_commit() {
   local path="$1" contents="$2" subject="$3" body="${4:-}"
   mkdir -p "$repo/$(dirname "$path")"
-  printf '%s\\n' "$contents" > "$repo/$path"
+  printf '%s\n' "$contents" > "$repo/$path"
   git -C "$repo" add "$path"
   if [ -n "$body" ]; then
     git -C "$repo" commit -q -m "$subject" -m "$body"
@@ -39,11 +39,11 @@ write_and_commit() {
 expect_pass() {
   local label="$1" base="$2" head="$3"
   if (cd "$repo" && bash "$checker" "$base" "$head" > "$tmp/out" 2> "$tmp/err"); then
-    printf 'PASS: %s\\n' "$label"
+    printf 'PASS: %s\n' "$label"
     test_count=$((test_count + 1))
   else
     cat "$tmp/out" "$tmp/err" >&2
-    printf 'FAIL: %s (expected pass)\\n' "$label" >&2
+    printf 'FAIL: %s (expected pass)\n' "$label" >&2
     exit 1
   fi
 }
@@ -52,10 +52,10 @@ expect_fail() {
   local label="$1" base="$2" head="$3"
   if (cd "$repo" && bash "$checker" "$base" "$head" > "$tmp/out" 2> "$tmp/err"); then
     cat "$tmp/out" >&2
-    printf 'FAIL: %s (expected failure)\\n' "$label" >&2
+    printf 'FAIL: %s (expected failure)\n' "$label" >&2
     exit 1
   else
-    printf 'PASS: %s\\n' "$label"
+    printf 'PASS: %s\n' "$label"
     test_count=$((test_count + 1))
   fi
 }
@@ -63,8 +63,8 @@ expect_fail() {
 # 1. Code + docs in the same commit passes.
 new_repo
 mkdir -p "$repo/src" "$repo/docs"
-printf 'program one;\\n' > "$repo/src/one.pas"
-printf 'one docs\\n' > "$repo/docs/one.md"
+printf 'program one;\n' > "$repo/src/one.pas"
+printf 'one docs\n' > "$repo/docs/one.md"
 git -C "$repo" add src/one.pas docs/one.md
 git -C "$repo" commit -q -m "code and docs together"
 expect_pass "code and docs in the same commit" "$BASE" "$(git -C "$repo" rev-parse HEAD)"
@@ -120,8 +120,8 @@ new_repo
 branch_base="$BASE"
 git -C "$repo" checkout -q -b feature
 mkdir -p "$repo/src" "$repo/docs"
-printf 'feature\\n' > "$repo/src/feature.pas"
-printf 'feature docs\\n' > "$repo/docs/feature.md"
+printf 'feature\n' > "$repo/src/feature.pas"
+printf 'feature docs\n' > "$repo/docs/feature.md"
 git -C "$repo" add src/feature.pas docs/feature.md
 git -C "$repo" commit -q -m "feature code and docs"
 git -C "$repo" checkout -q -b integration "$branch_base"
@@ -131,10 +131,10 @@ expect_pass "valid merge commit" "$branch_base" "$(git -C "$repo" rev-parse HEAD
 # 11. A squash-style integrated commit with code + docs passes.
 new_repo
 mkdir -p "$repo/src" "$repo/docs"
-printf 'squashed\\n' > "$repo/src/squashed.pas"
-printf 'squashed docs\\n' > "$repo/docs/squashed.md"
+printf 'squashed\n' > "$repo/src/squashed.pas"
+printf 'squashed docs\n' > "$repo/docs/squashed.md"
 git -C "$repo" add src/squashed.pas docs/squashed.md
 git -C "$repo" commit -q -m "squashed code and docs"
 expect_pass "squash commit contains code and docs" "$BASE" "$(git -C "$repo" rev-parse HEAD)"
 
-printf 'DOCS-IN-CHANGE-TESTS-PASS: %s scenarios\\n' "$test_count"
+printf 'DOCS-IN-CHANGE-TESTS-PASS: %s scenarios\n' "$test_count"

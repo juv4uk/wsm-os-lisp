@@ -8,12 +8,12 @@ base="${1:-}"
 head="${2:-HEAD}"
 
 fail() {
-  printf 'DOCS-IN-CHANGE-FAIL: %s\\n' "$1" >&2
+  printf 'DOCS-IN-CHANGE-FAIL: %s\n' "$1" >&2
   exit 1
 }
 
 note() {
-  printf 'DOCS-IN-CHANGE: %s\\n' "$1"
+  printf 'DOCS-IN-CHANGE: %s\n' "$1"
 }
 
 [ -n "$base" ] || fail "usage: check-docs-in-change.sh <base-sha> [head-sha]"
@@ -52,10 +52,10 @@ while IFS= read -r commit; do
   fi
 
   [ -n "$changed" ] || { note "$commit_line: no file changes"; continue; }
-  code_changed="$(printf '%s\\n' "$changed" | grep -E '^(src|scripts)/' || true)"
+  code_changed="$(printf '%s\n' "$changed" | grep -E '^(src|scripts)/' || true)"
   [ -n "$code_changed" ] || { note "$commit_line: no code change"; continue; }
 
-  docs_changed="$(printf '%s\\n' "$changed" | grep -E '^(docs/|README\\.md$|AGENTS\\.md$)' || true)"
+  docs_changed="$(printf '%s\n' "$changed" | grep -E '^(docs/|README\.md$|AGENTS\\.md$)' || true)"
   if [ -n "$docs_changed" ]; then
     note "$commit_line: code and documentation changed in the same commit"
     checked=$((checked + 1))
@@ -63,7 +63,7 @@ while IFS= read -r commit; do
   fi
 
   message="$(git show -s --format='%B' "$commit")"
-  marker_line="$(printf '%s\\n' "$message" | grep -E '^DOCS-NOT-REQUIRED:' | head -1 || true)"
+  marker_line="$(printf '%s\n' "$message" | grep -E '^DOCS-NOT-REQUIRED:' | head -1 || true)"
   if [ -n "$marker_line" ]; then
     reason="${marker_line#DOCS-NOT-REQUIRED:}"
     reason="$(printf '%s' "$reason" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
@@ -73,7 +73,7 @@ while IFS= read -r commit; do
     continue
   fi
 
-  printf '%s\\n' "$code_changed" | sed "s#^#  $commit_line code: #" >&2
+  printf '%s\n' "$code_changed" | sed "s#^#  $commit_line code: #" >&2
   fail "$commit_line: code changed without documentation in the same commit. Add docs/ or README changes, or write 'DOCS-NOT-REQUIRED: <reason>' in this commit message."
 done <<<"$commits"
 
