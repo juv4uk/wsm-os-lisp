@@ -118,6 +118,15 @@
    (status proved))
 
   (policy
+   (id documentation-authority-gate-always-runs)
+   (claim "The workflow that polices documentation runs on every commit and is never narrowed by a paths filter, so a docs-only change cannot pass unread.")
+   (enforcement literal ".github/workflows/ci.yml" "bash scripts/check-role-authority.sh")
+   (witness runtime)
+   (gate "scripts/check-policy-enforcement.py")
+   (note "The gate asserts both halves: ci.yml runs the documentation gates and has no paths/paths-ignore under on:. Removing either fails the build.")
+   (status proved))
+
+  (policy
    (id image-build-variance-pinned)
    (claim "Every known source of variance in the UEFI image builder is explicitly pinned: both GPT identities, the FAT volume identity and the FAT timestamps, with no generated UUID, shell randomness or wall-clock time in the builder.")
    (enforcement literal "scripts/build-uefi-image.sh" "mkfs.vfat --invariant -F 12")

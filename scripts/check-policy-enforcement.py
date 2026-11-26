@@ -360,6 +360,32 @@ def check_arbiter_budget(budget: dict) -> tuple[float, int, int]:
     return share, arbiter_lines, total
 
 
+def check_always_run_gates() -> None:
+    """Documentation-reading gates must not be narrowed away by a paths filter.
+
+    check-role-authority.sh reads README.md and check-semantic-authority.sh reads
+    docs/TARGET-ABI.md. If the workflow that runs them ever gains a paths filter,
+    a docs-only commit could change the text those gates police and pass anyway.
+    The filter would look like an optimisation and behave like a deleted gate.
+    """
+    ci = WORKFLOWS / "ci.yml"
+    if not ci.is_file():
+        raise GateError("ci.yml is missing; the always-run gates are not wired anywhere")
+    text = ci.read_text(encoding="utf-8", errors="replace")
+
+    head = text.split("\njobs:", 1)[0]
+    for key in ("paths:", "paths-ignore:"):
+        if key in head:
+            raise GateError(
+                f"ci.yml narrows itself with {key} under on: — that would silently stop "
+                "the documentation-authority gates from running on docs-only commits"
+            )
+
+    for script in ("scripts/check-role-authority.sh", "scripts/check-semantic-authority.sh"):
+        if script not in text:
+            raise GateError(f"ci.yml no longer runs {script}, which polices documentation")
+
+
 def check_vocabulary(reserved: dict[str, str]) -> tuple[int, int]:
     """Every constant defined in the mechanism layer is emitted, or declared reserved.
 
@@ -463,6 +489,12 @@ def main() -> int:
     try:
         budget = read_arbiter_budget()
         share, arbiter_lines, total_lines = check_arbiter_budget(budget)
+    except GateError as exc:
+        print(f"POLICY-ENFORCEMENT-FAIL: {exc}", file=sys.stderr)
+        return 1
+
+    try:
+        check_always_run_gates()
     except GateError as exc:
         print(f"POLICY-ENFORCEMENT-FAIL: {exc}", file=sys.stderr)
         return 1
