@@ -1,0 +1,25 @@
+name: ADR ratification
+
+# An architecture decision is the owner's to make. This job checks provenance:
+# who introduced the ACCEPTED line in each ADR, and whether that is the owner or
+# an owner-authored confirmation. Full history is required for git blame.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ratification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check who ratified each accepted ADR
+        run: bash scripts/check-adr-ratification.sh

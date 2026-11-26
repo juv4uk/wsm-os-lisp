@@ -118,6 +118,15 @@
    (status proved))
 
   (policy
+   (id adr-ratification-provenance)
+   (claim "An ADR is marked ACCEPTED only by an owner-authored commit or by an owner-authored confirmation in docs/decisions/OWNER-CONFIRMATIONS.lisp.")
+   (enforcement literal "scripts/check-adr-ratification.sh" "An ADR marked ACCEPTED without the owner is an agent ratifying architecture.")
+   (witness runtime)
+   (gate "scripts/check-adr-ratification.sh")
+   (note "Limitation, stated so nobody over-claims: git identity is not authentication. The gate raises the cost of a silent self-ratification and makes the difference between owner and agent visible in the record; it cannot prove who typed the commit. It currently fails on ADR-006, which was moved to ACCEPTED by an agent identity on 2026-11-26.")
+   (status proved))
+
+  (policy
    (id task-format)
    (claim "Every task not declared legacy carries its level, an evidence plan and fail-safely triggers, so a task that cannot state them is not worked on.")
    (enforcement literal "scripts/check-task-format.py" "A task without level, evidence plan and")
