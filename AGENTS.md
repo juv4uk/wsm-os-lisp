@@ -18,7 +18,7 @@
 - **Числа:** математична драбина починається з D12: D12, D24, D48, D96, D192, ... . D7 — текстова поверхня, не числовий домен.
 - **Legacy retirement:** SID8, Sens8 і Function8 не мають активного семантичного, reader, compiler, evaluator, Zig/T5M або runtime дозволу. Історичні згадки дозволені лише як не-виконуване походження/архів. Будь-який живий маршрут є міграційним дефектом.
 - **Міграційний стан цього репозиторію:** ратифікація Contract 12.0 не означає, що target ABI/runtime уже відповідає йому. Виявлені розбіжності, зокрема старий SID8 kind у pinned target ABI v8 та legacy `wsm_atom`/`wsm_eq` результати, відстежуються в [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109). Не оголошувати відповідність до завершення позитивних і негативних нативних/QEMU свідків.
-- **Зміна архітектури:** поточна production-межа лишається Lisp policy + мінімальний x86-64 Assembly mechanism за ADR-004. Дослідження Mach/XNU у [#41](https://github.com/juv4uk/wsm-os-lisp/issues/41) не є дозволом імпортувати XNU, замінити boot chain або змінити ADR-004.
+- **Зміна архітектури:** чинна production-межа визначена ADR-006 (**ACCEPTED**, 2026-11-26): ASM bootstrap, Free Pascal системний шар, C лише в `third_party/` через FFI, SENS policy та Lisp-середовище; `RUST = 0`. ADR-004 має статус **SUPERSEDED** і збережений як походження попереднього рішення. Перехід evidence-gated за P0–P4; доки P2 parity witness не зелений, `src/runtime.s` лишається чинним механізмом. Дослідження Mach/XNU у [#41](https://github.com/juv4uk/wsm-os-lisp/issues/41) не є дозволом імпортувати XNU або самовільно міняти boot chain чи ABI.
 
 <!-- SENS-CONTRACT-12-CURRENT-AUTHORITY-20261119:END -->
 

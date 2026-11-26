@@ -1,25 +1,29 @@
-# FPC toolchain probe: what actually happens on our target
-*Проба інструментарію FPC: що насправді відбувається на нашій цілі*
+# FPC 3.2.2 Linux-target control probe — not the embedded target
+*Контрольна проба FPC 3.2.2 для Linux — не перевірка embedded-цілі*
 
 **Дата**: 2026-11-26
-**Статус**: EVIDENCE — вимір, не рішення. Обслуговує [ADR-006](../ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md) фазу **P0**.
+**Статус**: CONTROL EVIDENCE — виміряно лише `-Tlinux`, не `OS_TARGET=embedded`. Це контрольний підексперимент P0, а не доказ сумісності або несумісності embedded RTL. Перевірка upstream `x86_64-embedded` відстежується в [#113](https://github.com/juv4uk/wsm-os-lisp/issues/113).
 **Задача**: `WSM-OS-FPC-TOOLCHAIN-PROBE`
 
 ---
 
 ## 1. Що перевірялося
 
-Три питання, кожне окремо:
+Цей звіт фіксує лише контрольний експеримент із FPC 3.2.2 та `-Tlinux` на x86_64. Він **не** тестує `-Tembedded` і не перевіряє upstream snapshot `x86_64-embedded`.
 
-1. Чи збирає pinned FPC об'єктний файл під нашу ціль і чи експортує він потрібний символ?
-2. Чи лінкується цей об'єкт нашим `src/linker.ld` без стороннього коду?
-3. Скільки коштує «порожня» програма?
+Перевірені питання:
+
+1. Чи компілює Linux-target FPC object і чи експортує названий символ?
+2. Чи лінкується саме цей Linux-target object нашим `src/linker.ld` без Linux RTL?
+3. Який розмір має порожня Linux-target програма?
+
+Embedded-target перевірка — окреме завдання [#113](https://github.com/juv4uk/wsm-os-lisp/issues/113).
 
 ## 2. Умови
 
 ```text
 FPC            3.2.2 (Debian fp-compiler-3.2.2 3.2.2+dfsg-20, amd64)
-ціль           -Tlinux, x86_64
+контрольна ціль  -Tlinux, x86_64 (не embedded)
 прапорці       -O- -Xs- -CX -Fu<units>/rtl -Fu<units>/rtl-objpas
 лінкер         GNU ld 2.40, скрипт src/linker.ld (наш, без libc)
 ```
@@ -36,8 +40,7 @@ $ nm probe.o | grep wsm_probe_entry
 0000000000000000 T wsm_probe_entry
 ```
 
-Це підтверджує: FPC дає звичайний ELF-об'єкт і дозволяє назвати символ так, як
-його очікує наш ABI. Тобто технічної несумісності з нашим ланцюгом немає.
+Це підтверджує лише те, що FPC 3.2.2 у Linux-target режимі створює ELF object і дозволяє експортувати названий символ. Це ще не доводить сумісності embedded ABI, UEFI handoff або цільового RTL.
 
 ### 3.2 Freestanding лінкування **не проходить**
 
@@ -52,9 +55,7 @@ probe.o:(.data.n_INITFINAL+0x28): undefined reference to `FINALIZE$_$OBJPAS'
 probe.o:(.data.n_FPC_THREADVARTABLES+0x4): undefined reference to `THREADVARLIST_$SYSTEM$indirect'
 ```
 
-П'ять символів, і всі п'ять — хуки RTL, а не наш код. Кожна програма FPC
-генерує таблиці `INITFINAL` і `FPC_THREADVARTABLES` і викликає ініціалізацію
-юнітів; без RTL ці посилання нічим не закриваються.
+П'ять символів у цьому конкретному Linux-target object — хуки Linux RTL, а не наш код. Цей результат не можна переносити на `OS_TARGET=embedded`: інша ціль може мати інший startup/RTL шлях.
 
 ### 3.3 Ціна «порожньої» програми
 
@@ -64,21 +65,18 @@ $ size probe
  144592   39448    9496  193536   2f400
 ```
 
-`program probe; begin end.` — близько **190 КБ**. Це не докір: саме цю цифру
-FPC wiki має на увазі, коли каже, що embedded-підтримка «не та, де 50 КБ
-overhead має значення». Тепер вона наша, а не цитата.
+`program probe; begin end.` у цій конфігурації Linux-target має близько **190 КБ**. Це вимір Linux RTL, а не embedded footprint і не розмір майбутнього Pascal ядра. Публікація `Minimal RTL` стосується дуже малого runtime з overhead близько 50 КБ; вона не доводить відсутності embedded target.
 
 ## 4. Що це означає для ADR-006
 
 | Питання | Відповідь |
 | --- | --- |
-| Чи можна писати рівень 2 на FPC? | Так, компілятор працює на нашій цілі й дає потрібні символи |
-| Чи можна взяти RTL «як є»? | Ні: він тягне ініціалізацію, фіналізацію й таблиці потокових змінних |
-| Що треба написати самим? | Мінімальний RTL: `fpc_initializeunits`, `fpc_do_exit`, `INIT$`/`FINALIZE$`-сумісні заглушки, `THREADVARLIST` |
-| Скільки це? | Невідомо, доки не зроблено P1 — і саме тому P1 окрема задача |
+| Чи компілює FPC 3.2.2 Linux-target об'єкт? | Так, і експортує потрібне ім'я символу; це не перевірка embedded target |
+| Чи лінкується Linux-target object без його RTL? | Ні: цей конкретний object має п'ять unresolved Linux RTL hooks |
+| Чи треба переписувати RTL для embedded target? | Ще невідомо; це перевіряє [#113](https://github.com/juv4uk/wsm-os-lisp/issues/113) на pinned `x86_64-embedded` snapshot |
+| Чи є у upstream embedded target? | Так, існує FPC 3.3.1 `x86_64-embedded` snapshot; його UEFI/ABI сумісність з нашим образом ще не доведена |
 
-**P0 не зелений.** Він дав відповідь «ні, не без власного RTL», і ця відповідь
-корисніша за оптимістичну: вона називає роботу до того, як вона почалася.
+**P0 не зелений для нашої embedded/UEFI цілі.** Цей контрольний підексперимент показав, що Linux-target object не лінкується без Linux RTL hooks. Він **не** доводить, що `x86_64-embedded` вимагає повного власного RTL. Цей висновок можливий лише після перевірки #113.
 
 ## 5. Що далі (P1)
 
@@ -89,14 +87,10 @@ overhead має значення». Тепер вона наша, а не цит
 2. лінкується нашим `linker.ld` без жодного undefined-символа;
 3. приймає UEFI handoff і друкує `WSM-OS BOOT schema=1 arch=x86_64 status=ok`.
 
-Критерій приймання P1: `nm -u` на фінальному об'єкті **порожній**, і транскрипт
-QEMU збігається з наявним BOOT-рядком.
+Перед P1 потрібно завершити embedded-target probe #113 і визначити мінімальний startup/link profile. Критерій P1: `nm -u` на фінальному об'єкті **порожній**, а QEMU-транскрипт збігається з наявним BOOT-рядком.
 
 ---
 
 ## Українською: одне речення
 
-FPC 3.2.2 збирає об'єкт під нашу ціль і експортує потрібний символ, але будь-яка
-програма вимагає п'яти RTL-хуків, яких у freestanding-лінкуванні немає, і
-«порожня» програма важить ~190 КБ — тобто ціна власного RTL виміряна, а не
-переказана з чужого FAQ.
+FPC 3.2.2 у режимі `-Tlinux` збирає ELF object, але цей Linux-target object не лінкується з нашим freestanding linker script без п'яти Linux RTL hooks; розмір порожньої Linux-target програми — близько 190 КБ. Це не вимір embedded footprint: перевірка upstream `x86_64-embedded` та її UEFI ABI сумісності відстежується в #113.

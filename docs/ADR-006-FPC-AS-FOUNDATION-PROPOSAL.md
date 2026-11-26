@@ -222,12 +222,10 @@ Value wsm_mmio_capability(RuntimeContext *);
 | P3 | `WSM-OS-FPC-MECHANISM-MIGRATION` | алокатори, арени й корені GC у Pascal за тим самим ABI |
 | P4 | `WSM-OS-ASM-RETIREMENT` | `src/runtime.s` скорочується до рівня 1 |
 
-**P0 виконано 2026-11-26** (`docs/research/FPC-TOOLCHAIN-PROBE-2026-11-26.md`):
-FPC 3.2.2 компілює й експортує `wsm_probe_entry`, але freestanding-лінкування
-нашим `src/linker.ld` падає на п'яти RTL-хуках (`fpc_initializeunits`,
-`fpc_do_exit`, `INIT$SYSTEM`, `FINALIZE$OBJPAS`, `THREADVARLIST$SYSTEM$indirect`),
-а «порожня» програма важить ~190 КБ. Висновок: потрібен власний мінімальний RTL,
-і його обсяг стане відомий на P1.
+**P0 має лише частковий контрольний результат 2026-11-26** (`docs/research/FPC-TOOLCHAIN-PROBE-2026-11-26.md`):
+FPC 3.2.2 з `-Tlinux` компілює ELF object і експортує `wsm_probe_entry`, але саме цей Linux-target object не лінкується з `src/linker.ld` без п'яти Linux RTL hooks; порожня Linux-target програма має близько 190 КБ. Це не є тестом `OS_TARGET=embedded` і не доводить, що embedded-ціль потребує повного власного RTL.
+
+Upstream опублікував FPC 3.3.1 `x86_64-embedded` snapshot, зібраний з `OS_TARGET=embedded CPU_TARGET=x86_64` (source commit `e3155f6eccd98f003c33a620996786e83ac79cd1`). Його сумісність із нашим UEFI handoff, ABI та linker script ще не перевірена; це окремий P0 доказ у [#113](https://github.com/juv4uk/wsm-os-lisp/issues/113). **P0 лишається незавершеним для production-цілі.** До завершення #113 не робити висновку про необхідність переписати весь RTL; визначити лише конкретні відсутні механізми.
 
 Доки P2 не зелений, `src/runtime.s` лишається чинним механізмом, і твердження
 «машина вже на Pascal» не є істинним.

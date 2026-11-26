@@ -364,12 +364,13 @@
     ((priority . 9.95)
      (capabilities . (wsm-os pascal toolchain freestanding adr-006 qemu))
      (origin . wsm-os-lisp)
+     (github-issue . 113)
      (level . pascal)
-     (evidence-plan . "nm -u on the linked object is empty; the ld failure transcript names every RTL hook; size(1) of an empty program")
-     (fail-safely . (("undefined symbol at link time" . "record the symbol and stop; never stub it silently") ("FPC version differs from the pin" . "stop and re-pin")))
+     (evidence-plan . "Pin the FPC 3.3.1 x86_64-embedded snapshot URL, SHA-256 and source commit; produce object dump, symbol export, undefined-symbol list, linker map and size; keep the FPC 3.2.2 -Tlinux experiment as a separate control.")
+     (fail-safely . (("snapshot checksum or source commit differs from the pin" . "stop and re-pin") ("embedded target emits unresolved symbols" . "record every symbol and stop; never stub it silently") ("embedded compiler is unavailable" . "mark P0 incomplete; do not infer target unsupported")))
      (depends-on . ())
-     (context . "Probe run 2026-11-26, see docs/research/FPC-TOOLCHAIN-PROBE-2026-11-26.md. FPC 3.2.2 (-Tlinux, x86_64) compiles and exports wsm_probe_entry correctly. Freestanding link with src/linker.ld FAILS on five RTL hooks: fpc_initializeunits, fpc_do_exit, INIT$SYSTEM, FINALIZE$OBJPAS, THREADVARLIST$SYSTEM$indirect. Trivial program is 144592 text / 39448 data (~190 KB). Verdict: NOT GREEN - an own minimal RTL is required, and its size is unknown until P1.")
-     (description . "ADR-006 P0: pin an exact FPC version and prove it can produce a freestanding x86_64 object that links with src/linker.ld and contains no RTL calls. Name the RTL cost the FPC wiki documents (no special RTL exists; rtl/embedded has no x86_64) before any kernel work starts. Evidence: object dump, undefined-symbol list, link map.")))
+     (context . "Linux control probe 2026-11-26 is documented in docs/research/FPC-TOOLCHAIN-PROBE-2026-11-26.md: FPC 3.2.2 (-Tlinux, x86_64) exports wsm_probe_entry, but this Linux-target object has five unresolved RTL hooks and a ~190 KB empty program. This does not test embedded RTL. Upstream FPC 3.3.1 x86_64-embedded snapshot was built with OS_TARGET=embedded CPU_TARGET=x86_64 from e3155f6eccd98f003c33a620996786e83ac79cd1. Embedded link/ABI/UEFI compatibility remains unverified; see issue #113.")
+     (description . "ADR-006 P0: pin and test the upstream FPC x86_64-embedded compiler/RTL against our freestanding linker and target ABI. Prove object format, exported symbols, startup/runtime dependencies and undefined-symbol policy. Run FPC 3.2.2 -Tlinux only as a separate control; do not generalize Linux RTL failures to the embedded target. Evidence: checksum, object dump, undefined-symbol list, link map and QEMU witness when possible.")))
 
    ("WSM-OS-FPC-KERNEL-SKELETON" .
     ((priority . 9.9)
