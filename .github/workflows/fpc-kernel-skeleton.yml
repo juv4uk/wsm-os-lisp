@@ -1,0 +1,51 @@
+name: FPC kernel skeleton
+
+on:
+  push:
+    paths:
+      - "src/pascal_probe.pas"
+      - "src/rtl_min.s"
+      - "src/entry.s"
+      - "src/runtime.s"
+      - "src/linker.ld"
+      - "scripts/check-fpc-kernel-skeleton.sh"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "artifacts/nucleus-witness-pascal-entry-qemu-serial-transcript.txt"
+      - "docs/FPC-KERNEL-SKELETON.md"
+      - ".github/workflows/fpc-kernel-skeleton.yml"
+  pull_request:
+    paths:
+      - "src/pascal_probe.pas"
+      - "src/rtl_min.s"
+      - "src/entry.s"
+      - "src/runtime.s"
+      - "src/linker.ld"
+      - "scripts/check-fpc-kernel-skeleton.sh"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "artifacts/nucleus-witness-pascal-entry-qemu-serial-transcript.txt"
+      - "docs/FPC-KERNEL-SKELETON.md"
+      - ".github/workflows/fpc-kernel-skeleton.yml"
+  workflow_dispatch:
+
+jobs:
+  fpc-kernel-skeleton:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install target and Pascal toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 ovmf mtools dosfstools gdisk binutils fp-compiler
+      - name: Prove a freestanding Pascal entry with zero undefined symbols
+        run: bash scripts/check-fpc-kernel-skeleton.sh
+      - name: Upload the Pascal witness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fpc-kernel-skeleton-witness
+          path: target/fpc-kernel-skeleton/
+          if-no-files-found: error
