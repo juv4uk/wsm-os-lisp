@@ -364,14 +364,20 @@
     ((priority . 9.95)
      (capabilities . (wsm-os pascal toolchain freestanding adr-006 qemu))
      (origin . wsm-os-lisp)
+     (level . pascal)
+     (evidence-plan . "nm -u on the linked object is empty; the ld failure transcript names every RTL hook; size(1) of an empty program")
+     (fail-safely . (("undefined symbol at link time" . "record the symbol and stop; never stub it silently") ("FPC version differs from the pin" . "stop and re-pin")))
      (depends-on . ())
-     (context . "Probe run 2026-11-26, see docs/research/FPC-TOOLCHAIN-PROBE-2026-11-26.md. FPC 3.2.2 (-Tlinux, x86_64) compiles and exports wsm_probe_entry correctly. Freestanding link with src/linker.ld FAILS on five RTL hooks: fpc_initializeunits, fpc_do_exit, INIT$SYSTEM, FINALIZE$OBJPAS, THREADVARLIST$SYSTEM$indirect. Trivial program is 144592 text / 39448 data (~190 KB). Verdict: NOT GREEN - an own minimal RTL is required, and its size is unknown until P1."))
+     (context . "Probe run 2026-11-26, see docs/research/FPC-TOOLCHAIN-PROBE-2026-11-26.md. FPC 3.2.2 (-Tlinux, x86_64) compiles and exports wsm_probe_entry correctly. Freestanding link with src/linker.ld FAILS on five RTL hooks: fpc_initializeunits, fpc_do_exit, INIT$SYSTEM, FINALIZE$OBJPAS, THREADVARLIST$SYSTEM$indirect. Trivial program is 144592 text / 39448 data (~190 KB). Verdict: NOT GREEN - an own minimal RTL is required, and its size is unknown until P1.")
      (description . "ADR-006 P0: pin an exact FPC version and prove it can produce a freestanding x86_64 object that links with src/linker.ld and contains no RTL calls. Name the RTL cost the FPC wiki documents (no special RTL exists; rtl/embedded has no x86_64) before any kernel work starts. Evidence: object dump, undefined-symbol list, link map.")))
 
    ("WSM-OS-FPC-KERNEL-SKELETON" .
     ((priority . 9.9)
      (capabilities . (wsm-os pascal kernel boot uefi adr-006 qemu))
      (origin . wsm-os-lisp)
+     (level . pascal)
+     (evidence-plan . "QEMU serial transcript equals WSM-OS BOOT schema=1 arch=x86_64 status=ok; nm -u on the final object is empty")
+     (fail-safely . (("handoff record missing or unparsable" . "halt with a named ABI condition") ("COM1 never transmitter-ready" . "exit 39 path, no silent continue")))
      (depends-on . (WSM-OS-FPC-TOOLCHAIN-PROBE))
      (description . "ADR-006 P1: a Pascal kernel stub receives the existing UEFI handoff and emits the unchanged WSM-OS BOOT schema=1 arch=x86_64 status=ok line on COM1. No Lisp evaluation yet. Fail closed on a missing or unparsable handoff record.")))
 
@@ -379,6 +385,9 @@
     ((priority . 9.5)
      (capabilities . (wsm-os pascal allocator gc roots migration adr-006 qemu))
      (origin . wsm-os-lisp)
+     (level . pascal)
+     (evidence-plan . "the #71 and #64 gates stay green with byte-identical transcripts after the move")
+     (fail-safely . (("any witness transcript changes" . "revert the migration, not the witness") ("allocation OOM path differs" . "stop; behaviour parity is the acceptance")))
      (depends-on . (WSM-OS-FPC-PARITY-VERTICAL-W3))
      (description . "ADR-006 P3: move the allocators, arenas and GC root machinery into Pascal behind the same target ABI, keeping the #71 and #64 witnesses green with unchanged transcripts. Any behavioural difference is a defect in the migration, not a new design.")))
 
@@ -386,6 +395,9 @@
     ((priority . 8.5)
      (capabilities . (wsm-os assembly retirement adr-006 qemu))
      (origin . wsm-os-lisp)
+     (level . asm)
+     (evidence-plan . "every deleted mechanism has a green Pascal-side witness; check-runtime-symbols stays clean")
+     (fail-safely . (("a witness is red on the Pascal side" . "keep the asm path; deletion waits")))
      (depends-on . (WSM-OS-FPC-MECHANISM-MIGRATION))
      (description . "ADR-006 P4: shrink src/runtime.s to the level-1 bootstrap minimum (context switch, interrupt entry, atomics) and delete the duplicated mechanism. Every deletion must be covered by a green witness on the Pascal side; nothing is removed on the strength of a plan.")))
 
@@ -393,6 +405,9 @@
     ((priority . 8.0)
      (capabilities . (wsm-os c ffi trust-boundary adr-006 policy))
      (origin . wsm-os-lisp)
+     (level . c)
+     (evidence-plan . "a policy record in policy-enforcement.lisp with a gate that re-checks the third_party/ rule")
+     (fail-safely . (("library ABI mismatch" . "fail closed at load") ("C source appears outside third_party/" . "gate fails the build")))
      (depends-on . ())
      (description . "ADR-006 §3.3: decide and enforce what C may cross into the image. Today scripts/check-no-rust.sh allows C only under third_party/; this task turns that into a named policy with a witness (which libraries, which ABI, what happens on a missing symbol) instead of a directory rule.")))
 
