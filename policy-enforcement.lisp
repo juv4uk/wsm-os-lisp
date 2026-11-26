@@ -61,9 +61,15 @@
   ; ADR-005 W5: the arbiter's share of hand-written code is a published number
   ; with a ceiling, not an adjective. The owner may change max-share; an agent
   ; may not. Crossing the ceiling fails the build, so growth needs a decision.
+  ;
+  ; The arbiter is everything under src/ in any admitted production language, not
+  ; "the .s files". Naming the language here would have let a language change
+  ; (ADR-006) silently move the mechanism out from under the ceiling while the
+  ; gate kept reporting a comfortable number.
   (max-share 0.40)
-  (arbiter-glob "src/*.s")
-  (code-extensions ".s" ".lisp" ".sh" ".py")
+  (arbiter-root "src/")
+  (arbiter-extensions ".s" ".pas" ".pp" ".lpr")
+  (code-extensions ".s" ".lisp" ".sh" ".py" ".pas" ".pp" ".lpr")
   (excluded-prefix "artifacts/"))
 
  (policies
@@ -128,8 +134,8 @@
 
   (policy
    (id task-format)
-   (claim "Every task not declared legacy carries its level, an evidence plan and fail-safely triggers, so a task that cannot state them is not worked on.")
-   (enforcement literal "scripts/check-task-format.py" "A task without level, evidence plan and")
+   (claim "Every task not declared legacy carries its level, a user journey, an evidence plan and fail-safely triggers, so a task that cannot state them is not worked on.")
+   (enforcement literal "scripts/check-task-format.py" "A task without level, user journey, evidence plan and")
    (witness runtime)
    (gate "scripts/check-task-format.py")
    (note "Definition of Done items 1-3 from the owner's agent prompt, enforced on new tasks only. 55 tasks predate the rule and are listed in task-format-disposition.lisp; the list is checked both ways, so a legacy task that gains the fields must leave it.")

@@ -308,15 +308,18 @@ def read_arbiter_budget() -> dict:
     if not 0 < max_share <= 1:
         raise GateError("arbiter-budget: max-share must be a fraction between 0 and 1")
 
-    glob_node = field("arbiter-glob")
-    arbiter_glob = string(glob_node[0]) or atom(glob_node[0])
+    root_node = field("arbiter-root")
+    arbiter_root = string(root_node[0]) or atom(root_node[0])
+    arb_ext_node = field("arbiter-extensions")
+    arbiter_ext = [string(x) or atom(x) for x in arb_ext_node]
     ext_node = field("code-extensions")
     extensions = [string(x) or atom(x) for x in ext_node]
     pref_node = field("excluded-prefix")
     excluded = string(pref_node[0]) or atom(pref_node[0])
     return {
         "max_share": max_share,
-        "arbiter_glob": arbiter_glob,
+        "arbiter_root": arbiter_root,
+        "arbiter_ext": [e for e in arbiter_ext if e],
         "extensions": [e for e in extensions if e],
         "excluded": excluded,
     }
@@ -330,18 +333,27 @@ def count_lines(path: Path) -> int:
 
 
 def check_arbiter_budget(budget: dict) -> tuple[float, int, int]:
-    arbiter_files = sorted(ROOT.glob(budget["arbiter_glob"]))
-    if not arbiter_files:
-        raise GateError(f"arbiter-budget: glob {budget['arbiter_glob']} matched no file")
-    arbiter_lines = sum(count_lines(p) for p in arbiter_files)
-
     tracked = subprocess.run(
         ["git", "-C", str(ROOT), "ls-files"], capture_output=True, text=True
     )
     if tracked.returncode != 0:
         raise GateError("arbiter-budget: git ls-files failed, cannot measure the denominator")
+
+    files = [rel for rel in tracked.stdout.splitlines() if rel.strip()]
+    arbiter_files = [
+        rel for rel in files
+        if rel.startswith(budget["arbiter_root"])
+        and any(rel.endswith(ext) for ext in budget["arbiter_ext"])
+    ]
+    if not arbiter_files:
+        raise GateError(
+            f"arbiter-budget: no {budget['arbiter_ext']} files under {budget['arbiter_root']}; "
+            "the arbiter cannot be measured"
+        )
+    arbiter_lines = sum(count_lines(ROOT / rel) for rel in arbiter_files)
+
     total = 0
-    for rel in tracked.stdout.splitlines():
+    for rel in files:
         if budget["excluded"] and rel.startswith(budget["excluded"]):
             continue
         if not any(rel.endswith(ext) for ext in budget["extensions"]):

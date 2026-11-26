@@ -23,7 +23,7 @@ TASKS = ROOT / "tasks.lisp"
 DISPOSITION = ROOT / "task-format-disposition.lisp"
 
 LEVELS = {"asm", "pascal", "c", "sens", "lisp"}
-REQUIRED = ("level", "evidence-plan", "fail-safely")
+REQUIRED = ("level", "user-journey", "evidence-plan", "fail-safely")
 
 
 class GateError(Exception):
@@ -180,6 +180,14 @@ def main() -> int:
         elif level.lower() not in LEVELS:
             problems.append(f"{name}: level '{level}' is not one of {sorted(LEVELS)}")
 
+        journey = fields.get("user-journey")
+        if journey is None:
+            problems.append(f"{name}: new task has no (user-journey . (...)) — DoD item 2")
+        elif isinstance(journey, str) and not journey.strip():
+            problems.append(f"{name}: (user-journey ...) is empty")
+        elif isinstance(journey, list) and not journey:
+            problems.append(f"{name}: (user-journey ...) describes nobody")
+
         plan = string(fields.get("evidence-plan"))
         if not plan or not plan.strip():
             problems.append(f"{name}: new task has no (evidence-plan . \"...\") — DoD item 4")
@@ -199,7 +207,7 @@ def main() -> int:
         for p in problems:
             print(f"  {p}", file=sys.stderr)
         print(
-            f"TASK-FORMAT-FAIL: {len(problems)} problem(s). A task without level, evidence plan and "
+            f"TASK-FORMAT-FAIL: {len(problems)} problem(s). A task without level, user journey, evidence plan and "
             "fail-safely triggers is not ready to be worked on.",
             file=sys.stderr,
         )

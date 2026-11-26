@@ -37,6 +37,13 @@ for adr in docs/ADR-*.md; do
   [ -n "$line_no" ] || continue
   checked=$((checked + 1))
 
+  # An ADR with named deciders is a decision; one without them is a blog post.
+  deciders="$(grep -E '^\*\*(Deciders|Хто вирішив)' "$adr" | head -1 || true)"
+  if ! printf '%s' "$deciders" | grep -qE ': *[^ *]'; then
+    problems=$((problems + 1))
+    printf '  %s: ACCEPTED but names no decider — add a "**Deciders/Хто вирішив**: <name>" line\n' "$adr" >&2
+  fi
+
   blame="$(git blame --porcelain -L "${line_no},${line_no}" -- "$adr" 2>/dev/null || true)"
   [ -n "$blame" ] || fail "$adr: cannot blame the status line (workflow needs full history)"
   mail="$(printf '%s\n' "$blame" | sed -n 's/^author-mail <\(.*\)>$/\1/p' | head -1)"
