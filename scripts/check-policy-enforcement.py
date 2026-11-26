@@ -15,6 +15,7 @@ a shell/awk pattern match, because a gate that mis-parses is worse than none.
 
 from __future__ import annotations
 
+import fnmatch
 import re
 import subprocess
 import sys
@@ -143,6 +144,41 @@ def read_records() -> list[dict]:
     return records
 
 
+# --- cached repository views ---------------------------------------------
+# The gate runs on every push and is the slowest member of the local suite. Its
+# cost was never the checks themselves: it walked the whole tree five times for
+# the absence rules and re-read every workflow file 56 times. Both are now read
+# once per process.
+
+_TRACKED: list[str] | None = None
+_WORKFLOW_TEXT: dict[str, str] = {}
+_LINE_COUNTS: dict[str, int] = {}
+
+
+def tracked_files() -> list[str]:
+    global _TRACKED
+    if _TRACKED is None:
+        proc = subprocess.run(
+            ["git", "-C", str(ROOT), "ls-files"], capture_output=True, text=True
+        )
+        if proc.returncode != 0:
+            raise GateError("git ls-files failed; the gate cannot see the tree")
+        _TRACKED = [rel for rel in proc.stdout.splitlines() if rel.strip()]
+    return _TRACKED
+
+
+def path_matches(rel: str, pattern: str) -> bool:
+    """Match a tracked path against a forbidden-name pattern.
+
+    Patterns in the registry are names, not globs with directories: "*.rs",
+    "Cargo.toml", "crates". A path matches when its basename or its full path
+    matches the pattern, or when any directory component equals it.
+    """
+    if fnmatch.fnmatch(rel, pattern) or fnmatch.fnmatch(rel.rsplit("/", 1)[-1], pattern):
+        return True
+    return pattern in rel.split("/")[:-1]
+
+
 def check_enforcement(rid: str, node) -> str:
     if not node:
         raise GateError(f"{rid}: enforcement is missing")
@@ -168,13 +204,9 @@ def check_enforcement(rid: str, node) -> str:
         if not patterns:
             raise GateError(f"{rid}: (enforcement absent ...) needs at least one pattern")
         for pattern in patterns:
-            hits = [
-                p
-                for p in ROOT.rglob(pattern)
-                if ".git" not in p.parts
-            ][:3]
+            hits = [rel for rel in tracked_files() if path_matches(rel, pattern)][:3]
             if hits:
-                joined = ", ".join(str(h.relative_to(ROOT)) for h in hits)
+                joined = ", ".join(hits)
                 raise GateError(f"{rid}: forbidden path {pattern!r} exists ({joined}) — absence claim is false")
         return f"absent {' '.join(patterns)}"
     raise GateError(f"{rid}: unknown enforcement kind {kind!r} (expected literal or absent)")
@@ -209,7 +241,11 @@ def workflow_references(rel: str) -> list[str]:
     if not WORKFLOWS.is_dir():
         return hits
     for wf in sorted(WORKFLOWS.glob("*.y*ml")):
-        if rel in wf.read_text(encoding="utf-8", errors="replace"):
+        text = _WORKFLOW_TEXT.get(wf.name)
+        if text is None:
+            text = wf.read_text(encoding="utf-8", errors="replace")
+            _WORKFLOW_TEXT[wf.name] = text
+        if rel in text:
             hits.append(wf.name)
     return hits
 
@@ -326,20 +362,20 @@ def read_arbiter_budget() -> dict:
 
 
 def count_lines(path: Path) -> int:
+    key = str(path)
+    cached = _LINE_COUNTS.get(key)
+    if cached is not None:
+        return cached
     try:
-        return len(path.read_text(encoding="utf-8", errors="replace").splitlines())
+        value = len(path.read_text(encoding="utf-8", errors="replace").splitlines())
     except OSError:
-        return 0
+        value = 0
+    _LINE_COUNTS[key] = value
+    return value
 
 
 def check_arbiter_budget(budget: dict) -> tuple[float, int, int]:
-    tracked = subprocess.run(
-        ["git", "-C", str(ROOT), "ls-files"], capture_output=True, text=True
-    )
-    if tracked.returncode != 0:
-        raise GateError("arbiter-budget: git ls-files failed, cannot measure the denominator")
-
-    files = [rel for rel in tracked.stdout.splitlines() if rel.strip()]
+    files = tracked_files()
     arbiter_files = [
         rel for rel in files
         if rel.startswith(budget["arbiter_root"])
