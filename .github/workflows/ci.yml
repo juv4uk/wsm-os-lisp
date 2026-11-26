@@ -1,9 +1,21 @@
 name: wsm-os-lisp contracts
 
+# This workflow is an intentional always-run: it has no paths filter, because
+# two of its gates read documentation rather than code
+# (check-role-authority.sh reads README.md, check-semantic-authority.sh reads
+# docs/TARGET-ABI.md). A docs-only commit must still be able to fail here.
+# Every other workflow in this directory narrows itself with a paths filter,
+# so a docs-only push costs one job, not nineteen.
 on:
   push:
   pull_request:
   workflow_dispatch:
+
+# Superseded runs on the same ref are cancelled: a queue of stale witness
+# runs on main tells you nothing that the newest run does not.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   contracts:

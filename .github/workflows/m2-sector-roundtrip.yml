@@ -23,6 +23,12 @@ on:
       - ".github/workflows/m2-sector-roundtrip.yml"
   workflow_dispatch:
 
+# Superseded runs on the same ref are cancelled: a queue of stale witness
+# runs on main tells you nothing that the newest run does not.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   sector0:
     runs-on: ubuntu-latest

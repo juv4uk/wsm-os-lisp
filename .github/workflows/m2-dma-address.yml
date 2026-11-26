@@ -23,6 +23,12 @@ on:
       - ".github/workflows/m2-dma-address.yml"
   workflow_dispatch:
 
+# Superseded runs on the same ref are cancelled: a queue of stale witness
+# runs on main tells you nothing that the newest run does not.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   dma-address:
     runs-on: ubuntu-latest
