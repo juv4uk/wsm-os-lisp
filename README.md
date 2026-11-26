@@ -81,6 +81,13 @@ The privacy-scrubbed physical and WSL target inventory is in
 The compiler-first ownership decision is recorded in
 [docs/ADR-001-COMPILER-FIRST.md](docs/ADR-001-COMPILER-FIRST.md).
 
+The trust-boundary decision is proposed (not accepted) in
+[docs/ADR-005-TRUST-BOUNDARY-ARBITER-NOT-KERNELLESS.md](docs/ADR-005-TRUST-BOUNDARY-ARBITER-NOT-KERNELLESS.md);
+its prior-art survey is
+[docs/research/PRIOR-ART-NO-KERNEL-2026-11-26.md](docs/research/PRIOR-ART-NO-KERNEL-2026-11-26.md),
+and the branch state it depends on is
+[docs/BRANCH-INVENTORY-2026-11-26.md](docs/BRANCH-INVENTORY-2026-11-26.md).
+
 Executable swarm work is tracked in [`tasks.lisp`](tasks.lisp).
 
 The first machine-readable ABI and its generated WSM projection are documented
@@ -183,6 +190,13 @@ QEMU x86_64 boot
 
 Рішення розпочати з побудови компілятора зафіксовано у
 [docs/ADR-001-COMPILER-FIRST.md](docs/ADR-001-COMPILER-FIRST.md).
+
+Рішення про межу довіри **запропоновано** (не прийнято) у
+[docs/ADR-005-TRUST-BOUNDARY-ARBITER-NOT-KERNELLESS.md](docs/ADR-005-TRUST-BOUNDARY-ARBITER-NOT-KERNELLESS.md);
+огляд попереднього доробку — у
+[docs/research/PRIOR-ART-NO-KERNEL-2026-11-26.md](docs/research/PRIOR-ART-NO-KERNEL-2026-11-26.md),
+а стан гілок, від якого він залежить, — у
+[docs/BRANCH-INVENTORY-2026-11-26.md](docs/BRANCH-INVENTORY-2026-11-26.md).
 
 Робота рою агентів над виконуваними завданнями відстежується у [`tasks.lisp`](tasks.lisp).
 
