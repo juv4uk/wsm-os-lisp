@@ -2,7 +2,7 @@
 *ADR-004: Архітектура чистого Lisp + x86-64 асемблера (Ціль: Zero-Rust)*
 
 **Date/Дата**: 2026-09-14  
-**Status/Статус**: **SUPERSEDED** by [ADR-006](ADR-006-FPC-HOST-LANGUAGE.md) (2026-11-26, owner directive) — тіло збережено як походження рішення
+**Status/Статус**: **SUPERSEDED** by [ADR-006](ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md) (2026-11-26, owner directive) — тіло збережено як походження рішення
 *Було*: ACCEPTED (owner directive / директива власника)  
 **Supersedes/Заміщує**: [ADR-003: Machine Mechanism Below, WSM Logic Above](ADR-003-RUST-LISP-MECHANISM-POLICY.md) (SUPERSEDED)
 
