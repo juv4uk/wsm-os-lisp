@@ -325,11 +325,29 @@
      (context . "Completed 2026-09-01 in ba899a7 on runtime foundation 4f5f727 and CML 1266c83. Closure tag 5 points only into a bounded 16-byte-aligned closure arena; image-local definition ID and owned WSM environment are bounds-checked; foreign/malformed pointers and OOM fail closed. Target/runtime 12/12 PASS, oracle=(A B), hosted=(A B), QEMU boot transcript=(A B) execution=escaping-closure; all artifact manifests/capsules verify against the pinned SHA.")
      (description . "Represent an escaping closure as a bounded target value carrying code identity plus captured environment; apply it after its defining call returns. Prove the unchanged fixture through my-lisp oracle, hosted generated code and QEMU. Do not copy Rust Value layout or add constitutional special cases.")))
 
-   ("WSM-OS-CONSTITUTION-GLOBAL-ENV-DEFS" .
+   ("WSM-OS-CONSTITUTION-GLOBAL-ENV-MECHANISM" .
+    ((priority . 9.75)
+     (done . t)
+     (capabilities . (wsm-os runtime globals definitions recursion qemu conformance))
+     (origin . wsm-os-lisp)
+     (github-issue . 110)
+     (depends-on . (WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME))
+     (description . "Target mechanism slice of the global environment: a bounded definition table (256 x 16-byte entries in .bss, name_id and value in separate fields) with wsm_def_bind / wsm_def_ref / wsm_def_count. Calls resolve the callee by name at call time, which is what mutual recursion needs before a linker exists. Proven in QEMU by three nucleus witnesses: ordinary+mutual recursion with live redefinition, unbound name as a SYMBOL condition (never NIL), and table exhaustion as a named OOM condition (never silent overwrite).")
+     (context . "Completed 2026-11-26. RuntimeContext +72 def_base, +80 def_capacity (256), +88 def_len; def_arena 4096 bytes of .bss. Gate scripts/check-constitution-global-env.sh = 3/3 PASS on the unchanged UEFI/QEMU target: defs -> value=(sym5 . (sym6 . nil)), unbound -> kind=SYMBOL source=0 value=44, full -> kind=OOM source=0 value=0. The defs fixture also asserts wsm_def_count stays 2 after redefinition and reports an ABI condition on violation. check-runtime-symbols.sh stays clean and the M0/M1 baseline transcript is unchanged. SCOPE: fixtures are hand-written target assembly (fixture-provenance = hand-written-assembly); no CML emission, oracle or hosted parity; the table is not yet a GC root; bindings are not persisted in an image. Those obligations are WSM-OS-CONSTITUTION-GLOBAL-ENV-PARITY.")))
+
+("WSM-OS-CONSTITUTION-GLOBAL-ENV-PARITY" .
+    ((priority . 9.72)
+     (capabilities . (wsm-os cml runtime globals definitions qemu conformance provenance))
+     (origin . wsm-os-lisp)
+     (github-issue . 111)
+     (depends-on . (WSM-OS-CONSTITUTION-GLOBAL-ENV-MECHANISM))
+     (description . "Take the three global-environment shapes through the admitted pipeline: CML emission from the .lisp projections, oracle parity on the positive program and both negatives, hosted parity, artifact manifest with cml_sha/assembly_digest/object_digest, and a definition capsule that carries the table state. Hand-written fixtures may remain only as explicitly labelled nucleus mechanism witnesses. No fixture may be silently skipped.")))
+
+("WSM-OS-CONSTITUTION-GLOBAL-ENV-DEFS" .
     ((priority . 9.7)
      (capabilities . (wsm-os runtime globals definitions recursion qemu conformance))
      (origin . wsm-os-lisp)
-     (depends-on . (WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME))
+     (depends-on . (WSM-OS-CONSTITUTION-GLOBAL-ENV-MECHANISM WSM-OS-CONSTITUTION-GLOBAL-ENV-PARITY))
      (description . "Add bounded global definition/function bindings and application needed by unchanged constitutional definitions, including ordinary and mutual recursion. Keep names separate from value identity and prove each new shape through oracle, hosted and QEMU.")))
 
    ("WSM-OS-CONSTITUTION-GC-OOM" .

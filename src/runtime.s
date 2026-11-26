@@ -460,6 +460,155 @@ wsm_closure_environment:
     ret
 
 # ---------------------------------------------------------------------------
+# Bounded global definition table (constitutional def/function bindings).
+#
+# RuntimeContext fields owned here (see src/entry.s::runtime_context):
+#   +72  def_base      pointer to a fixed-capacity arena owned by the target
+#   +80  def_capacity  number of 16-byte entries the arena holds
+#   +88  def_len       number of entries currently bound
+#
+# Entry layout (16 bytes, 16-byte aligned by construction):
+#   +0   u32 name_id   symbol id carried by the name word (word >> 3)
+#   +4   u32 reserved  always zero; keeps the value word 8-byte aligned
+#   +8   u64 value     tagged WSM word bound to that name
+#
+# Laws:
+#   * a name is not a value: the name word is decoded to an id and stored in a
+#     field that lookup never returns; the table returns only the value word;
+#   * binding is bounded by def_capacity and lookup by def_len, so a full table
+#     is a deterministic named failure, never a silent overwrite or corruption;
+#   * rebinding reuses the existing slot, so redefinition never consumes
+#     capacity and never reorders lookup;
+#   * an unbound name is a SYMBOL condition, never NIL: NIL is a value.
+# ---------------------------------------------------------------------------
+.set DEF_ENTRY_SHIFT,         4                       # 16 bytes per entry
+.set CTX_DEF_BASE,            72
+.set CTX_DEF_CAPACITY,        80
+.set CTX_DEF_LEN,             88
+
+# ---------------------------------------------------------------------------
+# Word wsm_def_bind(RuntimeContext* ctx, Word name, Word value)
+# Arguments: RDI = ctx, RSI = name (tag 100 symbol), RDX = value
+# Returns:   RAX = value (the bound word, unchanged)
+# ---------------------------------------------------------------------------
+.globl wsm_def_bind
+.type wsm_def_bind, @function
+wsm_def_bind:
+    movq %rsi, %rax
+    andq $WSM_TAG_MASK, %rax
+    cmpq $WSM_TAG_SYMBOL, %rax
+    jne .Ldef_bind_type
+
+    movq %rsi, %r8
+    shrq $3, %r8                    # name_id
+    testq %r8, %r8
+    jz .Ldef_bind_type              # id 0 is not an admissible name
+
+    movq CTX_DEF_BASE(%rdi), %r9
+    movq CTX_DEF_LEN(%rdi), %r10
+    xorq %rcx, %rcx
+
+.Ldef_bind_scan:
+    cmpq %r10, %rcx
+    jae .Ldef_bind_append
+    movq %rcx, %rax
+    shlq $DEF_ENTRY_SHIFT, %rax
+    addq %r9, %rax
+    cmpl %r8d, 0(%rax)              # same name already bound?
+    je .Ldef_bind_store
+    incq %rcx
+    jmp .Ldef_bind_scan
+
+.Ldef_bind_store:
+    movq %rdx, 8(%rax)              # rebind in place; capacity unchanged
+    movq %rdx, %rax
+    ret
+
+.Ldef_bind_append:
+    cmpq CTX_DEF_CAPACITY(%rdi), %r10
+    jae .Ldef_bind_exhausted
+
+    movq %r10, %rax
+    shlq $DEF_ENTRY_SHIFT, %rax
+    addq %r9, %rax
+    movl %r8d, 0(%rax)              # name_id
+    movl $0, 4(%rax)                # reserved
+    movq %rdx, 8(%rax)              # value
+    incq %r10
+    movq %r10, CTX_DEF_LEN(%rdi)
+    movq %rdx, %rax
+    ret
+
+.Ldef_bind_exhausted:
+    xorq %rdx, %rdx                 # OOM carries no offending value, as in
+    movl $ERR_OOM, %esi             # wsm_cons / wsm_closure_new arena OOM
+    jmp wsm_fail
+
+.Ldef_bind_type:
+    movq %rsi, %rdx                 # offending value = the rejected name
+    movl $ERR_TYPE, %esi
+    jmp wsm_fail
+
+# ---------------------------------------------------------------------------
+# Word wsm_def_ref(RuntimeContext* ctx, Word name)
+# Arguments: RDI = ctx, RSI = name (tag 100 symbol)
+# Returns:   RAX = bound value word
+# Fails closed: unbound name -> SYMBOL condition carrying the name word.
+# ---------------------------------------------------------------------------
+.globl wsm_def_ref
+.type wsm_def_ref, @function
+wsm_def_ref:
+    movq %rsi, %rax
+    andq $WSM_TAG_MASK, %rax
+    cmpq $WSM_TAG_SYMBOL, %rax
+    jne .Ldef_ref_type
+
+    movq %rsi, %r8
+    shrq $3, %r8
+    testq %r8, %r8
+    jz .Ldef_ref_type
+
+    movq CTX_DEF_BASE(%rdi), %r9
+    movq CTX_DEF_LEN(%rdi), %r10
+    xorq %rcx, %rcx
+
+.Ldef_ref_scan:
+    cmpq %r10, %rcx
+    jae .Ldef_ref_unbound
+    movq %rcx, %rax
+    shlq $DEF_ENTRY_SHIFT, %rax
+    addq %r9, %rax
+    cmpl %r8d, 0(%rax)
+    je .Ldef_ref_hit
+    incq %rcx
+    jmp .Ldef_ref_scan
+
+.Ldef_ref_hit:
+    movq 8(%rax), %rax
+    ret
+
+.Ldef_ref_unbound:
+    movq %rsi, %rdx                 # the unbound name is the offending value
+    movl $ERR_SYMBOL, %esi
+    jmp wsm_fail
+
+.Ldef_ref_type:
+    movq %rsi, %rdx
+    movl $ERR_TYPE, %esi
+    jmp wsm_fail
+
+# ---------------------------------------------------------------------------
+# uint64_t wsm_def_count(RuntimeContext* ctx)
+# Arguments: RDI = ctx
+# Returns:   RAX = number of bound names (observation only, no semantics)
+# ---------------------------------------------------------------------------
+.globl wsm_def_count
+.type wsm_def_count, @function
+wsm_def_count:
+    movq CTX_DEF_LEN(%rdi), %rax
+    ret
+
+# ---------------------------------------------------------------------------
 # void wsm_fail(RuntimeContext* ctx, uint32_t code, Word value)
 # Arguments: RDI = ctx, ESI = code, RDX = value
 # Generic/Lisp condition: source_id stays 0 (closed error vocabulary).

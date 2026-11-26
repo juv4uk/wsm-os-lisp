@@ -91,6 +91,11 @@ closure_arena:
     .skip 16384                     # 16 KB closure arena
 closure_arena_end:
 
+.align 16
+def_arena:
+    .skip 4096                      # 256 global definition entries * 16 bytes
+def_arena_end:
+
 .section .data
 .align 16
 # Boot handoff state: raw pointer captured from RDI on entry. The actual
@@ -111,6 +116,9 @@ runtime_context:
     .long 0                         # offset 52: condition_source
     .quad 0                         # offset 56: condition_value
     .quad kernel_failure            # offset 64: failure_handler
+    .quad def_arena                 # offset 72: def_base (global definitions)
+    .quad 256                       # offset 80: def_capacity (256 * 16 bytes)
+    .quad 0                         # offset 88: def_len
 
 .section .rodata
 msg_res_pre:
