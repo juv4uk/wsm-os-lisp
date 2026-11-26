@@ -360,11 +360,21 @@
      (description . "Capture allocator-entry root state before the prologue clobbers the certified registers, and classify it against a registered root map keyed by (final_pc, allocator_kind). Three outcomes stay distinct: CERTIFIED, NOT-A-SAFEPOINT and INVALID; absence of metadata is never read as an empty certificate, and contradictory metadata fails closed with a GC-family ABI source code. No collector runs.")
      (context . "Completed 2026-11-26. wsm_gc_safepoint save area (48 bytes) written as the first instruction of wsm_cons and wsm_closure_new: return_pc, caller_rsp_at_call, entry rsi, entry rdx, allocator_kind, state, captures. wsm_gc_root_map_register installs a 16-byte-entry map (pc_offset, kind, rsi_root, rdx_root); offsets rather than absolute addresses, so a map survives any link layout. Gate scripts/check-gc-safepoint-capture.sh = 4/4 PASS: certified and absent both allocate normally with value=(sym1 . sym2); kind-mismatch -> kind=ABI source=1195573249 (0x47430001) value=55 (site offset 0x40-0x9, cross-checked with objdump); closure-rsi -> kind=ABI source=1195573250 (0x47430002) value=0. Baseline M0/M1 transcript unchanged, runtime stays host-import free. SCOPE: maps are hand-written in the fixtures (fixture-provenance = hand-written-assembly); consuming a real CML_GC_ROOT_MAP_V1 is #64; no mark, sweep, free list or stack scan.")))
 
+   ("WSM-OS-GC-ROOT-MAP-WIRE" .
+    ((priority . 9.62)
+     (done . t)
+     (capabilities . (wsm-os runtime memory garbage-collection roots cml qemu conformance))
+     (origin . wsm-os-lisp)
+     (github-issue . 64)
+     (depends-on . (WSM-OS-GC-SAFEPOINT-CAPTURE))
+     (description . "Consume a CML_GC_ROOT_MAP_V1 record at the real allocation boundary: a label-keyed wire plus a label -> final_pc binding table, resolved once at registration into the internal root map, with every malformed record rejected before any allocation can consult it. Distinguishes CERTIFIED, CERTIFIED-EMPTY, NOT-A-SAFEPOINT and INVALID. No collection.")
+     (context . "Completed 2026-11-26. Wire header 32 bytes (magic GCRM, version 1, entry_count <= 256, stride 32, pc_base) and 32-byte entries (label_id, kind, register_mask, certified_empty, stack_root_count <= 2, frame_size, two stack offsets); binding rows 16 bytes (label_id, final_pc). wsm_gc_wire_register validates eagerly and fails closed with GC sources 0x47430003 duplicate label, 0x47430004 stack root, 0x47430005 unknown label, 0x47430006 wire invalid, 0x47430007 duplicate site. Gate scripts/check-gc-root-map-wire.sh = 5/5 PASS: certified (register roots plus one stack root whose computed address is asserted equal to caller_rsp_at_call + offset) and empty both allocate normally with value=(sym1 . sym2); unknown-label -> source=1195573253 value=9; bad-stack -> source=1195573252 value=0; dup-label -> source=1195573251 value=1. The #71 gate still passes against the widened 32-byte record with identical transcripts. SCOPE: wire records are hand-written fixtures; the runtime is proven able to consume such a record and reject malformed ones, producing it is CML's obligation; no mark, sweep, free list or stack scan.")))
+
    ("WSM-OS-CONSTITUTION-GC-OOM" .
     ((priority . 9.6)
      (capabilities . (wsm-os runtime memory garbage-collection oom qemu conformance))
      (origin . wsm-os-lisp)
-     (depends-on . (WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME WSM-OS-GC-SAFEPOINT-CAPTURE))
+     (depends-on . (WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME WSM-OS-GC-SAFEPOINT-CAPTURE WSM-OS-GC-ROOT-MAP-WIRE))
      (description . "Provide root enumeration and bounded collection for cons, closures and environments before widening heap value types. Exhaustion must yield a deterministic named target failure, not corruption or reset; prove live capture survival and deliberate OOM in hosted and QEMU.")))
 
    ("WSM-OS-CONSTITUTION-FULL-VALUES-ERRORS" .

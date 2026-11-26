@@ -32,8 +32,11 @@ wsm_entry:
 
 .align 8
 .Lroot_map:
-    .quad .Lsite_closure - .Lpc_base
-    .byte 2, 1, 1, 0                # closure kind but claims %rsi as a root
+    .long .Lsite_closure - .Lpc_base
+    .byte 2, 1, 0, 0                # closure kind but claims %rsi as a root
+    .quad 0
     .long 0
+    .long 0
+    .quad 0
 .size wsm_entry, .-wsm_entry
 .section .note.GNU-stack,"",@progbits

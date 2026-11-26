@@ -192,14 +192,22 @@ wsm_m3_idtr:
 #   offset 64: failure_handler  (void (*)(RuntimeContext*, uint32_t))
 
 # ---------------------------------------------------------------------------
-# GC safepoint capture (#71, GC-ENTRY-CAPTURE-1)
+# GC safepoint capture and root-map consumption (#71, #64)
 #
 # A precise collector can only start from roots the compiler certified for the
 # exact allocation site. The allocator is the last place where that evidence
 # still exists: one instruction later the prologue reuses %rax/%rcx and the
-# return PC is no longer recoverable. So every allocator captures its entry
-# state before touching anything, then classifies it against a registered
-# root map keyed by (final_pc, allocator_kind).
+# return PC is no longer recoverable. Every allocator therefore captures its
+# entry state before touching anything, then classifies it against a root map
+# keyed by (final_pc, allocator_kind).
+#
+# Two ways to install a map:
+#   wsm_gc_root_map_register  internal/test path, entries already carry
+#                             site offsets relative to pc_base;
+#   wsm_gc_wire_register      CML_GC_ROOT_MAP_V1 boundary: entries name a
+#                             label, a separate binding table resolves
+#                             label -> final_pc, and every record is validated
+#                             before it can influence anything.
 #
 # Captured state (rewriteable save area, never a language value):
 #   +0  return_pc            *(entry_rsp)
@@ -207,43 +215,76 @@ wsm_m3_idtr:
 #   +16 entry rsi            certified candidate for cons, not a root for closure
 #   +24 entry rdx            certified candidate for both
 #   +32 allocator_kind       1 cons, 2 closure
-#   +36 state                0 none, 1 CERTIFIED, 2 NOT-A-SAFEPOINT, 3 INVALID
+#   +36 state                0 none, 1 CERTIFIED, 2 NOT-A-SAFEPOINT,
+#                            3 INVALID, 4 CERTIFIED-EMPTY
 #   +40 captures             CERTIFIED captures so far (observation only)
+#   +48 stack_root[0]        computed address caller_rsp + certified offset
+#   +56 stack_root[1]
+#   +64 stack_root_count
 #
-# Three outcomes, never conflated:
-#   CERTIFIED        a map entry for this (pc, kind) certifies the registers
-#   NOT-A-SAFEPOINT no metadata at all: allocation proceeds unchanged
-#   INVALID          metadata exists but contradicts this site -> fail closed
+# Root map entry, 32 bytes (internal and wire share this layout; the first word
+# is a site offset internally and a label id on the wire):
+#   +0  u32 site_offset / label_id
+#   +4  u8  allocator_kind
+#   +5  u8  register_mask    bit0 %rsi, bit1 %rdx
+#   +6  u8  certified_empty  1 = explicitly no roots
+#   +7  u8  stack_root_count <= 2 in v1
+#   +8  u64 frame_size
+#   +16 u32 stack_offset[0]
+#   +20 u32 stack_offset[1]
+#   +24 u64 reserved
 #
-# %rdi/%r12 (RuntimeContext*) is deliberately NOT captured as a root, and the
-# stack is never scanned: only certified registers are recorded.
+# Laws carried over from the #62 research witness:
+#   * absent metadata is NOT-A-SAFEPOINT, never an empty root set;
+#   * an empty certificate must say so explicitly (certified_empty=1) and may
+#     not also declare roots;
+#   * duplicate labels, duplicate final PCs, unknown labels, unaligned or
+#     out-of-frame stack roots and unsupported versions fail closed at
+#     registration, before any allocation happens;
+#   * register roots are only %rsi/%rdx; a closure record may not claim %rsi;
+#   * the stack is never scanned conservatively.
 # ---------------------------------------------------------------------------
-.set GC_STATE_NONE,           0
-.set GC_STATE_CERTIFIED,      1
-.set GC_STATE_NOT_SAFEPOINT,  2
-.set GC_STATE_INVALID,        3
+.set GC_STATE_NONE,            0
+.set GC_STATE_CERTIFIED,       1
+.set GC_STATE_NOT_SAFEPOINT,   2
+.set GC_STATE_INVALID,         3
+.set GC_STATE_CERTIFIED_EMPTY, 4
 
-.set GC_KIND_CONS,            1
-.set GC_KIND_CLOSURE,         2
+.set GC_KIND_CONS,             1
+.set GC_KIND_CLOSURE,          2
 
-.set CTX_GC_MAP_BASE,         96
-.set CTX_GC_MAP_LEN,          104
-.set CTX_GC_PC_BASE,          112
-.set CTX_GC_MAP_VALID,        120
+.set CTX_GC_MAP_BASE,          96
+.set CTX_GC_MAP_LEN,           104
+.set CTX_GC_PC_BASE,           112
+.set CTX_GC_MAP_VALID,         120
 
-.set GC_MAP_ENTRY_SHIFT,      4
-.set GC_MAP_MAX_ENTRIES,      4096
+.set GC_ENTRY_SHIFT,           5                       # 32 bytes per entry
+.set GC_ENTRY_STRIDE,          32
+.set GC_MAP_MAX_ENTRIES,       256
+
+.set GC_WIRE_MAGIC,            0x4752434D              # "GCRM"
+.set GC_WIRE_VERSION,          1
+.set GC_WIRE_HEADER_SIZE,      32
 
 # ABI source codes, same family as the MMIO 0x4D494F.. codes.
-.set GC_ERR_KIND_MISMATCH,    0x47430001      # "GC" 01
-.set GC_ERR_MAP_INVALID,      0x47430002      # "GC" 02
+.set GC_ERR_KIND_MISMATCH,     0x47430001
+.set GC_ERR_MAP_INVALID,       0x47430002
+.set GC_ERR_DUP_LABEL,         0x47430003
+.set GC_ERR_STACK_ROOT,        0x47430004
+.set GC_ERR_UNKNOWN_LABEL,     0x47430005
+.set GC_ERR_WIRE_INVALID,      0x47430006
+.set GC_ERR_DUP_SITE,          0x47430007
 
 .section .bss
 .align 16
 .globl wsm_gc_safepoint
 wsm_gc_safepoint:
-    .skip 48
+    .skip 80
 wsm_gc_safepoint_end:
+
+.align 16
+wsm_gc_map_copy:
+    .skip 8192                  # 256 entries * 32 bytes for wire resolution
 
 .text
 
@@ -277,26 +318,52 @@ wsm_gc_safepoint_end:
     jae .Lgc_not_safepoint                 # absent record = NOT-A-SAFEPOINT
 
     movq %rcx, %r11
-    shlq $GC_MAP_ENTRY_SHIFT, %r11
+    shlq $GC_ENTRY_SHIFT, %r11
     addq CTX_GC_MAP_BASE(%rdi), %r11
-    cmpq %rax, 0(%r11)                      # entry.pc_offset == site offset?
+    cmpl %eax, 0(%r11)                      # entry.site_offset == site offset?
     je .Lgc_found
     incq %rcx
     jmp .Lgc_scan
 
 .Lgc_found:
-    movzbl 8(%r11), %ecx                    # entry allocator kind
+    movzbl 4(%r11), %ecx                    # entry allocator kind
     cmpl %r8d, %ecx
     jne .Lgc_kind_mismatch
 
     cmpl $GC_KIND_CLOSURE, %ecx
-    jne .Lgc_certify
-    cmpb $0, 9(%r11)                        # closure has no %rsi root
-    jne .Lgc_invalid
+    jne .Lgc_empty_check
+    testb $1, 5(%r11)                       # closure has no %rsi root
+    jnz .Lgc_invalid
 
-.Lgc_certify:
+.Lgc_empty_check:
+    cmpb $0, 6(%r11)
+    jne .Lgc_certify_empty
+
     movl $GC_STATE_CERTIFIED, wsm_gc_safepoint+36(%rip)
     incq wsm_gc_safepoint+40(%rip)
+
+    movzbl 7(%r11), %ecx                    # stack_root_count
+    movl %ecx, wsm_gc_safepoint+64(%rip)
+    testl %ecx, %ecx
+    jz .Lgc_done
+
+    movq wsm_gc_safepoint+8(%rip), %r9      # caller_rsp_at_call
+    movl 16(%r11), %eax
+    addq %r9, %rax
+    movq %rax, wsm_gc_safepoint+48(%rip)
+    cmpl $2, %ecx
+    jb .Lgc_done
+    movl 20(%r11), %eax
+    addq %r9, %rax
+    movq %rax, wsm_gc_safepoint+56(%rip)
+
+.Lgc_done:
+    ret
+
+.Lgc_certify_empty:
+    movl $GC_STATE_CERTIFIED_EMPTY, wsm_gc_safepoint+36(%rip)
+    incq wsm_gc_safepoint+40(%rip)
+    movl $0, wsm_gc_safepoint+64(%rip)
     ret
 
 .Lgc_not_safepoint:
@@ -319,7 +386,7 @@ wsm_gc_safepoint_end:
 # void wsm_gc_root_map_register(RuntimeContext* ctx, void* table, uint64 count,
 #                                void* pc_base)
 # Arguments: RDI = ctx, RSI = table, RDX = count, RCX = pc_base
-# Fails closed on null table, null base, zero count or count > 4096.
+# Internal/test path: entries already carry site offsets. Bounds only.
 # ---------------------------------------------------------------------------
 .globl wsm_gc_root_map_register
 .type wsm_gc_root_map_register, @function
@@ -346,9 +413,251 @@ wsm_gc_root_map_register:
     jmp wsm_fail_src
 
 # ---------------------------------------------------------------------------
-# uint32_t wsm_gc_safepoint_state(RuntimeContext* ctx)
-# uint64_t wsm_gc_safepoint_captures(RuntimeContext* ctx)
-# Observation only; no language meaning.
+# void wsm_gc_wire_register(RuntimeContext* ctx, void* wire, void* bindings,
+#                           uint64 binding_count)
+# Arguments: RDI = ctx, RSI = wire, RDX = bindings, RCX = binding_count
+#
+# Wire header (32 bytes):
+#   +0  u32 magic "GCRM"   +4 u16 version   +6 u16 entry_count
+#   +8  u32 stride (32)    +12 u32 flags    +16 u64 pc_base
+#
+# Binding row (16 bytes): +0 u32 label_id, +4 u32 reserved, +8 u64 final_pc
+#
+# Every record is validated here, before any allocation can consult the map.
+# ---------------------------------------------------------------------------
+.globl wsm_gc_wire_register
+.type wsm_gc_wire_register, @function
+wsm_gc_wire_register:
+    pushq %rbx
+    pushq %rbp
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    pushq %r15
+    subq $24, %rsp
+
+    testq %rsi, %rsi
+    jz .Lwr_wire_invalid
+    testq %rdx, %rdx
+    jz .Lwr_wire_invalid
+    testq %rcx, %rcx
+    jz .Lwr_wire_invalid
+    cmpq $GC_MAP_MAX_ENTRIES, %rcx
+    ja .Lwr_wire_invalid
+
+    movq %rdi, %r12
+    movq %rsi, %r13
+    movq %rdx, %r14
+    movq %rcx, %r15
+    leaq wsm_gc_map_copy(%rip), %rbp
+
+    cmpl $GC_WIRE_MAGIC, 0(%r13)
+    jne .Lwr_wire_invalid
+    cmpw $GC_WIRE_VERSION, 4(%r13)
+    jne .Lwr_wire_invalid
+    movzwl 6(%r13), %eax
+    testl %eax, %eax
+    jz .Lwr_wire_invalid
+    cmpl $GC_MAP_MAX_ENTRIES, %eax
+    ja .Lwr_wire_invalid
+    movl %eax, 0(%rsp)                      # entry_count
+    cmpl $GC_ENTRY_STRIDE, 8(%r13)
+    jne .Lwr_wire_invalid
+    cmpq $0, 16(%r13)
+    je .Lwr_wire_invalid
+
+    # --- duplicate label in the binding table fails closed
+    xorl %ebx, %ebx
+.Lwr_dup_outer:
+    cmpq %r15, %rbx
+    jae .Lwr_entries
+    movq %rbx, %rax
+    shlq $4, %rax
+    addq %r14, %rax
+    movl 0(%rax), %ecx
+    movq %rbx, %rdx
+    incq %rdx
+.Lwr_dup_inner:
+    cmpq %r15, %rdx
+    jae .Lwr_dup_next
+    movq %rdx, %rsi
+    shlq $4, %rsi
+    addq %r14, %rsi
+    cmpl 0(%rsi), %ecx
+    je .Lwr_dup_label
+    incq %rdx
+    jmp .Lwr_dup_inner
+.Lwr_dup_next:
+    incq %rbx
+    jmp .Lwr_dup_outer
+
+    # --- per-entry validation
+.Lwr_entries:
+    xorl %ebx, %ebx
+.Lwr_entry_loop:
+    cmpl 0(%rsp), %ebx
+    jae .Lwr_install
+    movq %rbx, %rsi
+    shlq $GC_ENTRY_SHIFT, %rsi
+    addq %r13, %rsi
+    addq $GC_WIRE_HEADER_SIZE, %rsi
+
+    movzbl 4(%rsi), %eax                    # kind
+    cmpl $GC_KIND_CONS, %eax
+    je .Lwr_kind_ok
+    cmpl $GC_KIND_CLOSURE, %eax
+    jne .Lwr_wire_invalid
+.Lwr_kind_ok:
+    movzbl 5(%rsi), %ecx                    # register mask
+    cmpl $3, %ecx
+    ja .Lwr_wire_invalid
+    movzbl 6(%rsi), %edx                    # certified_empty
+    cmpl $1, %edx
+    ja .Lwr_wire_invalid
+    movzbl 7(%rsi), %r8d                    # stack_root_count
+    cmpl $2, %r8d
+    ja .Lwr_stack_invalid
+
+    movl %ecx, %r9d
+    orl %r8d, %r9d
+    testl %edx, %edx
+    jz .Lwr_not_empty
+    testl %r9d, %r9d                        # empty declared together with roots
+    jnz .Lwr_wire_invalid
+    jmp .Lwr_frame
+.Lwr_not_empty:
+    testl %r9d, %r9d                        # zero roots without certified_empty
+    jz .Lwr_wire_invalid
+
+.Lwr_frame:
+    movq 8(%rsi), %r10                      # frame_size
+    testq $7, %r10
+    jnz .Lwr_stack_invalid
+
+    testl %r8d, %r8d
+    jz .Lwr_resolve
+    movl 16(%rsi), %eax
+    testl $7, %eax
+    jnz .Lwr_stack_invalid
+    movq %rax, %r11
+    addq $8, %r11
+    cmpq %r10, %r11
+    ja .Lwr_stack_invalid
+    cmpl $2, %r8d
+    jb .Lwr_resolve
+    movl 20(%rsi), %eax
+    testl $7, %eax
+    jnz .Lwr_stack_invalid
+    movq %rax, %r11
+    addq $8, %r11
+    cmpq %r10, %r11
+    ja .Lwr_stack_invalid
+
+    # --- label -> final_pc binding
+.Lwr_resolve:
+    movl 0(%rsi), %ecx                      # label_id
+    xorl %edx, %edx
+.Lwr_find:
+    cmpq %r15, %rdx
+    jae .Lwr_unknown_label
+    movq %rdx, %rax
+    shlq $4, %rax
+    addq %r14, %rax
+    cmpl 0(%rax), %ecx
+    je .Lwr_bound
+    incq %rdx
+    jmp .Lwr_find
+
+.Lwr_bound:
+    movq 8(%rax), %r9                       # final_pc
+    movq 16(%r13), %r10                     # pc_base
+    cmpq %r10, %r9
+    jb .Lwr_wire_invalid
+    subq %r10, %r9                          # site offset
+
+    xorl %edx, %edx
+.Lwr_site_dup:
+    cmpq %rbx, %rdx
+    jae .Lwr_store
+    movq %rdx, %rax
+    shlq $GC_ENTRY_SHIFT, %rax
+    addq %rbp, %rax
+    cmpl %r9d, 0(%rax)
+    je .Lwr_dup_site
+    incq %rdx
+    jmp .Lwr_site_dup
+
+.Lwr_store:
+    movq %rbx, %rax
+    shlq $GC_ENTRY_SHIFT, %rax
+    addq %rbp, %rax
+    movl %r9d, 0(%rax)                      # site_offset
+    movl 4(%rsi), %ecx                      # kind, mask, empty, stack_count
+    movl %ecx, 4(%rax)
+    movq 8(%rsi), %rcx                      # frame_size
+    movq %rcx, 8(%rax)
+    movl 16(%rsi), %ecx
+    movl %ecx, 16(%rax)
+    movl 20(%rsi), %ecx
+    movl %ecx, 20(%rax)
+    movq $0, 24(%rax)
+    incl %ebx
+    jmp .Lwr_entry_loop
+
+.Lwr_install:
+    movq %rbp, CTX_GC_MAP_BASE(%r12)
+    movl 0(%rsp), %eax
+    movq %rax, CTX_GC_MAP_LEN(%r12)
+    movq 16(%r13), %rax
+    movq %rax, CTX_GC_PC_BASE(%r12)
+    movq $1, CTX_GC_MAP_VALID(%r12)
+    addq $24, %rsp
+    popq %r15
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %rbp
+    popq %rbx
+    ret
+
+.Lwr_wire_invalid:
+    xorq %rcx, %rcx
+    movl $GC_ERR_WIRE_INVALID, %edx
+    jmp .Lwr_fail
+.Lwr_dup_label:
+    movl %ecx, %ecx
+    movl $GC_ERR_DUP_LABEL, %edx
+    jmp .Lwr_fail
+.Lwr_unknown_label:
+    movl %ecx, %ecx
+    movl $GC_ERR_UNKNOWN_LABEL, %edx
+    jmp .Lwr_fail
+.Lwr_stack_invalid:
+    xorq %rcx, %rcx
+    movl $GC_ERR_STACK_ROOT, %edx
+    jmp .Lwr_fail
+.Lwr_dup_site:
+    movq %r9, %rcx
+    movl $GC_ERR_DUP_SITE, %edx
+
+.Lwr_fail:
+    movq %r12, %rdi
+    movl $ERR_ABI, %esi
+    addq $24, %rsp
+    popq %r15
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %rbp
+    popq %rbx
+    jmp wsm_fail_src
+
+# ---------------------------------------------------------------------------
+# Observation accessors: no language meaning.
+#   uint32_t wsm_gc_safepoint_state(RuntimeContext* ctx)
+#   uint64_t wsm_gc_safepoint_captures(RuntimeContext* ctx)
+#   uint32_t wsm_gc_safepoint_stack_count(RuntimeContext* ctx)
+#   uint64_t wsm_gc_safepoint_stack_root(RuntimeContext* ctx, uint64 index)
 # ---------------------------------------------------------------------------
 .globl wsm_gc_safepoint_state
 .type wsm_gc_safepoint_state, @function
@@ -360,6 +669,23 @@ wsm_gc_safepoint_state:
 .type wsm_gc_safepoint_captures, @function
 wsm_gc_safepoint_captures:
     movq wsm_gc_safepoint+40(%rip), %rax
+    ret
+
+.globl wsm_gc_safepoint_stack_count
+.type wsm_gc_safepoint_stack_count, @function
+wsm_gc_safepoint_stack_count:
+    movl wsm_gc_safepoint+64(%rip), %eax
+    ret
+
+.globl wsm_gc_safepoint_stack_root
+.type wsm_gc_safepoint_stack_root, @function
+wsm_gc_safepoint_stack_root:
+    testq %rsi, %rsi
+    jnz 1f
+    movq wsm_gc_safepoint+48(%rip), %rax
+    ret
+1:
+    movq wsm_gc_safepoint+56(%rip), %rax
     ret
 
 # ---------------------------------------------------------------------------

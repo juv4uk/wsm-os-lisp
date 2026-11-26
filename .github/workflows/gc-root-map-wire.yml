@@ -1,0 +1,45 @@
+name: GC root map wire
+
+on:
+  push:
+    paths:
+      - "src/runtime.s"
+      - "artifacts/nucleus-witness-gc-wire-*.s"
+      - "artifacts/nucleus-witness-gc-wire-*-qemu-serial-transcript.txt"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/check-gc-root-map-wire.sh"
+      - "docs/GC-ROOT-MAP-WIRE.md"
+      - ".github/workflows/gc-root-map-wire.yml"
+  pull_request:
+    paths:
+      - "src/runtime.s"
+      - "artifacts/nucleus-witness-gc-wire-*.s"
+      - "artifacts/nucleus-witness-gc-wire-*-qemu-serial-transcript.txt"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/check-gc-root-map-wire.sh"
+      - "docs/GC-ROOT-MAP-WIRE.md"
+      - ".github/workflows/gc-root-map-wire.yml"
+  workflow_dispatch:
+
+jobs:
+  root-map-wire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pure target dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 ovmf mtools dosfstools gdisk binutils
+      - name: Consume a root-map wire record and prove the fail-closed matrix
+        run: bash scripts/check-gc-root-map-wire.sh
+      - name: Upload wire witnesses
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gc-root-map-wire-witness
+          path: target/gc-root-map-wire/
+          if-no-files-found: error

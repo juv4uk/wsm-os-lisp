@@ -35,8 +35,11 @@ wsm_entry:
 
 .align 8
 .Lroot_map:
-    .quad .Lsite_cons - .Lpc_base
-    .byte 2, 1, 1, 0
+    .long .Lsite_cons - .Lpc_base
+    .byte 2, 3, 0, 0                # declared closure, reached by cons
+    .quad 0
     .long 0
+    .long 0
+    .quad 0
 .size wsm_entry, .-wsm_entry
 .section .note.GNU-stack,"",@progbits

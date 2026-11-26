@@ -71,14 +71,21 @@ wsm_entry:
     movq %rax, %rdx
     call wsm_fail
 
-# entry: pc_offset, kind, rsi_root, rdx_root, pad, pad32
+# entry (32 bytes): site_offset, kind, reg_mask, certified_empty, stack_count,
+#                   frame_size, stack_offset[2], reserved
 .align 8
 .Lroot_map:
-    .quad .Lsite_cons - .Lpc_base
-    .byte 1, 1, 1, 0
+    .long .Lsite_cons - .Lpc_base
+    .byte 1, 3, 0, 0                # cons, %rsi+%rdx, no empty, no stack roots
+    .quad 0
     .long 0
-    .quad .Lsite_closure - .Lpc_base
-    .byte 2, 0, 1, 0
     .long 0
+    .quad 0
+    .long .Lsite_closure - .Lpc_base
+    .byte 2, 2, 0, 0                # closure, %rdx only
+    .quad 0
+    .long 0
+    .long 0
+    .quad 0
 .size wsm_entry, .-wsm_entry
 .section .note.GNU-stack,"",@progbits
