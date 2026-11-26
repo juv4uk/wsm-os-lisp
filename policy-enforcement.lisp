@@ -124,6 +124,15 @@
    (status proved))
 
   (policy
+   (id gate-suite-budget)
+   (claim "The static gate suite stays inside a wall-clock ceiling, so the feedback loop cannot quietly rot into something people skip.")
+   (enforcement literal "scripts/check-gate-budget.sh" "above the")
+   (witness runtime)
+   (gate "scripts/check-gate-budget.sh")
+   (note "A tripwire, not a target: the ceiling is 10 s against a measured ~2.9 s, so it fires on a tenfold regression and not on a slow runner. One run is enough for a tripwire; publishing a number still needs the median of twenty from measure-gate-suite.sh.")
+   (status proved))
+
+  (policy
    (id fpc-parity-witness)
    (claim "The Pascal entry produces a RESULT line byte-identical to the hand-written assembly fixture, with zero undefined symbols in the linked kernel.")
    (enforcement literal "scripts/check-fpc-kernel-skeleton.sh" "parity broken:")
