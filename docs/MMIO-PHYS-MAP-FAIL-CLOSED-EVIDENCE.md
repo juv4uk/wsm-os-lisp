@@ -126,3 +126,26 @@ WSM-OS DRIVER schema=1 driver=virtio-blk stage=mmio-status value=t execution=wsm
 - `CONFIRMED`: offset zero більше не розглядається як identity mapping.
 - `CONFIRMED`: позитивний QEMU-шлях (D1/D2) без змін проходить.
 - Scope обмежений MMIO-трансляцією; ABI target-contract v2 не змінювався.
+---
+
+## 6. Аудит 2026-11-26: що з цього документа ще чинне / Audit 2026-11-26
+
+Перевірка під час побудови реєстру політик (ADR-005, W4) показала, що розділи 1–3 цього
+документа описують **pre-ADR-004 Rust-епоху** і в поточному дереві не відтворюються.
+
+| Твердження документа | Стан на 2026-11-26 |
+| :--- | :--- |
+| Коди `MMIO_ERR_MAPPING_UNAVAILABLE_READ/WRITE` (0x4D494F07/08) — чинні коди відмови | **Ні.** Вони оголошені в `src/runtime.s`, але **жодна інструкція їх не породжує**. `wsm_mmio_capability` зводить усі п'ять причин (немає offset / немає cap / поганий BAR / не замаплено / немає пристрою) в один код `MMIO_ERR_PROVISIONING` (0x4D494F00) |
+| Свідок `artifacts/d2-virtio-blk-status-fixture-fail-closed-phys-map-transcript.txt` (`source=1296649992`) | **Історичний.** Його згенерував `scripts/rebuild-and-run-mapping-fail-closed.sh`, який позначений LEGACY pre-ADR-004 і не запускається (кличе прибрані cargo-крейти) |
+| Живий свідок тієї самої мутації | `artifacts/d4-mmio-bounds-read-fixture-no-phys-map-transcript.txt`, `source=1296649984`; відтворюється кейсом `forced-no-phys-map` у `scripts/check-mmio-mutation-fail-closed.sh`, який запускається в CI |
+| Принцип fail-closed | **Чинний і доведений**, але грубішим кодом: одна відмова на п'ять причин |
+
+Наслідки, зафіксовані в реєстрі:
+
+- політика `mmio-missing-physical-mapping` посилається на живий шлях і живий свідок;
+- коди `MMIO_ERR_MAPPING_READ/WRITE` і `MMIO_ERR_DECODE_READ/WRITE` оголошені в
+  `policy-enforcement.lisp` як **reserved-but-unemitted** з причинами;
+- рішення «розрізняти п'ять причин окремими кодами чи лишити один» **не прийнято** —
+  це питання до власника, а не до агента.
+
+Розділ 4 зі своїм `[!WARNING]` лишається чинним без змін.
