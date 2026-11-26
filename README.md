@@ -102,7 +102,7 @@ still unmeasured.
 
 Making Free Pascal the host language would supersede ADR-004, so it is filed as
 a proposal rather than an instruction:
-[docs/ADR-006-FPC-HOST-LANGUAGE-PROPOSAL.md](docs/ADR-006-FPC-HOST-LANGUAGE-PROPOSAL.md)
+[docs/ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md](docs/ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md)
 (PROPOSED, not accepted).
 
 Executable swarm work is tracked in [`tasks.lisp`](tasks.lisp).
@@ -228,7 +228,7 @@ FPC досі не виміряна.
 
 Зробити Free Pascal хост-мовою означало б замістити ADR-004, тому це подано як
 пропозицію, а не як інструкцію:
-[docs/ADR-006-FPC-HOST-LANGUAGE-PROPOSAL.md](docs/ADR-006-FPC-HOST-LANGUAGE-PROPOSAL.md)
+[docs/ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md](docs/ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md)
 (PROPOSED, не прийнято).
 
 Робота рою агентів над виконуваними завданнями відстежується у [`tasks.lisp`](tasks.lisp).
