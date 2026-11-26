@@ -1,0 +1,25 @@
+name: Docs in change
+
+# Definition of Done item 5: documentation lands in the same push as the code.
+# Only the push range is checked, so a missing doc change cannot hide inside a
+# long history, and the escape hatch (DOCS-NOT-REQUIRED: <reason>) keeps a
+# deliberate code-only change possible without pretending the rule is optional.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs-in-change:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require a documentation change alongside a code change
+        run: bash scripts/check-docs-in-change.sh "${{ github.event.before }}" "${{ github.sha }}"

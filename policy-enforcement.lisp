@@ -118,6 +118,15 @@
    (status proved))
 
   (policy
+   (id docs-in-change)
+   (claim "A push that changes src/ or scripts/ also changes documentation, unless a commit in the range declares DOCS-NOT-REQUIRED: <reason>.")
+   (enforcement literal "scripts/check-docs-in-change.sh" "DOCS-NOT-REQUIRED:")
+   (witness runtime)
+   (gate "scripts/check-docs-in-change.sh")
+   (note "Definition of Done item 5 from the owner's agent prompt, the first of its eight items to get teeth. Scope is the push range only. Verified against a real code-only commit in this repository (1aff7f3) which the gate rejects, and against the marker path which it accepts.")
+   (status proved))
+
+  (policy
    (id no-new-branches)
    (claim "No branch is created outside the recorded disposition, and no frozen branch tip moves: finished work lands in main.")
    (enforcement literal "AGENTS.md" "Заборонено створювати будь-які нові гілки")
