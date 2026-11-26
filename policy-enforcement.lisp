@@ -68,8 +68,8 @@
   ; gate kept reporting a comfortable number.
   (max-share 0.40)
   (arbiter-root "src/")
-  (arbiter-extensions ".s" ".pas" ".pp" ".lpr")
-  (code-extensions ".s" ".lisp" ".sh" ".py" ".pas" ".pp" ".lpr")
+  (arbiter-extensions ".s" ".pas" ".pp" ".lpr" ".c" ".h")
+  (code-extensions ".s" ".lisp" ".sh" ".py" ".pas" ".pp" ".lpr" ".c" ".h")
   (excluded-prefix "artifacts/"))
 
  (policies

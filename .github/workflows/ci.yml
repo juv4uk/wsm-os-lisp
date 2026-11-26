@@ -37,7 +37,7 @@ jobs:
         run: bash scripts/check-build-variance.sh
       - name: Enforce the task format on every task that is not declared legacy
         run: python3 scripts/check-task-format.py
-      - name: Verify zero-Rust boundary (ADR-004)
+      - name: Verify language boundary (ADR-006; RUST = 0)
         run: bash scripts/check-no-rust.sh
       - name: Prove pure assembly runtime has no forbidden host imports
         run: bash scripts/check-runtime-symbols.sh
