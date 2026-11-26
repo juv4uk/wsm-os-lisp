@@ -237,6 +237,89 @@ def check_gate(rid: str, node, gap) -> tuple[str, str | None]:
     return value, None
 
 
+# --- mechanism vocabulary ------------------------------------------------
+
+ASM_COMMENT = "#"
+
+
+def strip_asm_comments(text: str) -> str:
+    out = []
+    for line in text.splitlines():
+        cut = line.find(ASM_COMMENT)
+        out.append(line[:cut] if cut >= 0 else line)
+    return "\n".join(out)
+
+
+def read_reserved_codes() -> dict[str, str]:
+    tree = parse(REGISTRY.read_text(encoding="utf-8"))
+    top = tree[0]
+    block = find(top, "reserved-mechanism-codes")
+    if block is None:
+        return {}
+    reserved: dict[str, str] = {}
+    for entry in find_all(block, "code"):
+        name = atom(entry[1]) if len(entry) > 1 else None
+        if not name:
+            raise GateError("reserved-mechanism-codes: (code <NAME> \"<reason>\") needs a name")
+        reason = string(entry[2]) if len(entry) > 2 else None
+        if not reason:
+            raise GateError(f"reserved-mechanism-codes: {name} needs a reason")
+        if name in reserved:
+            raise GateError(f"reserved-mechanism-codes: duplicate {name}")
+        reserved[name] = reason
+    return reserved
+
+
+def check_vocabulary(reserved: dict[str, str]) -> tuple[int, int]:
+    """Every constant defined in the mechanism layer is emitted, or declared reserved.
+
+    A constant that exists only as a .set line is vocabulary the mechanism does
+    not implement. That is allowed only when the registry says so out loud, and
+    the declaration must be removed once the constant is emitted — otherwise the
+    list rots into a place where dead code hides.
+    """
+    src = sorted((ROOT / "src").glob("*.s"))
+    if not src:
+        raise GateError("no src/*.s files found; the vocabulary check would pass vacuously")
+
+    defined: list[str] = []
+    for path in src:
+        for line in strip_asm_comments(path.read_text(encoding="utf-8", errors="replace")).splitlines():
+            m = re.match(r"\s*\.set\s+([A-Za-z_][A-Za-z0-9_]*)\s*,", line)
+            if m:
+                defined.append(m.group(1))
+    if not defined:
+        raise GateError("no .set definitions found in src/*.s; the vocabulary check would pass vacuously")
+
+    corpus = "\n".join(
+        strip_asm_comments(p.read_text(encoding="utf-8", errors="replace"))
+        for p in src + sorted((ROOT / "artifacts").glob("*.s"))
+    )
+
+    unemitted = set()
+    for name in sorted(set(defined)):
+        if len(re.findall(r"\b" + re.escape(name) + r"\b", corpus)) <= 1:
+            unemitted.add(name)
+
+    undeclared = sorted(unemitted - set(reserved))
+    if undeclared:
+        raise GateError(
+            "mechanism constants defined but never emitted, and not declared reserved: "
+            + ", ".join(undeclared)
+            + " — declare them under (reserved-mechanism-codes ...) with a reason, or delete them"
+        )
+
+    stale = sorted(set(reserved) - unemitted)
+    if stale:
+        raise GateError(
+            "reserved-mechanism-codes lists constants that are emitted (or do not exist): "
+            + ", ".join(stale)
+            + " — remove them from the reserved list"
+        )
+
+    return len(set(defined)), len(unemitted)
+
+
 def main() -> int:
     try:
         records = read_records()
@@ -249,6 +332,12 @@ def main() -> int:
             "POLICY-ENFORCEMENT-FAIL: registry contains no policy record; the gate would pass vacuously",
             file=sys.stderr,
         )
+        return 1
+
+    try:
+        reserved = read_reserved_codes()
+    except GateError as exc:
+        print(f"POLICY-ENFORCEMENT-FAIL: {exc}", file=sys.stderr)
         return 1
 
     gaps: list[str] = []
@@ -281,6 +370,12 @@ def main() -> int:
         print(f"POLICY-ENFORCEMENT-FAIL: {exc}", file=sys.stderr)
         return 1
 
+    try:
+        defined, unemitted = check_vocabulary(reserved)
+    except GateError as exc:
+        print(f"POLICY-ENFORCEMENT-FAIL: {exc}", file=sys.stderr)
+        return 1
+
     # Visibility, not failure: check scripts that no workflow runs are debt.
     ungated = []
     for script in sorted((ROOT / "scripts").glob("check-*")):
@@ -302,7 +397,8 @@ def main() -> int:
 
     print(
         f"POLICY-ENFORCEMENT-PASS: {len(records)} proved policies re-checked, "
-        f"{len(gaps)} with a declared gate gap, {len(ungated)} check scripts without an automated gate."
+        f"{len(gaps)} with a declared gate gap, {len(ungated)} check scripts without an automated gate; "
+        f"{unemitted}/{defined} mechanism constants are reserved-but-unemitted."
     )
     return 0
 

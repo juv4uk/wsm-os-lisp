@@ -26,6 +26,19 @@
  (authority "ADR-005 D2 — enforceability rule")
  (gate-script "scripts/check-policy-enforcement.sh")
 
+ (reserved-mechanism-codes
+  ; Constants defined in the mechanism layer that no instruction path emits.
+  ; Declaring them keeps the closed vocabulary honest in both directions:
+  ; an unlisted unemitted constant fails the gate, and a listed constant that
+  ; becomes emitted also fails, so this list cannot rot.
+  (code ERR_OVERFLOW "Declared in the closed error vocabulary (value 5); no current path returns it.")
+  (code GC_STATE_INVALID "Collector state constant; the collector never reports an invalid state, so nothing emits it.")
+  (code MMIO_ERR_DECODE_READ "Pre-ADR-004 capability-decode refusal; the live path reports every capability failure as MMIO_ERR_PROVISIONING.")
+  (code MMIO_ERR_DECODE_WRITE "Pre-ADR-004 capability-decode refusal; same collapse into MMIO_ERR_PROVISIONING as the read side.")
+  (code MMIO_ERR_MAPPING_READ "Pre-ADR-004 mapping-unavailable refusal; a missing physical mapping is reported as MMIO_ERR_PROVISIONING.")
+  (code MMIO_ERR_MAPPING_WRITE "Pre-ADR-004 mapping-unavailable refusal; same collapse into MMIO_ERR_PROVISIONING as the read side.")
+  (code WSM_TAG_NIL "Tag constant kept for documentation; no instruction path compares against it. Wire or delete — decision pending."))
+
  (policies
 
   (policy
@@ -53,12 +66,12 @@
    (status proved))
 
   (policy
-   (id mmio-mapping-fail-closed)
-   (claim "An MMIO write without a physical-memory mapping is refused instead of assuming an identity map.")
-   (enforcement literal "src/runtime.s" "MMIO_ERR_MAPPING_WRITE,        0x4D494F08")
-   (witness transcript "artifacts/d2-virtio-blk-status-fixture-fail-closed-phys-map-transcript.txt" "source=1296649992")
-   (gate manual)
-   (gate-gap "Only scripts/rebuild-and-run-mapping-fail-closed.sh exercises this path, and no workflow calls it; the witness is real but no CI gate re-proves it. Wiring it needs the QEMU image build inside an existing M2 workflow.")
+   (id mmio-missing-physical-mapping)
+   (claim "An MMIO access attempted without a physical-memory mapping is refused before any volatile access, and produces a device/ABI condition instead of a successful read.")
+   (enforcement literal "src/runtime.s" "movl $MMIO_ERR_PROVISIONING, %edx")
+   (witness transcript "artifacts/d4-mmio-bounds-read-fixture-no-phys-map-transcript.txt" "source=1296649984")
+   (gate "scripts/check-mmio-mutation-fail-closed.sh")
+   (note "The runtime collapses five capability causes (no offset, no cap, bad BAR, not mapped, no device) into one provisioning code; the finer MMIO_ERR_MAPPING_* and MMIO_ERR_DECODE_* codes are reserved, not emitted. See docs/MMIO-PHYS-MAP-FAIL-CLOSED-EVIDENCE.md, audit 2026-11-26.")
    (status proved))
 
   (policy
