@@ -7,6 +7,32 @@
 
 ---
 
+**Upstream embedded snapshot (перевірка каталогу/README 2026-11-26)**
+
+Окремо перевірено конкретну upstream-публікацію `x86_64-embedded`; це не продовження Linux-проби вище.
+
+| Поле | Спостережене значення |
+| --- | --- |
+| Архів | [FPC 3.3.1 x86_64-embedded](https://downloads.freepascal.org/fpc/snapshot/trunk/x86_64-embedded/fpc-3.3.1.x86_64-embedded.built.on.x86_64-linux.tar.gz) |
+| Розмір у каталозі | 5.2 MB |
+| Час у каталозі | 2026-11-26 13:57 UTC |
+| Час генерації за README | 2026-11-26 13:56 UTC |
+| Компілятор | `3.3.1-22025-ge3155f6ecc` |
+| Команда збірки | `make singlezipinstall OS_TARGET=embedded CPU_TARGET=x86_64 SNAPSHOT=1 "" PP=ppcx64 CROSSOPT="-n -gl -vx " OPT=""` |
+| Репозиторій джерел | `https://gitlab.com/freepascal.org/fpc/source.git` |
+| Commit джерел | `e3155f6eccd98f003c33a620996786e83ac79cd1` |
+| Commit build-репозиторію | `712d9f81225c1da6d5e5feb3922d71f18df33778` |
+
+Первинний README: [README-fpc-3.3.1.x86_64-embedded.built.on.x86_64-linux](https://downloads.freepascal.org/fpc/snapshot/trunk/x86_64-embedded/README-fpc-3.3.1.x86_64-embedded.built.on.x86_64-linux).
+
+**Межа доказу:** це підтверджує target triple, час і provenance snapshot. SHA-256 самого архіву ще не обчислено; архів у цьому середовищі не був отриманий локально, тому немає ані compiler run, ані object, link map, `nm -u`, розміру образу чи QEMU-транскрипту. Не підміняти ці відсутні результати README-метаданими.
+
+FPC називає development snapshots непідтримуваними та попереджає, що вони можуть бути нестабільними: [офіційна сторінка Development](https://www.freepascal.org/develop.html). Тому цей exact snapshot є **дослідницьким інструментом P0**, а не новою стабільною toolchain-базою й не дозволом на production Pascal.
+
+P0 лишається відкритим до відтворюваного завантаження з SHA-256, компіляції саме через `-Tembedded`, аналізу undefined symbols і перевірки лінкування з нашим `src/linker.ld`. Позитивний compile окремо не доводить UEFI startup або SENS parity.
+
+---
+
 ## 1. Що перевірялося
 
 Цей звіт фіксує лише контрольний експеримент із FPC 3.2.2 та `-Tlinux` на x86_64. Він **не** тестує `-Tembedded` і не перевіряє upstream snapshot `x86_64-embedded`.
