@@ -1,0 +1,72 @@
+; task-format-disposition.lisp — tasks that predate the task-format rule.
+;
+; The owner's agent prompt makes the task format mandatory: a task carries its
+; level, an evidence plan and fail-safely triggers, or it is not ready. Tasks
+; written before that rule are listed here as legacy, and
+; scripts/check-task-format.py enforces the format on every task not on this list.
+;
+; Same both-ways discipline as the mechanism vocabulary and the branch
+; disposition: a legacy task that gains the fields must leave this list, and one
+; that disappears must leave it too — otherwise the list rots.
+
+(task-format-disposition
+ (schema 1)
+ (authority "AGENTS.md — Definition of Done and task format, adopted 2026-11-26")
+ (gate-script "scripts/check-task-format.py")
+ (legacy-tasks
+  (legacy-task "BILINGUAL-DOCUMENTATION-AUDIT")
+  (legacy-task "WSM-OS-BLOCK-MECHANISM-F5")
+  (legacy-task "WSM-OS-BLOCK-OWNERSHIP-RESOLUTION")
+  (legacy-task "WSM-OS-BOOT-SUBSTRATE-DECISION-M3A")
+  (legacy-task "WSM-OS-BOOT-SUBSTRATE-REALIGN-M3A1")
+  (legacy-task "WSM-OS-BOOT-TOOLCHAIN-M3B")
+  (legacy-task "WSM-OS-BOOT-TOOLCHAIN-PIN-M3B1")
+  (legacy-task "WSM-OS-CAPABILITY-IDENTITY-CROSS-CLASS-ADVERSARIAL-WITNESS")
+  (legacy-task "WSM-OS-CML-TAIL-CALL-PROOF-M5C")
+  (legacy-task "WSM-OS-CML-X86-ARITHMETIC-M5B")
+  (legacy-task "WSM-OS-CML-X86-FIXNUM-BRANCH-M5A")
+  (legacy-task "WSM-OS-CML-X86-FREESTANDING-M1")
+  (legacy-task "WSM-OS-CONFORMANCE-LADDER-M5")
+  (legacy-task "WSM-OS-CONSTITUTION-BATCH-QEMU-RUNNER")
+  (legacy-task "WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME")
+  (legacy-task "WSM-OS-CONSTITUTION-FULL-VALUES-ERRORS")
+  (legacy-task "WSM-OS-CONSTITUTION-GC-OOM")
+  (legacy-task "WSM-OS-CONSTITUTION-GLOBAL-ENV-DEFS")
+  (legacy-task "WSM-OS-CONSTITUTION-GLOBAL-ENV-MECHANISM")
+  (legacy-task "WSM-OS-CONSTITUTION-GLOBAL-ENV-PARITY")
+  (legacy-task "WSM-OS-CONSTITUTION-READER-META-EVAL")
+  (legacy-task "WSM-OS-COPYING-GC-M7")
+  (legacy-task "WSM-OS-DEFINITION-CAPSULE-M5D")
+  (legacy-task "WSM-OS-FIRST-QEMU-PARITY-M4")
+  (legacy-task "WSM-OS-FPC-PARITY-VERTICAL-W3")
+  (legacy-task "WSM-OS-FS-MACHINE-WITNESS-F6")
+  (legacy-task "WSM-OS-FS-VIRTUAL-DISK-PERSISTENCE-Q6B")
+  (legacy-task "WSM-OS-GC-ROOT-MAP-WIRE")
+  (legacy-task "WSM-OS-GC-SAFEPOINT-CAPTURE")
+  (legacy-task "WSM-OS-HOST-RUNTIME-PARITY-M2")
+  (legacy-task "WSM-OS-IMMUTABLE-LITERAL-SPACE-DECISION-M5F")
+  (legacy-task "WSM-OS-LISP-MACHINE-PRIMITIVE-RDTSC")
+  (legacy-task "WSM-OS-LISP-RAW-UEFI-HANDOFF-PROBE")
+  (legacy-task "WSM-OS-LIVE-IMAGE-M10")
+  (legacy-task "WSM-OS-M2-DMA-ADDRESS-Q6B")
+  (legacy-task "WSM-OS-M2-ORACLE-EVIDENCE-REALIGN")
+  (legacy-task "WSM-OS-M2-RUNTIME-IMPORT-ALLOWLIST")
+  (legacy-task "WSM-OS-M3-TIMER-IRQ-SUBSTRATE")
+  (legacy-task "WSM-OS-M4-COMPILER-ARTIFACT-BUNDLE")
+  (legacy-task "WSM-OS-MYLISP-NOSTD-DECISION-M6")
+  (legacy-task "WSM-OS-PCI-CAPABILITY-UNFORGEABILITY-HARDENING")
+  (legacy-task "WSM-OS-PURE-LISP-ASSEMBLY-M4")
+  (legacy-task "WSM-OS-RUNTIMECONTEXT-EXCLUSIVE-OWNERSHIP")
+  (legacy-task "WSM-OS-SEMANTIC-TRACE-M5E")
+  (legacy-task "WSM-OS-SERIAL-BOOT-WITNESS-M3C")
+  (legacy-task "WSM-OS-SERIAL-REPL-M5H")
+  (legacy-task "WSM-OS-STACK-BUFFER-M8")
+  (legacy-task "WSM-OS-STRUCTURED-CONDITION-RECORD-M5G")
+  (legacy-task "WSM-OS-TARGET-ABI-M0")
+  (legacy-task "WSM-OS-TINY-ISA-M9")
+  (legacy-task "WSM-OS-TWO-WITNESSES-GRADUATION-CHECK")
+  (legacy-task "WSM-OS-VIRTIO-BLK-DATA-IO-Q6B")
+  (legacy-task "WSM-OS-VIRTIO-BLK-GUEST-DRIVER-Q6B")
+  (legacy-task "WSM-OS-WSM-PCI-CONFIG-CAPABILITY-D1")
+  (legacy-task "WSM-OS-WSM-PCI-IDENTITY-D0")
+))

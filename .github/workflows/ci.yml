@@ -35,6 +35,8 @@ jobs:
         run: python3 scripts/check-policy-enforcement.py
       - name: Verify the image builder still pins every known variance source
         run: bash scripts/check-build-variance.sh
+      - name: Enforce the task format on every task that is not declared legacy
+        run: python3 scripts/check-task-format.py
       - name: Verify zero-Rust boundary (ADR-004)
         run: bash scripts/check-no-rust.sh
       - name: Prove pure assembly runtime has no forbidden host imports
