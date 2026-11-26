@@ -93,6 +93,12 @@ The enforceable-policy registry that ADR-005 requires is
 with an enforcement point, a witness and a CI gate, and
 `scripts/check-policy-enforcement.py` re-checks each record against the tree.
 
+The proposal to use Free Pascal as the OS foundation is assessed, claim by
+claim, in
+[docs/research/FPC-AS-OS-SUBSTRATE-2026-11-26.md](docs/research/FPC-AS-OS-SUBSTRATE-2026-11-26.md):
+four of the six cited projects are confirmed, two are not found, and the
+strongest argument (iteration speed) is currently unmeasured.
+
 Executable swarm work is tracked in [`tasks.lisp`](tasks.lisp).
 
 The first machine-readable ABI and its generated WSM projection are documented
@@ -207,6 +213,11 @@ QEMU x86_64 boot
 [`policy-enforcement.lisp`](policy-enforcement.lisp): політику можна цитувати лише
 з точкою примусу, свідком і гейтом у CI, а `scripts/check-policy-enforcement.py`
 повторно перевіряє кожен запис проти дерева.
+
+Пропозицію зробити Free Pascal основою ОС розібрано за твердженнями у
+[docs/research/FPC-AS-OS-SUBSTRATE-2026-11-26.md](docs/research/FPC-AS-OS-SUBSTRATE-2026-11-26.md):
+чотири з шести названих проєктів підтверджуються, два не знайдені, а
+найсильніший аргумент (швидкість ітерації) наразі не виміряний.
 
 Робота рою агентів над виконуваними завданнями відстежується у [`tasks.lisp`](tasks.lisp).
 
