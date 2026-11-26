@@ -1,9 +1,7 @@
 name: Docs in change
 
-# Definition of Done item 5: documentation lands in the same push as the code.
-# Only the push range is checked, so a missing doc change cannot hide inside a
-# long history, and the escape hatch (DOCS-NOT-REQUIRED: <reason>) keeps a
-# deliberate code-only change possible without pretending the rule is optional.
+# Definition of Done item 5: code and documentation belong to the same commit.
+# The regression harness protects against range-level false positives.
 on:
   push:
     branches: [main]
@@ -21,5 +19,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Require a documentation change alongside a code change
-        run: bash scripts/check-docs-in-change.sh "${{ github.event.before }}" "${{ github.sha }}"
+      - name: Test same-commit gate regressions
+        run: bash scripts/test-docs-in-change.sh
+      - name: Require documentation in each code commit
+        env:
+          BASE_SHA: ${{ github.event.before || github.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: bash scripts/check-docs-in-change.sh "$BASE_SHA" "$HEAD_SHA"
