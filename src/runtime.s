@@ -192,6 +192,177 @@ wsm_m3_idtr:
 #   offset 64: failure_handler  (void (*)(RuntimeContext*, uint32_t))
 
 # ---------------------------------------------------------------------------
+# GC safepoint capture (#71, GC-ENTRY-CAPTURE-1)
+#
+# A precise collector can only start from roots the compiler certified for the
+# exact allocation site. The allocator is the last place where that evidence
+# still exists: one instruction later the prologue reuses %rax/%rcx and the
+# return PC is no longer recoverable. So every allocator captures its entry
+# state before touching anything, then classifies it against a registered
+# root map keyed by (final_pc, allocator_kind).
+#
+# Captured state (rewriteable save area, never a language value):
+#   +0  return_pc            *(entry_rsp)
+#   +8  caller_rsp_at_call   entry_rsp + 8
+#   +16 entry rsi            certified candidate for cons, not a root for closure
+#   +24 entry rdx            certified candidate for both
+#   +32 allocator_kind       1 cons, 2 closure
+#   +36 state                0 none, 1 CERTIFIED, 2 NOT-A-SAFEPOINT, 3 INVALID
+#   +40 captures             CERTIFIED captures so far (observation only)
+#
+# Three outcomes, never conflated:
+#   CERTIFIED        a map entry for this (pc, kind) certifies the registers
+#   NOT-A-SAFEPOINT no metadata at all: allocation proceeds unchanged
+#   INVALID          metadata exists but contradicts this site -> fail closed
+#
+# %rdi/%r12 (RuntimeContext*) is deliberately NOT captured as a root, and the
+# stack is never scanned: only certified registers are recorded.
+# ---------------------------------------------------------------------------
+.set GC_STATE_NONE,           0
+.set GC_STATE_CERTIFIED,      1
+.set GC_STATE_NOT_SAFEPOINT,  2
+.set GC_STATE_INVALID,        3
+
+.set GC_KIND_CONS,            1
+.set GC_KIND_CLOSURE,         2
+
+.set CTX_GC_MAP_BASE,         96
+.set CTX_GC_MAP_LEN,          104
+.set CTX_GC_PC_BASE,          112
+.set CTX_GC_MAP_VALID,        120
+
+.set GC_MAP_ENTRY_SHIFT,      4
+.set GC_MAP_MAX_ENTRIES,      4096
+
+# ABI source codes, same family as the MMIO 0x4D494F.. codes.
+.set GC_ERR_KIND_MISMATCH,    0x47430001      # "GC" 01
+.set GC_ERR_MAP_INVALID,      0x47430002      # "GC" 02
+
+.section .bss
+.align 16
+.globl wsm_gc_safepoint
+wsm_gc_safepoint:
+    .skip 48
+wsm_gc_safepoint_end:
+
+.text
+
+# ---------------------------------------------------------------------------
+# .Lgc_classify: classify the captured entry state (internal)
+# Arguments: RDI = ctx, R8D = allocator kind of the calling allocator
+# Preserves %rsi/%rdx (the captured root candidates) on every returning path.
+# ---------------------------------------------------------------------------
+.Lgc_classify:
+    cmpq $0, CTX_GC_MAP_VALID(%rdi)
+    je .Lgc_not_safepoint
+
+    movq CTX_GC_MAP_LEN(%rdi), %r9
+    testq %r9, %r9
+    jz .Lgc_not_safepoint
+
+    movq CTX_GC_PC_BASE(%rdi), %r10
+    testq %r10, %r10
+    jz .Lgc_invalid
+
+    movq wsm_gc_safepoint+0(%rip), %rax     # return_pc
+    testq %rax, %rax
+    jz .Lgc_invalid
+    cmpq %r10, %rax                         # return_pc below declared base?
+    jb .Lgc_invalid
+    subq %r10, %rax                         # site offset from pc_base
+
+    xorq %rcx, %rcx
+.Lgc_scan:
+    cmpq %r9, %rcx
+    jae .Lgc_not_safepoint                 # absent record = NOT-A-SAFEPOINT
+
+    movq %rcx, %r11
+    shlq $GC_MAP_ENTRY_SHIFT, %r11
+    addq CTX_GC_MAP_BASE(%rdi), %r11
+    cmpq %rax, 0(%r11)                      # entry.pc_offset == site offset?
+    je .Lgc_found
+    incq %rcx
+    jmp .Lgc_scan
+
+.Lgc_found:
+    movzbl 8(%r11), %ecx                    # entry allocator kind
+    cmpl %r8d, %ecx
+    jne .Lgc_kind_mismatch
+
+    cmpl $GC_KIND_CLOSURE, %ecx
+    jne .Lgc_certify
+    cmpb $0, 9(%r11)                        # closure has no %rsi root
+    jne .Lgc_invalid
+
+.Lgc_certify:
+    movl $GC_STATE_CERTIFIED, wsm_gc_safepoint+36(%rip)
+    incq wsm_gc_safepoint+40(%rip)
+    ret
+
+.Lgc_not_safepoint:
+    movl $GC_STATE_NOT_SAFEPOINT, wsm_gc_safepoint+36(%rip)
+    ret
+
+.Lgc_invalid:
+    xorq %rcx, %rcx                         # no meaningful site offset yet
+    movl $GC_ERR_MAP_INVALID, %edx
+    movl $ERR_ABI, %esi
+    jmp wsm_fail_src
+
+.Lgc_kind_mismatch:
+    movq %rax, %rcx                         # offending value = site offset
+    movl $GC_ERR_KIND_MISMATCH, %edx
+    movl $ERR_ABI, %esi
+    jmp wsm_fail_src
+
+# ---------------------------------------------------------------------------
+# void wsm_gc_root_map_register(RuntimeContext* ctx, void* table, uint64 count,
+#                                void* pc_base)
+# Arguments: RDI = ctx, RSI = table, RDX = count, RCX = pc_base
+# Fails closed on null table, null base, zero count or count > 4096.
+# ---------------------------------------------------------------------------
+.globl wsm_gc_root_map_register
+.type wsm_gc_root_map_register, @function
+wsm_gc_root_map_register:
+    testq %rsi, %rsi
+    jz .Lgc_reg_invalid
+    testq %rdx, %rdx
+    jz .Lgc_reg_invalid
+    testq %rcx, %rcx
+    jz .Lgc_reg_invalid
+    cmpq $GC_MAP_MAX_ENTRIES, %rdx
+    ja .Lgc_reg_invalid
+
+    movq %rsi, CTX_GC_MAP_BASE(%rdi)
+    movq %rdx, CTX_GC_MAP_LEN(%rdi)
+    movq %rcx, CTX_GC_PC_BASE(%rdi)
+    movq $1, CTX_GC_MAP_VALID(%rdi)
+    ret
+
+.Lgc_reg_invalid:
+    xorq %rcx, %rcx
+    movl $GC_ERR_MAP_INVALID, %edx
+    movl $ERR_ABI, %esi
+    jmp wsm_fail_src
+
+# ---------------------------------------------------------------------------
+# uint32_t wsm_gc_safepoint_state(RuntimeContext* ctx)
+# uint64_t wsm_gc_safepoint_captures(RuntimeContext* ctx)
+# Observation only; no language meaning.
+# ---------------------------------------------------------------------------
+.globl wsm_gc_safepoint_state
+.type wsm_gc_safepoint_state, @function
+wsm_gc_safepoint_state:
+    movl wsm_gc_safepoint+36(%rip), %eax
+    ret
+
+.globl wsm_gc_safepoint_captures
+.type wsm_gc_safepoint_captures, @function
+wsm_gc_safepoint_captures:
+    movq wsm_gc_safepoint+40(%rip), %rax
+    ret
+
+# ---------------------------------------------------------------------------
 # Word wsm_cons(RuntimeContext* ctx, Word car, Word cdr)
 # Arguments: RDI = ctx, RSI = car, RDX = cdr
 # Returns:   RAX = pointer to cons cell (16-byte aligned, tag 000)
@@ -199,6 +370,18 @@ wsm_m3_idtr:
 .globl wsm_cons
 .type wsm_cons, @function
 wsm_cons:
+    # Allocator-entry capture: before any clobber of the certified registers.
+    movq (%rsp), %rax
+    movq %rax, wsm_gc_safepoint+0(%rip)
+    leaq 8(%rsp), %rax
+    movq %rax, wsm_gc_safepoint+8(%rip)
+    movq %rsi, wsm_gc_safepoint+16(%rip)
+    movq %rdx, wsm_gc_safepoint+24(%rip)
+    movl $GC_KIND_CONS, wsm_gc_safepoint+32(%rip)
+    movl $GC_STATE_NONE, wsm_gc_safepoint+36(%rip)
+    movl $GC_KIND_CONS, %r8d
+    call .Lgc_classify
+
     movq 16(%rdi), %rax             # heap_len
     cmpq 8(%rdi), %rax              # heap_len >= heap_capacity?
     jae .Lcons_oom
@@ -396,6 +579,18 @@ wsm_predicate_bit_bits:
 .globl wsm_closure_new
 .type wsm_closure_new, @function
 wsm_closure_new:
+    # Allocator-entry capture: %rdx is the only certified candidate here.
+    movq (%rsp), %rax
+    movq %rax, wsm_gc_safepoint+0(%rip)
+    leaq 8(%rsp), %rax
+    movq %rax, wsm_gc_safepoint+8(%rip)
+    movq %rsi, wsm_gc_safepoint+16(%rip)
+    movq %rdx, wsm_gc_safepoint+24(%rip)
+    movl $GC_KIND_CLOSURE, wsm_gc_safepoint+32(%rip)
+    movl $GC_STATE_NONE, wsm_gc_safepoint+36(%rip)
+    movl $GC_KIND_CLOSURE, %r8d
+    call .Lgc_classify
+
     movq 40(%rdi), %rax             # closure_len
     cmpq 32(%rdi), %rax             # closure_len >= closure_capacity?
     jae .Lclosure_oom

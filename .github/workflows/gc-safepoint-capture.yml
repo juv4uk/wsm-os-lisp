@@ -1,0 +1,47 @@
+name: GC safepoint capture
+
+on:
+  push:
+    paths:
+      - "src/runtime.s"
+      - "src/entry.s"
+      - "artifacts/nucleus-witness-gc-safepoint-*.s"
+      - "artifacts/nucleus-witness-gc-safepoint-*-qemu-serial-transcript.txt"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/check-gc-safepoint-capture.sh"
+      - "docs/GC-SAFEPOINT-CAPTURE.md"
+      - ".github/workflows/gc-safepoint-capture.yml"
+  pull_request:
+    paths:
+      - "src/runtime.s"
+      - "src/entry.s"
+      - "artifacts/nucleus-witness-gc-safepoint-*.s"
+      - "artifacts/nucleus-witness-gc-safepoint-*-qemu-serial-transcript.txt"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/check-gc-safepoint-capture.sh"
+      - "docs/GC-SAFEPOINT-CAPTURE.md"
+      - ".github/workflows/gc-safepoint-capture.yml"
+  workflow_dispatch:
+
+jobs:
+  safepoint-capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pure target dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 ovmf mtools dosfstools gdisk binutils
+      - name: Prove allocator-entry capture and fail-closed classification
+        run: bash scripts/check-gc-safepoint-capture.sh
+      - name: Upload safepoint witnesses
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gc-safepoint-capture-witness
+          path: target/gc-safepoint-capture/
+          if-no-files-found: error

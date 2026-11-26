@@ -119,6 +119,10 @@ runtime_context:
     .quad def_arena                 # offset 72: def_base (global definitions)
     .quad 256                       # offset 80: def_capacity (256 * 16 bytes)
     .quad 0                         # offset 88: def_len
+    .quad 0                         # offset 96: gc_root_map_base
+    .quad 0                         # offset 104: gc_root_map_len
+    .quad 0                         # offset 112: gc_root_map_pc_base
+    .quad 0                         # offset 120: gc_root_map_valid
 
 .section .rodata
 msg_res_pre:

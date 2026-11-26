@@ -350,11 +350,21 @@
      (depends-on . (WSM-OS-CONSTITUTION-GLOBAL-ENV-MECHANISM WSM-OS-CONSTITUTION-GLOBAL-ENV-PARITY))
      (description . "Add bounded global definition/function bindings and application needed by unchanged constitutional definitions, including ordinary and mutual recursion. Keep names separate from value identity and prove each new shape through oracle, hosted and QEMU.")))
 
+   ("WSM-OS-GC-SAFEPOINT-CAPTURE" .
+    ((priority . 9.65)
+     (done . t)
+     (capabilities . (wsm-os runtime memory garbage-collection roots qemu conformance))
+     (origin . wsm-os-lisp)
+     (github-issue . 71)
+     (depends-on . ())
+     (description . "Capture allocator-entry root state before the prologue clobbers the certified registers, and classify it against a registered root map keyed by (final_pc, allocator_kind). Three outcomes stay distinct: CERTIFIED, NOT-A-SAFEPOINT and INVALID; absence of metadata is never read as an empty certificate, and contradictory metadata fails closed with a GC-family ABI source code. No collector runs.")
+     (context . "Completed 2026-11-26. wsm_gc_safepoint save area (48 bytes) written as the first instruction of wsm_cons and wsm_closure_new: return_pc, caller_rsp_at_call, entry rsi, entry rdx, allocator_kind, state, captures. wsm_gc_root_map_register installs a 16-byte-entry map (pc_offset, kind, rsi_root, rdx_root); offsets rather than absolute addresses, so a map survives any link layout. Gate scripts/check-gc-safepoint-capture.sh = 4/4 PASS: certified and absent both allocate normally with value=(sym1 . sym2); kind-mismatch -> kind=ABI source=1195573249 (0x47430001) value=55 (site offset 0x40-0x9, cross-checked with objdump); closure-rsi -> kind=ABI source=1195573250 (0x47430002) value=0. Baseline M0/M1 transcript unchanged, runtime stays host-import free. SCOPE: maps are hand-written in the fixtures (fixture-provenance = hand-written-assembly); consuming a real CML_GC_ROOT_MAP_V1 is #64; no mark, sweep, free list or stack scan.")))
+
    ("WSM-OS-CONSTITUTION-GC-OOM" .
     ((priority . 9.6)
      (capabilities . (wsm-os runtime memory garbage-collection oom qemu conformance))
      (origin . wsm-os-lisp)
-     (depends-on . (WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME))
+     (depends-on . (WSM-OS-CONSTITUTION-FIRST-CLASS-CLOSURE-RUNTIME WSM-OS-GC-SAFEPOINT-CAPTURE))
      (description . "Provide root enumeration and bounded collection for cons, closures and environments before widening heap value types. Exhaustion must yield a deterministic named target failure, not corruption or reset; prove live capture survival and deliberate OOM in hosted and QEMU.")))
 
    ("WSM-OS-CONSTITUTION-FULL-VALUES-ERRORS" .
