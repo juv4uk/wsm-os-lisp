@@ -423,10 +423,12 @@
 
    ("WSM-OS-FPC-PARITY-VERTICAL-W3" .
     ((priority . 7.0)
+     (done . nil)
      (capabilities . (research substrate parity measurement adr-006 qemu))
      (origin . wsm-os-lisp)
      (depends-on . (WSM-OS-FPC-KERNEL-SKELETON))
-     (description . "ADR-006 measurement step W3: build the same vertical scenario (UEFI boot -> one Lisp form -> one allocation -> one named failure exit) twice - once on the current Lisp+ASM mechanism and once on a Free Pascal substrate - and compare transcripts plus the measured edit->build->verify cycle. The result is evidence for or against ADR-006; it does not ratify it and does not change ADR-004.")))
+     (description . "ADR-006 measurement step W3: build the same vertical scenario (UEFI boot -> one Lisp form -> one allocation -> one named failure exit) twice - once on the current Lisp+ASM mechanism and once on a Free Pascal substrate - and compare transcripts plus the measured edit->build->verify cycle. The result is evidence for or against ADR-006; it does not ratify it and does not change ADR-004.")
+     (context . "PARTIAL 2026-11-27, docs/FPC-PARITY-P2.md. Gate scripts/check-fpc-parity.sh: 4/4 cells, asm and Pascal byte-identical on both scenarios (value=(sym1 . sym2); kind=OOM source=0 value=0), with the substrates compared against each other and not only against the pin. Cycle split by phase on one machine, TCG QEMU, 3 repeats: COMPILE asm 102 ms vs Pascal 277 ms; image BUILD ~3.0 s and BOOT+verify ~12.4 s identical for both, because they are shared overhead. The language therefore accounts for roughly 1% of a ~15.6 s edit->verify cycle at this scale - which is a measurement against the iteration-speed argument, not for it. SCOPE: both cells use the Linux target -Tlinux, not the pinned x86_64-embedded, and the handoff boundary still belongs to the asm entry, so this shares P1's scope limit and P2 stays OPEN until the embedded target and the handoff negative witnesses exist. One machine, emulated boot, a tiny program; human time and energy (wsm-lazarus METHODOLOGY/RAPL) remain unmeasured.")))
 
    ("WSM-OS-GC-ROOT-MAP-WIRE" .
     ((priority . 9.62)

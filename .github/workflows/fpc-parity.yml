@@ -1,0 +1,55 @@
+name: FPC parity matrix
+
+on:
+  push:
+    paths:
+      - "src/pascal_probe.pas"
+      - "src/pascal_probe_oom.pas"
+      - "src/rtl_min.s"
+      - "src/entry.s"
+      - "src/runtime.s"
+      - "src/linker.ld"
+      - "artifacts/fixture.s"
+      - "artifacts/nucleus-witness-alloc-oom-fixture.s"
+      - "artifacts/nucleus-witness-alloc-oom-fixture-qemu-serial-transcript.txt"
+      - "artifacts/nucleus-witness-pascal-entry-qemu-serial-transcript.txt"
+      - "scripts/check-fpc-parity.sh"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "docs/FPC-PARITY-P2.md"
+      - ".github/workflows/fpc-parity.yml"
+  pull_request:
+    paths:
+      - "src/pascal_probe.pas"
+      - "src/pascal_probe_oom.pas"
+      - "src/rtl_min.s"
+      - "src/entry.s"
+      - "src/runtime.s"
+      - "src/linker.ld"
+      - "artifacts/fixture.s"
+      - "artifacts/nucleus-witness-alloc-oom-fixture.s"
+      - "scripts/check-fpc-parity.sh"
+      - "docs/FPC-PARITY-P2.md"
+      - ".github/workflows/fpc-parity.yml"
+  workflow_dispatch:
+
+jobs:
+  fpc-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install target and Pascal toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 ovmf mtools dosfstools gdisk binutils fp-compiler
+      - name: Prove asm and Pascal agree on a value and on a named failure
+        run: WSM_P2_REPEATS=1 bash scripts/check-fpc-parity.sh
+      - name: Upload the parity and cycle records
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fpc-parity-witness
+          path: target/fpc-parity/
+          if-no-files-found: error
