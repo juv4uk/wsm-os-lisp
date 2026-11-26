@@ -270,6 +270,24 @@ def read_reserved_codes() -> dict[str, str]:
     return reserved
 
 
+def read_ungated_declarations() -> dict[str, tuple[str, str]]:
+    tree = parse(REGISTRY.read_text(encoding="utf-8"))
+    block = find(tree[0], "ungated-check-scripts")
+    if block is None:
+        return {}
+    declared: dict[str, tuple[str, str]] = {}
+    for entry in find_all(block, "script"):
+        rel = string(entry[1]) if len(entry) > 1 else None
+        why = string(entry[2]) if len(entry) > 2 else None
+        nxt = string(entry[3]) if len(entry) > 3 else None
+        if not rel or not why or not nxt:
+            raise GateError('ungated-check-scripts: (script "<path>" "<why>" "<next action>") needs all three')
+        if rel in declared:
+            raise GateError(f"ungated-check-scripts: duplicate {rel}")
+        declared[rel] = (why, nxt)
+    return declared
+
+
 def check_vocabulary(reserved: dict[str, str]) -> tuple[int, int]:
     """Every constant defined in the mechanism layer is emitted, or declared reserved.
 
@@ -385,10 +403,39 @@ def main() -> int:
         if not workflow_references(rel):
             ungated.append(rel)
 
+    try:
+        declared_ungated = read_ungated_declarations()
+    except GateError as exc:
+        print(f"POLICY-ENFORCEMENT-FAIL: {exc}", file=sys.stderr)
+        return 1
+
+    undeclared = [rel for rel in ungated if rel not in declared_ungated]
+    if undeclared:
+        print(
+            "POLICY-ENFORCEMENT-FAIL: check scripts with no workflow and no declaration: "
+            + ", ".join(undeclared)
+            + " — add them to (ungated-check-scripts ...) with a reason and a next action, or gate them",
+            file=sys.stderr,
+        )
+        return 1
+
+    stale_decl = sorted(set(declared_ungated) - set(ungated))
+    if stale_decl:
+        print(
+            "POLICY-ENFORCEMENT-FAIL: (ungated-check-scripts ...) declares scripts that are gated or missing: "
+            + ", ".join(stale_decl)
+            + " — remove them from the list",
+            file=sys.stderr,
+        )
+        return 1
+
     if ungated:
         print("POLICY-ENFORCEMENT: check scripts that no workflow references (declared debt):", file=sys.stderr)
         for rel in ungated:
+            why, nxt = declared_ungated[rel]
             print(f"  {rel}", file=sys.stderr)
+            print(f"    why: {why}", file=sys.stderr)
+            print(f"    next: {nxt}", file=sys.stderr)
 
     if gaps:
         print("POLICY-ENFORCEMENT: policies with a declared gate gap:", file=sys.stderr)

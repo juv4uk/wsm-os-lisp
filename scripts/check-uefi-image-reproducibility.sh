@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# LEGACY (pre-ADR-004, cannot run: consumes a bundle built by the cargo-based
+# oracle scripts, which no longer build).
+# Marked 2026-11-26 during the branch review; kept for provenance.
 set -euo pipefail
 
 bundle=${1:-target/shared-oracle-provenance/case-1}

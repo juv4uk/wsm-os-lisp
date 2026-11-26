@@ -39,6 +39,24 @@
   (code MMIO_ERR_MAPPING_WRITE "Pre-ADR-004 mapping-unavailable refusal; same collapse into MMIO_ERR_PROVISIONING as the read side.")
   (code WSM_TAG_NIL "Tag constant kept for documentation; no instruction path compares against it. Wire or delete — decision pending."))
 
+ (ungated-check-scripts
+  ; check-* scripts that no workflow references. Declaring them turns an
+  ; anonymous warning into a reviewed list: a new ungated script fails the
+  ; gate until someone says why it is ungated, and a declared script that
+  ; becomes gated fails too, so the list cannot drift.
+  (script "scripts/check-mmio-abi-bounded.sh"
+   "Live witness that the pure-assembly target exports the MMIO ABI symbols. Needs the pinned CML toolchain, so it was never run in this sandbox and has never been wired into a workflow."
+   "Wire it after the CML toolchain step in ci.yml — but only after one green local run, not on faith.")
+  (script "scripts/check-shared-oracle-corpus.sh"
+   "Pre-ADR-004 script: drives removed cargo crates to build a kernel and an image. Cannot run under ADR-004. Header marked LEGACY 2026-11-26."
+   "Delete, or rewrite against the current build path if the corpus check still has value.")
+  (script "scripts/check-shared-oracle-provenance.sh"
+   "Pre-ADR-004 script: same cargo path as check-shared-oracle-corpus.sh, plus an image-determinism comparison. Header marked LEGACY 2026-11-26."
+   "Fold the still-useful determinism check into a runnable witness, then delete.")
+  (script "scripts/check-uefi-image-reproducibility.sh"
+   "Pre-ADR-004 script: consumes a provenance bundle produced by the cargo-based oracle scripts, so it cannot run either. Header marked LEGACY 2026-11-26."
+   "Image determinism is currently unproven in CI. Rewrite against the current build path, then gate it."))
+
  (policies
 
   (policy

@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# LEGACY (pre-ADR-004, cannot run: drives removed cargo crates).
+# Successor path: scripts/check-uefi-image-reproducibility.sh expects this bundle
+# and is legacy for the same reason; image determinism is currently unproven in CI.
+# Marked 2026-11-26 during the branch review; kept for provenance.
 set -euo pipefail
 
 lock_file="contracts/my-lisp/compiler-corpus.lock.lisp"
