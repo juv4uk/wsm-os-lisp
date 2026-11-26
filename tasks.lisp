@@ -362,7 +362,7 @@
 
    ("WSM-OS-FPC-TOOLCHAIN-PROBE" .
     ((priority . 9.95)
-     (done . t)
+     (done . nil)
      (capabilities . (wsm-os pascal toolchain freestanding adr-006 qemu))
      (origin . wsm-os-lisp)
      (github-issue . 113)
@@ -371,21 +371,22 @@
      (evidence-plan . "Pin the FPC 3.3.1 x86_64-embedded snapshot URL, SHA-256 and source commit; produce object dump, symbol export, undefined-symbol list, linker map and size; keep the FPC 3.2.2 -Tlinux experiment as a separate control.")
      (fail-safely . (("snapshot checksum or source commit differs from the pin" . "stop and re-pin") ("embedded target emits unresolved symbols" . "record every symbol and stop; never stub it silently") ("embedded compiler is unavailable" . "mark P0 incomplete; do not infer target unsupported")))
      (depends-on . ())
-     (context . "Linux control probe 2026-11-26 is documented in docs/research/FPC-TOOLCHAIN-PROBE-2026-11-26.md: FPC 3.2.2 (-Tlinux, x86_64) exports wsm_probe_entry, but this Linux-target object has five unresolved RTL hooks (fpc_initializeunits, fpc_do_exit, INIT$SYSTEM, FINALIZE$OBJPAS, THREADVARLIST$SYSTEM$indirect) and a ~190 KB empty program. This does not test embedded RTL. Upstream FPC 3.3.1 x86_64-embedded snapshot was built with OS_TARGET=embedded CPU_TARGET=x86_64 from e3155f6eccd98f003c33a620996786e83ac79cd1. Embedded link/ABI/UEFI compatibility remains unverified; see issue #113. CONTROL RESULT 2026-11-27: the five Linux-target hooks are implemented as no-ops in src/rtl_min.s and that surface is sufficient for a Pascal entry to boot (docs/FPC-KERNEL-SKELETON.md). That closes the Linux control, not this task: whether the embedded RTL removes the hooks, changes them, or adds more is exactly what P0 still has to measure.")
+     (context . "Linux control evidence: FPC 3.2.2 with -Tlinux exports wsm_probe_entry, but the Linux-target object initially exposed five RTL hooks and an empty program of ~190 KB; a separate UEFI/QEMU prototype now satisfies those link references with no-op stubs for this single function call. This is NOT the x86_64-embedded test. Upstream snapshot metadata is recorded in docs/research/FPC-TOOLCHAIN-PROBE-2026-11-26.md and issue #113, but the archive SHA-256, local extraction/compiler run, -Tembedded object, undefined-symbol list, linker map and embedded QEMU witness remain absent. P0 stays OPEN until every required embedded artifact is produced; do not infer that embedded RTL is unsupported or replace its missing hooks with no-ops.")
      (description . "ADR-006 P0: pin and test the upstream FPC x86_64-embedded compiler/RTL against our freestanding linker and target ABI. Prove object format, exported symbols, startup/runtime dependencies and undefined-symbol policy. Run FPC 3.2.2 -Tlinux only as a separate control; do not generalize Linux RTL failures to the embedded target. Evidence: checksum, object dump, undefined-symbol list, link map and QEMU witness when possible.")))
 
    ("WSM-OS-FPC-KERNEL-SKELETON" .
     ((priority . 9.9)
-     (done . t)
+     (done . nil)
      (capabilities . (wsm-os pascal kernel boot uefi adr-006 qemu))
      (origin . wsm-os-lisp)
+     (depends-on . (WSM-OS-FPC-TOOLCHAIN-PROBE))
      (level . pascal)
      (user-journey . ("розробник у QEMU" "після P0" "бачить на COM1 той самий рядок WSM-OS BOOT schema=1 arch=x86_64 status=ok" "відсутній handoff дає названу ABI-умову, а не тишу"))
-     (evidence-plan . "QEMU serial transcript equals WSM-OS BOOT schema=1 arch=x86_64 status=ok; nm -u on the final object is empty")
+     (evidence-plan . "After P0, compile with the pinned x86_64-embedded compiler; pass and validate the actual UEFI BootInfo/handoff in the Pascal entry; reject missing/malformed handoff with a named ABI condition; emit the unchanged BOOT line; require empty nm -u on the final image and a byte-identical QEMU transcript. The current -Tlinux prototype is partial evidence only.")
      (fail-safely . (("handoff record missing or unparsable" . "halt with a named ABI condition") ("COM1 never transmitter-ready" . "exit 39 path, no silent continue")))
      (depends-on . ())
      (description . "ADR-006 P1: a Pascal kernel stub receives the existing UEFI handoff and emits the unchanged WSM-OS BOOT schema=1 arch=x86_64 status=ok line on COM1. No Lisp evaluation yet. Fail closed on a missing or unparsable handoff record.")
-     (context . "Completed 2026-11-27, docs/FPC-KERNEL-SKELETON.md. src/pascal_probe.pas exports wsm_entry(ctx), calls the asm wsm_cons through the unchanged System V ABI, and returns the tagged cons. src/rtl_min.s supplies the five hooks FPC emits as no-ops, which is the whole admitted RTL surface. Gate scripts/check-fpc-kernel-skeleton.sh pins FPC 3.2.2, fails on version drift, requires nm -u on target/kernel-x86_64 to be empty, and compares the QEMU transcript byte-for-byte with the hand-written asm fixture: WSM-OS RESULT schema=1 value=(sym1 . sym2) status=ok. CI job .github/workflows/fpc-kernel-skeleton.yml. SCOPE: proves a Pascal entry, ABI parity and a counted RTL surface; it does not prove drivers, memory manager, GC or image loader, and it does not retire src/runtime.s.")))
+     (context . "Partial prototype only (commit e9737fd, docs/FPC-KERNEL-SKELETON.md): FPC 3.2.2 is explicitly invoked with -Tlinux, not -Tembedded. The Pascal function receives RuntimeContext after ASM _start has already parsed BootInfo; it does not receive or validate BootInfo and has no missing/malformed-handoff negative witness. src/rtl_min.s defines five no-op link satisfiers; they are not implemented RTL services and are safe only for this narrow path because _start calls wsm_entry directly rather than the FPC program main/init/finalize path. The final image is checked for empty nm -u and its serial output is checked against the committed expected transcript. This is a useful cross-language ABI/QEMU prototype, not completion of P1 or evidence for embedded-target compatibility.")))
 
    ("WSM-OS-FPC-MECHANISM-MIGRATION" .
     ((priority . 9.5)
