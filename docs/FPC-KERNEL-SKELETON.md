@@ -26,7 +26,7 @@ WSM-OS BOOT schema=1 arch=x86_64 status=ok
 WSM-OS RESULT schema=1 value=(sym1 . sym2) status=ok
 ```
 
-Файл `artifacts/nucleus-witness-pascal-entry-qemu-serial-transcript.txt` має той самий Git blob SHA, що й базовий `artifacts/qemu-serial-transcript.txt`. Гейт запускає QEMU та звіряє рядки з цим зафіксованим очікуванням. Це корисний parity-сигнал, але не самостійний доказ того, що Pascal вже обробляє UEFI handoff.
+Файл `artifacts/nucleus-witness-pascal-entry-qemu-serial-transcript.txt` має той самий Git blob SHA, що й базовий ASM transcript `artifacts/qemu-serial-transcript.txt`. Гейт запускає QEMU, звіряє весь спостережений `WSM-OS`-вивід із committed очікуванням, а після цього окремо порівнює рядок `WSM-OS RESULT` із першим RESULT-рядком ASM baseline. Другу перевірку було додано в commit `7b4cf4c`, бо раніше заголовок обіцяв parity, а скрипт перевіряв лише BOOT/transcript. Порівняння нормалізує CR перед зіставленням: це точна рівність рядка після нормалізації, не побайтова тотожність сирих файлів із різними line endings. Це посилює parity-свідчення, але не доводить, що Pascal вже обробляє UEFI handoff.
 
 ## 2. Компілятор і ABI — що насправді використано
 
