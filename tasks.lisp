@@ -360,6 +360,13 @@
      (description . "Capture allocator-entry root state before the prologue clobbers the certified registers, and classify it against a registered root map keyed by (final_pc, allocator_kind). Three outcomes stay distinct: CERTIFIED, NOT-A-SAFEPOINT and INVALID; absence of metadata is never read as an empty certificate, and contradictory metadata fails closed with a GC-family ABI source code. No collector runs.")
      (context . "Completed 2026-11-26. wsm_gc_safepoint save area (48 bytes) written as the first instruction of wsm_cons and wsm_closure_new: return_pc, caller_rsp_at_call, entry rsi, entry rdx, allocator_kind, state, captures. wsm_gc_root_map_register installs a 16-byte-entry map (pc_offset, kind, rsi_root, rdx_root); offsets rather than absolute addresses, so a map survives any link layout. Gate scripts/check-gc-safepoint-capture.sh = 4/4 PASS: certified and absent both allocate normally with value=(sym1 . sym2); kind-mismatch -> kind=ABI source=1195573249 (0x47430001) value=55 (site offset 0x40-0x9, cross-checked with objdump); closure-rsi -> kind=ABI source=1195573250 (0x47430002) value=0. Baseline M0/M1 transcript unchanged, runtime stays host-import free. SCOPE: maps are hand-written in the fixtures (fixture-provenance = hand-written-assembly); consuming a real CML_GC_ROOT_MAP_V1 is #64; no mark, sweep, free list or stack scan.")))
 
+   ("WSM-OS-FPC-PARITY-VERTICAL-W3" .
+    ((priority . 7.0)
+     (capabilities . (research substrate parity measurement adr-006 qemu))
+     (origin . wsm-os-lisp)
+     (depends-on . ())
+     (description . "ADR-006 measurement step W3: build the same vertical scenario (UEFI boot -> one Lisp form -> one allocation -> one named failure exit) twice - once on the current Lisp+ASM mechanism and once on a Free Pascal substrate - and compare transcripts plus the measured edit->build->verify cycle. The result is evidence for or against ADR-006; it does not ratify it and does not change ADR-004.")))
+
    ("WSM-OS-GC-ROOT-MAP-WIRE" .
     ((priority . 9.62)
      (done . t)
