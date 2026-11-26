@@ -170,7 +170,25 @@ _start:
     # pointer now; semantic extraction happens in wsm_boot_handoff.
     # If the pointer is null we still proceed fail-closed (MMIO will not
     # provision without a physical-memory mapping).
+.ifdef WSM_FORCE_NO_BOOT_INFO
+    # Test-only mutation (ADR-006 P1 negative witness): the kernel is entered
+    # with a missing BootInfo pointer so the Pascal-side handoff validation is
+    # witnessable. Never defined in production builds; injected by
+    # `as --defsym` from build-uefi-image.sh.
+    movq $0, saved_boot_info(%rip)
+.else
     movq %rdi, saved_boot_info(%rip)
+.endif
+.ifdef WSM_FORCE_BAD_BOOT_INFO_TAG
+    # Test-only: poison the Optional<u64> tag so the Pascal-side "malformed
+    # record" branch is witnessable. Never defined in production builds.
+    movb $2, 0x58(%rdi)
+.endif
+.ifdef WSM_FORCE_ZERO_BOOT_INFO_OFFSET
+    # Test-only: keep tag = Some but zero the value, so the "Some but zero"
+    # branch is witnessable. Never defined in production builds.
+    movq $0, 0x60(%rdi)
+.endif
 
     # Setup stack
     leaq stack_top(%rip), %rsp

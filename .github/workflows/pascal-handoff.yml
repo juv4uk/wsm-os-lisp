@@ -1,0 +1,46 @@
+name: Pascal handoff boundary
+
+on:
+  push:
+    paths:
+      - "src/pascal_handoff.pas"
+      - "src/rtl_min.s"
+      - "src/entry.s"
+      - "src/runtime.s"
+      - "src/linker.ld"
+      - "scripts/check-pascal-handoff.sh"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "artifacts/nucleus-witness-pascal-handoff-*-qemu-serial-transcript.txt"
+      - "docs/PASCAL-HANDOFF-BOUNDARY.md"
+      - ".github/workflows/pascal-handoff.yml"
+  pull_request:
+    paths:
+      - "src/pascal_handoff.pas"
+      - "src/entry.s"
+      - "src/runtime.s"
+      - "scripts/check-pascal-handoff.sh"
+      - "docs/PASCAL-HANDOFF-BOUNDARY.md"
+      - ".github/workflows/pascal-handoff.yml"
+  workflow_dispatch:
+
+jobs:
+  pascal-handoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install target and Pascal toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 ovmf mtools dosfstools gdisk binutils fp-compiler
+      - name: Prove Pascal reads BootInfo and fails closed on three malformed shapes
+        run: bash scripts/check-pascal-handoff.sh
+      - name: Upload the handoff witnesses
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pascal-handoff-witness
+          path: target/pascal-handoff/
+          if-no-files-found: error

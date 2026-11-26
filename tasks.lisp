@@ -420,6 +420,19 @@
      (depends-on . ())
      (description . "ADR-006 §3.3: decide and enforce what C may cross into the image. Today scripts/check-no-rust.sh allows C only under third_party/; this task turns that into a named policy with a witness (which libraries, which ABI, what happens on a missing symbol) instead of a directory rule.")))
 
+   ("WSM-OS-FPC-HANDOFF-BOUNDARY" .
+    ((priority . 9.7)
+     (done . t)
+     (capabilities . (wsm-os pascal boot uefi handoff fail-closed qemu adr-006))
+     (origin . wsm-os-lisp)
+     (level . pascal)
+     (user-journey . ("kernel developer at boot: a missing or malformed bootloader record stops the target with a named ABI condition instead of booting into undefined behaviour, and the same bytes are read identically by Pascal and by assembly"))
+     (evidence-plan . "four QEMU cells with pinned transcripts: valid, missing pointer, bad Optional tag, Some-with-zero; every cell also requires nm -u on the final kernel to be empty")
+     (fail-safely . (("BootInfo pointer is null" . "ABI 0x48414E01, no allocation") ("Optional tag is neither 0 nor 1" . "ABI 0x48414E02 carrying the tag") ("tag says Some but the offset is zero" . "ABI 0x48414E03") ("Pascal and asm read different offsets" . "ABI 0x48414E04 carrying the Pascal value")))
+     (depends-on . ())
+     (description . "ADR-006 P1 remainder: Pascal reads the bootloader record itself instead of receiving a pre-parsed RuntimeContext*, validates it, and fails closed with a named condition on missing or malformed input. The record layout is the one documented in TARGET-BOOT-HANDOFF-ABI.md; a fourth check compares Pascal's reading with the assembly reading of the same bytes.")
+     (context . "Completed 2026-11-27, docs/PASCAL-HANDOFF-BOUNDARY.md. src/pascal_handoff.pas reads BootInfo+0x58 (Optional tag) and +0x60 (u64, byte by byte), and calls wsm_fail_src with the HAN family 0x48414E01..04. Gate scripts/check-pascal-handoff.sh = 4/4 PASS: valid -> value=(sym1 . sym2); missing -> source=1212239361 value=0; badtag -> source=1212239362 value=2; zerooffset -> source=1212239363 value=0. The three negatives are injected by test-only --defsym mutations in src/entry.s (WSM_FORCE_NO_BOOT_INFO, WSM_FORCE_BAD_BOOT_INFO_TAG, WSM_FORCE_ZERO_BOOT_INFO_OFFSET) that build-uefi-image.sh emits only on an explicit env flag. SCOPE: still -Tlinux, not the pinned x86_64-embedded (that is P0 / #113); physical-address translation still belongs to the asm mechanism; four specific shapes are witnessed, not arbitrary corruption.")))
+
    ("WSM-OS-FPC-PARITY-VERTICAL-W3" .
     ((priority . 7.0)
      (done . nil)

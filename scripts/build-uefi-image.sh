@@ -19,6 +19,15 @@ as_extra=()
 if [[ "${WSM_OS_FORCE_NO_PHYS_MAP:-0}" == "1" ]]; then
   as_extra+=(--defsym WSM_FORCE_NO_PHYS_MAP=1)
 fi
+if [[ "${WSM_FORCE_NO_BOOT_INFO:-0}" == "1" ]]; then
+  as_extra+=(--defsym WSM_FORCE_NO_BOOT_INFO=1)
+fi
+if [[ "${WSM_FORCE_BAD_BOOT_INFO_TAG:-0}" == "1" ]]; then
+  as_extra+=(--defsym WSM_FORCE_BAD_BOOT_INFO_TAG=1)
+fi
+if [[ "${WSM_FORCE_ZERO_BOOT_INFO_OFFSET:-0}" == "1" ]]; then
+  as_extra+=(--defsym WSM_FORCE_ZERO_BOOT_INFO_OFFSET=1)
+fi
 if [[ "${WSM_DMA_EVIDENCE_SERIAL:-0}" == "1" ]]; then
   as_extra+=(--defsym WSM_DMA_EVIDENCE_SERIAL=1)
 fi
