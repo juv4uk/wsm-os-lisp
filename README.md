@@ -109,6 +109,12 @@ Pascal". The first probe is measured, not quoted: freestanding linking currently
 fails on five RTL hooks and an empty program is ~190 KB
 ([probe](docs/research/FPC-TOOLCHAIN-PROBE-2026-11-26.md)).
 
+The first measurement under the `wsm-lazarus` iteration-time protocol is in
+[docs/research/ITERATION-TIME-GATE-SUITE-2026-11-27.md](docs/research/ITERATION-TIME-GATE-SUITE-2026-11-27.md):
+the static gate suite takes a median 3855 ms and p90 3946 ms on a 2-vCPU
+container, and the measurement itself found that one gate was costing 11.5 s and
+dominating the suite.
+
 Executable swarm work is tracked in [`tasks.lisp`](tasks.lisp).
 
 The first machine-readable ABI and its generated WSM projection are documented
@@ -234,6 +240,11 @@ FPC досі не виміряна.
 пропозицію, а не як інструкцію:
 [docs/ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md](docs/ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md)
 (PROPOSED, не прийнято).
+
+Перший замір за протоколом часу ітерації з `wsm-lazarus` — у
+[docs/research/ITERATION-TIME-GATE-SUITE-2026-11-27.md](docs/research/ITERATION-TIME-GATE-SUITE-2026-11-27.md):
+статичний набір гейтів — медіана 3855 мс і p90 3946 мс на контейнері з 2 vCPU, і
+сам замір показав, що один гейт коштував 11,5 с і з'їдав більшу частину набору.
 
 Робота рою агентів над виконуваними завданнями відстежується у [`tasks.lisp`](tasks.lisp).
 

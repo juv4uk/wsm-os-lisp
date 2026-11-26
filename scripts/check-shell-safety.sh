@@ -3,9 +3,9 @@
 #
 # Why this exists: a neighbouring project with heavy agent involvement shipped
 # generated bash that interpolated untrusted data into command strings (a media
-# title reached a download command; a notification click action was executed as
-# a shell string). Both are command-injection classes that a generated script
-# reproduces silently. This gate keeps that class out of this repository.
+# title reached a download command; a notification click action was executed as a
+# shell string). Both are command-injection classes that a generated script
+# reproduces silently.
 #
 # Scope: every tracked *.sh and *.py outside this file itself.
 # Rules (code lines only; full-line comments are ignored):
@@ -13,6 +13,11 @@
 #   2. `sh|bash|zsh|dash -c "<string containing $>"` is never allowed.
 #   3. A command substitution used as the command name (`$(...)` at line start).
 #   4. Python `shell=True` and `os.system(` are never allowed.
+#
+# Performance note (2026-11-27): the first version ran four awk|grep pipelines per
+# file, which cost 11.5 s on this repository and dominated the local gate suite.
+# It now makes one pass over all files in a single awk process. A gate that is
+# slow enough to skip is a gate that gets skipped.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -23,47 +28,59 @@ fail() {
   exit 1
 }
 
-scan_shell() {
-  local file="$1" rel="$2" label="$3" pattern="$4" hits
-  hits=$(awk '{ line=$0; sub(/^[[:space:]]*/, "", line); if (line ~ /^#/) next; printf "%d:%s\n", FNR, $0 }' "$file" \
-    | grep -E -n "$pattern" || true)
-  if [ -n "$hits" ]; then
-    printf '%s\n' "$hits" >&2
-    fail "$rel: $label"
-  fi
-}
+cd "$ROOT_DIR"
 
-scan_python() {
-  local file="$1" rel="$2" label="$3" pattern="$4" hits
-  hits=$(awk '{ line=$0; sub(/^[[:space:]]*/, "", line); if (line ~ /^#/) next; printf "%d:%s\n", FNR, $0 }' "$file" \
-    | grep -E -n "$pattern" || true)
-  if [ -n "$hits" ]; then
-    printf '%s\n' "$hits" >&2
-    fail "$rel: $label"
-  fi
-}
+mapfile -t files < <(
+  find . \
+    -path ./.git -prune -o \
+    -path ./target -prune -o \
+    -path ./node_modules -prune -o \
+    -type f \( -name '*.sh' -o -name '*.py' \) -print | sort
+)
 
-count=0
-while IFS= read -r file; do
-  rel="${file#"$ROOT_DIR"/}"
-  [ "$rel" = "$SELF" ] && continue
-  scan_shell "$file" "$rel" 'eval is forbidden in repository scripts' '\beval\b'
-  scan_shell "$file" "$rel" 'interpolated command string passed to a shell (-c with $)' \
-    '(bash|sh|zsh|dash)[[:space:]]+-c[[:space:]]+["'"'"'][^"'"'"']*\$'
-  scan_shell "$file" "$rel" 'command substitution used as the command name' \
-    '^[[:space:]]*\$\([^)]*\)'
-  count=$((count + 1))
-done < <(find "$ROOT_DIR" -path "$ROOT_DIR/.git" -prune -o -name '*.sh' -type f -print | sort)
+# This file is excluded rather than filtered later: its own patterns would always
+# match themselves, and a gate that has to explain its own output is noise.
+kept=()
+for f in "${files[@]}"; do
+  [ "$f" = "./$SELF" ] && continue
+  kept+=("$f")
+done
+files=("${kept[@]}")
 
-py_count=0
-while IFS= read -r file; do
-  rel="${file#"$ROOT_DIR"/}"
-  scan_python "$file" "$rel" 'shell=True is forbidden in repository scripts' 'shell[[:space:]]*=[[:space:]]*True'
-  scan_python "$file" "$rel" 'os.system( is forbidden in repository scripts' 'os\.system[[:space:]]*\('
-  py_count=$((py_count + 1))
-done < <(find "$ROOT_DIR" -path "$ROOT_DIR/.git" -prune -o -name '*.py' -type f -print | sort)
+[ "${#files[@]}" -gt 0 ] || fail 'no shell or python scripts were found; the gate would pass vacuously'
 
-[ "$count" -gt 0 ] || fail 'no shell scripts were scanned; the gate would pass vacuously'
-[ "$py_count" -gt 0 ] || fail 'no python scripts were scanned; the gate would pass vacuously'
+violations="$(
+  awk '
+    function code_line(l) {
+      sub(/^[[:space:]]*/, "", l)
+      return (l ~ /^#/) ? "" : l
+    }
+    {
+      line = code_line($0)
+      if (line == "") next
+      is_py = (FILENAME ~ /\.py$/)
 
-printf 'SHELL-SAFETY-PASS: %s shell and %s python scripts carry no data-to-command interpolation.\n' "$count" "$py_count"
+      if (line ~ /(^|[^A-Za-z0-9_])eval([^A-Za-z0-9_]|$)/)
+        printf "%s:%d: eval is forbidden in repository scripts\n", FILENAME, FNR
+
+      if (line ~ /(bash|sh|zsh|dash)[[:space:]]+-c[[:space:]]+["\047][^"\047]*\$/)
+        printf "%s:%d: interpolated command string passed to a shell\n", FILENAME, FNR
+
+      if (line ~ /^[[:space:]]*\$\([^)]*\)/)
+        printf "%s:%d: command substitution used as the command name\n", FILENAME, FNR
+
+      if (is_py && line ~ /shell[[:space:]]*=[[:space:]]*True/)
+        printf "%s:%d: shell=True is forbidden in repository scripts\n", FILENAME, FNR
+
+      if (is_py && line ~ /os\.system[[:space:]]*\(/)
+        printf "%s:%d: os.system( is forbidden in repository scripts\n", FILENAME, FNR
+    }
+  ' "${files[@]}" || true
+)"
+
+if [ -n "$violations" ]; then
+  printf '%s\n' "$violations" >&2
+  fail "$(printf '%s\n' "$violations" | wc -l) unsafe construct(s) found"
+fi
+
+printf 'SHELL-SAFETY-PASS: %s scripts scanned in one pass, no data-to-command interpolation.\n' "${#files[@]}"
