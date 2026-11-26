@@ -154,8 +154,9 @@
 
   (policy
    (id no-data-to-command-interpolation)
-   (claim "Repository scripts never turn data into a shell command string.")
+   (claim "Repository scripts never turn data into a shell command string: no eval, no interpolated -c string, no command substitution as a command name, no shell=True.")
    (enforcement literal "scripts/check-shell-safety.sh" "eval is forbidden in repository scripts")
    (witness runtime)
    (gate "scripts/check-shell-safety.sh")
+   (note "Syntactic guard, not a data-flow witness. It proves the dangerous constructs are absent; it does not prove that no untrusted value reaches a privileged action by some other route. A gate must reproduce the actual threat and cover the whole data path, not just the syntax — see ADR-005 section 6.")
    (status proved))))
