@@ -97,9 +97,9 @@ if [[ -s "$semantic_asm" ]]; then
   as --64 "$semantic_asm" -o "$work/current-sens-type-failure.o"
   bash "$ROOT_DIR/scripts/build-uefi-image.sh" \
     "$work/current-sens-type-failure.o" "$work/current-sens-type-failure.img" >/dev/null
-  semantic="$(bash "$ROOT_DIR/scripts/run-qemu-uefi.sh" \
+  semantic="$(WSM_QEMU_TRANSCRIPT="$ROOT_DIR/artifacts/d9-lisp-type-failure-fixture-qemu-serial-transcript.txt" \
+    bash "$ROOT_DIR/scripts/run-qemu-uefi.sh" \
     "$work/current-sens-type-failure.img" \
-    WSM_QEMU_TRANSCRIPT="$ROOT_DIR/artifacts/d9-lisp-type-failure-fixture-qemu-serial-transcript.txt" \
     2>"$work/current-sens-type-failure.qemu.err")" || {
       fail "current SENS Type fixture did not reach the structured runtime condition"
       cat "$work/current-sens-type-failure.qemu.err" >&2
