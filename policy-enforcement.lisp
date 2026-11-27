@@ -196,11 +196,11 @@
    (status proved))
 
   (policy
-   (id zero-rust-boundary)
-   (claim "No Rust exists in the production target, bootstrap or runtime.")
-   (enforcement absent "*.rs" "Cargo.toml" "Cargo.lock" "rust-toolchain.toml" "crates")
+   (id open-language-policy)
+   (claim "No programming language is prohibited by name or source directory.")
+   (enforcement literal "docs/ADR-009-OPEN-LANGUAGE-AND-CODE-REUSE.md" "No blanket language bans")
    (witness runtime)
-   (gate "scripts/check-no-rust.sh")
+   (gate "scripts/check-language-policy.sh")
    (status proved))
 
   (policy
