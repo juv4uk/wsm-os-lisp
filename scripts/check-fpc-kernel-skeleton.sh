@@ -63,7 +63,7 @@ WSM_QEMU_RAW_SERIAL_COPY="$out_dir/pascal-serial.log" \
   || fail "QEMU witness failed"
 observed="$(tr -d '\r' < "$out_dir/pascal-serial.log" | grep '^WSM-OS RESULT' || true)"
 expected="$(tr -d '\r' < "$asm_fixture" | grep '^WSM-OS RESULT' | head -1)"
-[[ -n "$observed" && "$observed" == "$expected" ]] || fail "Pascal RESULT differs from ASM baseline"
+[[ -n "$observed" && "$observed" == "$expected" ]] || fail "parity broken: Pascal RESULT differs from ASM baseline"
 
 printf 'PASS pascal-unit  %s\n' "$observed"
 echo "FPC-KERNEL-SKELETON-PASS: FPC $got_version, unit-only, no RTL stubs, byte-identical RESULT"

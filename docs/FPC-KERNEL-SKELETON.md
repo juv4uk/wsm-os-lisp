@@ -30,7 +30,7 @@ The pinned FPC 3.3.1 `x86_64-embedded` snapshot is checksum-pinned in [FPC-EMBED
 - invalid Optional tag;
 - Some tag with zero physical-memory offset.
 
-The Pascal unit reads the record itself and compares it with the independent Assembly value. The final kernel must have an empty `nm -u`; the only permitted pre-link imports are the Assembly boundary symbols plus one unused Byte RTTI metadata section removed by the explicit test-profile `--gc-sections` pass. No no-op RTL hooks are used.
+The Pascal unit reads the record itself and compares it with the independent Assembly value. The final kernel must have an empty `nm -u`; the exact pre-link import set is `RTTI_$SYSTEM_$_BYTE$indirect` plus `saved_boot_info`, `wsm_target_phys_mem_offset`, `wsm_cons` and `wsm_fail_src`. The unused Byte RTTI metadata section is removed by the explicit test-profile `--gc-sections` pass. No no-op RTL hooks are used.
 
 ## 5. Program lifecycle is a separate runtime
 

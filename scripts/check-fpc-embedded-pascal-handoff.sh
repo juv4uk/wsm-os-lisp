@@ -34,7 +34,7 @@ file "$OBJ" > "$OUT/object-format.txt"
 nm -g "$OBJ" > "$OUT/object-global-symbols.txt"
 nm -u "$OBJ" > "$OUT/object-undefined-symbols.txt" 2>&1 || true
 actual_undefined="$(awk '{print $2}' "$OUT/object-undefined-symbols.txt" | sort | tr '\n' ' ')"
-expected_undefined="$(printf '%s\n' 'RTTI_$SYSTEM_$_BYTE$indirect' saved_boot_info wsm_cons wsm_fail_src wsm_target_phys_mem_offset | sort | tr '\n' ' ')"
+expected_undefined="$(printf '%s\n' 'RTTI_$SYSTEM_$$_BYTE$indirect' saved_boot_info wsm_cons wsm_fail_src wsm_target_phys_mem_offset | sort | tr '\n' ' ')"
 [[ "$actual_undefined" == "$expected_undefined" ]] || {
   cat "$OUT/object-undefined-symbols.txt" >&2
   fail "unexpected handoff unit imports"
