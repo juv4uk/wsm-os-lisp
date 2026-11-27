@@ -29,7 +29,7 @@
 - Точний upstream commit: `f5f795ce095f301e987d74aed57948d1bc4e137c` (стан `main`, 2026-11-26).
 - Pin manifest: `refs/wsm-lazarus-pin.lisp`; перевірка gitlink/manifest — `scripts/check-language-policy.sh`.
 - Дозволено напряму копіювати, переносити й адаптувати код із цього та інших репозиторіїв власника. Зберігати повний license notice «ВОЛЬНІСТЬ», авторство, provenance, локальні тести та межі SENS Contract 12.0.
-- Вкладений у цей Lazarus-коміт `external/sens` pin `2c498b35af53c085450eac6f51b87facf7f9aa47` належить до його історичного Contract 9.0 baseline і **не є** SENS authority для цього репозиторію. Чинна семантична влада залишається за SENS Contract 12.0.
+- Вкладений у цей Lazarus-коміт `external/sens` pin `2c498b35af53c085450eac6f51b87facf7f9aa47` за прямою перевіркою його `language-contract.lisp` і `contracts/language-contract-12.lisp` містить Contract 12.0 (owner-ratified 2026-10-25). Цей pin є provenance залежності `wsm-lazarus`, але **не замінює** нормативне джерело `wsm-os-lisp`: чинна семантична влада залишається за актуальним SENS Contract 12.0, який цей репозиторій перевіряє безпосередньо. Не називати цей SHA Contract 9.0.
 - `wsm.domain.pas` — кандидат для адаптації host-механізму; `wsm.registry.pas` і `wsm.eval.pas` мають SID8-залежності й потребують міграції до Contract 12.0 перед активним використанням.
 
 <!-- WSM-LAZARUS-PIN-AND-REUSE-20261127:END -->
