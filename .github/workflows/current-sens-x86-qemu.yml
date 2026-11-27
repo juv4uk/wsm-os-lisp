@@ -117,6 +117,7 @@ jobs:
           OVMF_CODE: /usr/share/OVMF/OVMF_CODE.fd
           OVMF_VARS: /usr/share/OVMF/OVMF_VARS.fd
           WSM_QEMU_TRANSCRIPT: ${{ github.workspace }}/expected-current-sens-transcript.txt
+          CURRENT_SENS_MANIFEST: ${{ github.workspace }}/current-sens-d1-cond-manifest.json
         run: |
           cat > "$WSM_QEMU_TRANSCRIPT" <<'EOF'
           WSM-OS BOOT schema=1 arch=x86_64 status=ok
