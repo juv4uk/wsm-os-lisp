@@ -114,7 +114,7 @@ Linux-target контроль історично дав 4/4; новий embedded
 
 ## 6. Embedded-target W3 gate — 2026-11-27
 
-**Статус:** перший embedded CI run #46073255854 завершився SUCCESS; 4/4 клітинки та pin identity PASS. Linux-target вимір вище лишається історичним control і не підміняє embedded результат. Workflow тепер налаштовано на три повтори для стабільнішої медіани.
+**Статус:** перший embedded CI run #46073255854 завершився SUCCESS; 4/4 клітинки та pin identity PASS. Linux-target вимір вище лишається історичним control і не підміняє embedded результат. Старий `scripts/check-fpc-parity.sh` явно задекларований як legacy у `policy-enforcement.lisp`; active acceptance path — лише embedded workflow. Workflow тепер налаштовано на три повтори для стабільнішої медіани.
 
 Новий `scripts/check-fpc-embedded-parity.sh` використовує checksum-pinned FPC 3.3.1 `x86_64-embedded` toolchain, встановлену `scripts/probe-fpc-embedded.sh`. Обидва Pascal сценарії — окремі `unit` модулі:
 - value: `src/pascal_probe.pas`;

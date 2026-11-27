@@ -55,7 +55,8 @@
    "Fold the still-useful determinism check into a runnable witness, then delete.")
   (script "scripts/check-uefi-image-reproducibility.sh"
    "Pre-ADR-004 script: consumes a provenance bundle produced by the cargo-based oracle scripts, so it cannot run either. Header marked LEGACY 2026-11-26."
-   "Image determinism is currently unproven in CI. Rewrite against the current build path, then gate it."  (script "scripts/check-fpc-parity.sh"
+   "Image determinism is currently unproven in CI. Rewrite against the current build path, then gate it.")
+  (script "scripts/check-fpc-parity.sh"
    "Legacy FPC 3.2.2 Linux-target W3 runner. Active acceptance moved to pinned FPC 3.3.1 x86_64-embedded via scripts/check-fpc-embedded-parity.sh; historical Linux measurements are retained in docs/FPC-PARITY-P2.md."
    "Keep only as a historical reproducer while the embedded gate gains three-repeat and physical-host evidence; then remove.")
 ))
