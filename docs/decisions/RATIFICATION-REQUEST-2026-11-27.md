@@ -14,8 +14,11 @@
 `bash scripts/check-adr-ratification.sh` падає на одному ADR:
 
 ```text
+docs/ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md: ACCEPTED but names no decider —
+  add a "**Deciders/Хто вирішив**: <name>" line
 docs/ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md: ACCEPTED by
 <agents@wsm-os-lisp.invalid> in 947ca396a525, and no owner confirmation on record
+ADR-RATIFICATION-FAIL: 2 ADR(s) claim a decision the owner did not sign
 ```
 
 **Statically proven (git provenance):** рядок статусу `ACCEPTED` в ADR-006
@@ -38,6 +41,13 @@ ADR-007 зараз `PROPOSED`, тому цей гейт його не перев
 
 ```lisp
  (confirmed "ADR-006" "2026-11-27" "Підтверджую ADR-006: Free Pascal як хост-мова; RUST=0; P0-P4 лишаються evidence-gated.")
+```
+
+У тому ж owner-коміті додати до ADR-006 рядок з ім'ям того, хто вирішив, бо
+гейт вимагає і його:
+
+```text
+**Deciders/Хто вирішив**: juv4uk, власник проєкту (2026-11-26; підпис 2026-11-27)
 ```
 
 Коміт має бути зроблено з author/committer
