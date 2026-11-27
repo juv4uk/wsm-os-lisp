@@ -36,6 +36,8 @@ jobs:
           WSM_TOOLCHAIN_RUNS: ${{ github.event.inputs.runs || '15' }}
           WSM_TOOLCHAIN_OUT: target/toolchain-iteration-benchmark
         run: python3 benchmarks/toolchain/measure.py
+      - name: Prove hosted Pascal to C ABI integration
+        run: python3 benchmarks/multilang/run_abi_probe.py
       - name: Upload raw samples and summary
         if: always()
         uses: actions/upload-artifact@v4
