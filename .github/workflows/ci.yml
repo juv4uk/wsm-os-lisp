@@ -39,8 +39,8 @@ jobs:
         run: python3 scripts/check-task-format.py
       - name: Keep the static gate suite inside its wall-clock ceiling
         run: bash scripts/check-gate-budget.sh
-      - name: Verify language boundary (ADR-006; RUST = 0)
-        run: bash scripts/check-no-rust.sh
+      - name: Verify open language policy and pinned Lazarus source
+        run: bash scripts/check-language-policy.sh
       - name: Prove pure assembly runtime has no forbidden host imports
         run: bash scripts/check-runtime-symbols.sh
       - name: Guard finite UART poll and distinct transport-failure exit (#31)
