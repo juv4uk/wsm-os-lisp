@@ -94,13 +94,28 @@ else
 fi
 
 if [ "$COMPILE_RC" -eq 0 ] && [ -f "$OBJ" ]; then
+  FPC_ASM="$OUT/units/fpc_embedded_probe.s"
+  if [ -f "$FPC_ASM" ]; then
+    cp "$FPC_ASM" "$OUT/fpc-generated-assembly.s"
+    grep -Fq 'movq $4,%r9' "$FPC_ASM"
+    grep -Fq 'movq $3,%r8' "$FPC_ASM"
+    grep -Fq 'movq $2,%rdx' "$FPC_ASM"
+    grep -Fq 'movq $1,%rcx' "$FPC_ASM"
+    grep -Fq 'call *' "$FPC_ASM"
+    grep -Fq 'movq %rcx,-8(%rbp)' "$FPC_ASM"
+    grep -Fq 'movq %rdx,-16(%rbp)' "$FPC_ASM"
+    echo "MS_ABI_DISASSEMBLY=PASS"
+  else
+    echo "MS_ABI_DISASSEMBLY=FAIL"
+    exit 9
+  fi
   as --64 -o "$OUT/units/fpc_embedded_entry.o" "$ROOT/tests/fpc_embedded_entry.s" > "$OUT/assembly.txt" 2>&1
   AS_RC=$?
   echo "ASSEMBLY_EXIT=$AS_RC"
   cat "$OUT/assembly.txt"
   if [ "$AS_RC" -eq 0 ]; then
     set +e
-    ld -T "$ROOT/src/linker.ld" -Map="$OUT/embedded-link.map" \
+    ld --gc-sections -T "$ROOT/src/linker.ld" -Map="$OUT/embedded-link.map" \
       -o "$OUT/embedded-link.elf" "$OUT/units/fpc_embedded_entry.o" "$OBJ" > "$OUT/link.txt" 2>&1
     LINK_RC=$?
     set -e
@@ -112,6 +127,12 @@ if [ "$COMPILE_RC" -eq 0 ] && [ -f "$OBJ" ]; then
       nm -g "$OUT/embedded-link.elf" > "$OUT/final-global-symbols.txt" 2>&1 || true
       objdump -d "$OUT/embedded-link.elf" > "$OUT/final-disassembly.txt" 2>&1 || true
       size "$OUT/embedded-link.elf" > "$OUT/final-size.txt" 2>&1 || true
+      if [ -s "$OUT/final-undefined-symbols.txt" ]; then
+        echo "FINAL_UNDEFINED_SYMBOLS=FAIL"
+        cat "$OUT/final-undefined-symbols.txt"
+        exit 10
+      fi
+      echo "FINAL_UNDEFINED_SYMBOLS=NONE"
     fi
   fi
 else
