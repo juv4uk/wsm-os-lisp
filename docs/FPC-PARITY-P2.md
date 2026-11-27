@@ -107,3 +107,31 @@ WSM_P2_REPEATS=3 bash scripts/check-fpc-parity.sh
 ## Українською: одне речення
 
 Асемблер і Pascal у чотирьох клітинках Linux-target прототипу дають однакові `WSM-OS`-рядки після нормалізації CR; вимір циклу показав близько 1% compile time (277 мс проти ~15.6 с образу й завантаження). Це часткове свідчення, а не закриття P2 чи доказ `x86_64-embedded`.
+
+
+---
+
+## 6. Embedded-target W3 gate — 2026-11-27
+
+**Статус:** новий embedded parity gate реалізовано; CI run очікується. Linux-target вимір вище лишається історичним control і не підміняє embedded результат.
+
+Новий `scripts/check-fpc-embedded-parity.sh` використовує checksum-pinned FPC 3.3.1 `x86_64-embedded` toolchain, встановлену `scripts/probe-fpc-embedded.sh`. Обидва Pascal сценарії — окремі `unit` модулі:
+- value: `src/pascal_probe.pas`;
+- named OOM: `src/pascal_probe_oom.pas`.
+
+Для обох об'єктів очікується рівно один зовнішній символ — Assembly `wsm_cons`. Жоден FPC PROGRAM startup hook і жоден `rtl_min.s` no-op stub не лінкується.
+
+Чотири клітини:
+1. ASM value;
+2. ASM named OOM;
+3. embedded Pascal value;
+4. embedded Pascal named OOM.
+
+Гейт механічно перевіряє:
+- byte-identical identity між ASM value transcript pin і Pascal value pin до будь-якої збірки;
+- кожен повний QEMU serial transcript проти відповідного pin;
+- усі рядки `WSM-OS` між ASM і Pascal для value та OOM;
+- порожній `nm -u` у фінальному Pascal kernel;
+- compile, image-build і QEMU+verify час окремо, із сирими TSV та SHA-256 образів.
+
+Цей workflow працює на GitHub-hosted runner з TCG/OVMF. Його часи — CI datapoints, не вимірювання на фізичному i5-6400. P2 не закривається лише від створення gate: потрібні зелений CI, перегляд усіх артефактів і окремий фізичний замір на власному хості.
