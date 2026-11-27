@@ -16,7 +16,6 @@ implementation
 const
   SYMBOL_A = (TWord(1) shl 3) or TWord(4);
   SYMBOL_B = (TWord(2) shl 3) or TWord(4);
-
   ERR_ABI = LongWord(4);
   HAN_ERR_MISSING  = LongWord($48414E01);
   HAN_ERR_TAG      = LongWord($48414E02);

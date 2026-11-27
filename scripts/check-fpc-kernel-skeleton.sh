@@ -1,20 +1,11 @@
 #!/usr/bin/env bash
-# ADR-006 P1 gate: Pascal code runs on the target.
-#
-# Proves four things, each separately observable:
-#   1. the pinned FPC compiles src/pascal_probe.pas with -Cn (no host link);
-#   2. the object links with src/linker.ld and src/rtl_min.s into a kernel with
-#      ZERO undefined symbols (nm -u is empty);
-#   3. the UEFI/QEMU boot reaches the unchanged BOOT line;
-#   4. the RESULT line is byte-identical to the hand-written assembly fixture,
-#      so Pascal and asm agree on the ABI rather than merely both running.
-#
-# Fail closed on: missing compiler, version drift, any undefined symbol.
+# ADR-006 P1 control: a freestanding Pascal UNIT runs on the target.
+# This is the stable FPC 3.2.2 Linux-target control, not the embedded probe.
+# No Pascal PROGRAM startup hooks and no no-op RTL stubs are linked.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
-
 out_dir="${WSM_FPC_OUT_DIR:-target/fpc-kernel-skeleton}"
 expected_version="${WSM_FPC_VERSION:-3.2.2}"
 transcript="artifacts/nucleus-witness-pascal-entry-qemu-serial-transcript.txt"
@@ -24,83 +15,55 @@ fail() {
   exit 1
 }
 
-# --- compiler discovery and pin -------------------------------------------
 ppc="${FPC_PPCX64:-}"
-if [[ -z "$ppc" ]]; then
-  ppc="$(command -v ppcx64 || true)"
-fi
+if [[ -z "$ppc" ]]; then ppc="$(command -v ppcx64 || true)"; fi
 if [[ -z "$ppc" ]]; then
   for candidate in /usr/lib/x86_64-linux-gnu/fpc/*/ppcx64 /usr/lib/fpc/*/ppcx64; do
-    if [[ -x "$candidate" ]]; then
-      ppc="$candidate"
-      break
-    fi
+    [[ -x "$candidate" ]] && ppc="$candidate" && break
   done
 fi
-[[ -n "$ppc" && -x "$ppc" ]] || fail "ppcx64 not found; install fp-compiler or set FPC_PPCX64"
-
+[[ -n "$ppc" && -x "$ppc" ]] || fail "ppcx64 not found"
 got_version="$("$ppc" -iV 2>/dev/null | tr -d '\r')"
-[[ "$got_version" == "$expected_version" ]] \
-  || fail "FPC version drift: expected $expected_version, got ${got_version:-none}"
+[[ "$got_version" == "$expected_version" ]] || fail "FPC version drift: expected $expected_version, got $got_version"
 
 units_dir="${FPC_UNITS_DIR:-}"
 if [[ -z "$units_dir" ]]; then
-  for candidate in /usr/lib/x86_64-linux-gnu/fpc/*/units/x86_64-linux \
-                   /usr/lib/fpc/*/units/x86_64-linux; do
-    if [[ -d "$candidate/rtl" ]]; then
-      units_dir="$candidate"
-      break
-    fi
+  for candidate in /usr/lib/x86_64-linux-gnu/fpc/*/units/x86_64-linux /usr/lib/fpc/*/units/x86_64-linux; do
+    [[ -d "$candidate/rtl" ]] && units_dir="$candidate" && break
   done
 fi
-[[ -n "$units_dir" && -d "$units_dir/rtl" ]] || fail "FPC rtl units not found; set FPC_UNITS_DIR"
+[[ -n "$units_dir" && -d "$units_dir/rtl" ]] || fail "FPC RTL units not found"
 
 rm -rf "$out_dir"
 mkdir -p "$out_dir"
-
-# --- 1. compile without the host link stage -------------------------------
 "$ppc" -Tlinux -O- -Xs- -CX -Cn \
   -Fu"$units_dir/rtl" -Fu"$units_dir/rtl-objpas" \
-  -FE"$out_dir" -FU"$out_dir" \
-  src/pascal_probe.pas >/dev/null || fail "FPC compile failed"
-[[ -s "$out_dir/pascal_probe.o" ]] || fail "FPC produced no object"
+  -FE"$out_dir" -FU"$out_dir" src/pascal_probe.pas > "$out_dir/compile.txt" 2>&1 \
+  || fail "FPC unit compile failed"
+[[ -s "$out_dir/pascal_probe.o" ]] || fail "FPC produced no unit object"
+nm -u "$out_dir/pascal_probe.o" > "$out_dir/object-undefined-symbols.txt" 2>&1 || true
+undefined="$(awk '{print $2}' "$out_dir/object-undefined-symbols.txt" | tr '\n' ' ')"
+[[ "$undefined" == "wsm_cons " ]] || {
+  cat "$out_dir/object-undefined-symbols.txt" >&2
+  fail "expected only Assembly wsm_cons import; no FPC startup hooks"
+}
 
-# --- 2. link with our linker script and our minimal RTL -------------------
-as --64 src/rtl_min.s -o "$out_dir/rtl_min.o" || fail "rtl_min.s assemble failed"
-ld -r "$out_dir/pascal_probe.o" "$out_dir/rtl_min.o" -o "$out_dir/pascal_fixture.o" \
-  || fail "relocatable merge failed"
-
-bash scripts/build-uefi-image.sh "$out_dir/pascal_fixture.o" "$out_dir/pascal.img" >/dev/null \
+bash scripts/build-uefi-image.sh "$out_dir/pascal_probe.o" "$out_dir/pascal.img" > "$out_dir/image-build.txt" \
   || fail "image build failed"
-
-# build-uefi-image.sh writes target/kernel-x86_64
 kernel="target/kernel-x86_64"
-[[ -s "$kernel" ]] || fail "linked kernel not found at $kernel"
-undefined="$(nm -u "$kernel" | tr -d '\r')"
-[[ -z "$undefined" ]] || fail "undefined symbols in the linked kernel: $undefined"
+[[ -s "$kernel" ]] || fail "linked kernel missing"
+nm -u "$kernel" > "$out_dir/kernel-undefined-symbols.txt" 2>&1 || true
+[[ ! -s "$out_dir/kernel-undefined-symbols.txt" ]] || fail "undefined symbols in final kernel"
 
-# --- 3/4. boot, then actually compare with the asm fixture ----------------
-# Claim 4 used to be asserted in the header and never checked: the script wrote
-# the transcript and printed the last line, so a Pascal probe that emitted only
-# the BOOT line would still have passed. The comparison is the claim.
 asm_fixture="artifacts/qemu-serial-transcript.txt"
-[[ -s "$asm_fixture" ]] || fail "asm fixture transcript $asm_fixture is missing; parity cannot be checked"
-
+[[ -s "$asm_fixture" ]] || fail "ASM fixture transcript missing"
 WSM_QEMU_TRANSCRIPT="$transcript" \
 WSM_QEMU_RAW_SERIAL_COPY="$out_dir/pascal-serial.log" \
-  bash scripts/run-qemu-uefi.sh "$out_dir/pascal.img" >/dev/null \
-  || fail "qemu witness failed"
-
+  bash scripts/run-qemu-uefi.sh "$out_dir/pascal.img" > "$out_dir/qemu.stdout" 2> "$out_dir/qemu.stderr" \
+  || fail "QEMU witness failed"
 observed="$(tr -d '\r' < "$out_dir/pascal-serial.log" | grep '^WSM-OS RESULT' || true)"
-[[ -n "$observed" ]] || fail "pascal probe emitted no WSM-OS RESULT line; a BOOT line alone is not a parity witness"
-
 expected="$(tr -d '\r' < "$asm_fixture" | grep '^WSM-OS RESULT' | head -1)"
-[[ -n "$expected" ]] || fail "asm fixture $asm_fixture has no WSM-OS RESULT line to compare against"
+[[ -n "$observed" && "$observed" == "$expected" ]] || fail "Pascal RESULT differs from ASM baseline"
 
-[[ "$observed" == "$expected" ]] \
-  || fail "parity broken: pascal emitted '$observed', asm fixture has '$expected'"
-
-printf 'PASS pascal-entry  %s\n' "$observed"
-printf 'PASS parity        byte-identical to %s\n' "$asm_fixture"
-printf 'PASS undefined     none (nm -u on %s is empty)\n' "$kernel"
-echo "FPC-KERNEL-SKELETON-PASS: FPC $got_version, freestanding link, RESULT line identical to the asm fixture"
+printf 'PASS pascal-unit  %s\n' "$observed"
+echo "FPC-KERNEL-SKELETON-PASS: FPC $got_version, unit-only, no RTL stubs, byte-identical RESULT"

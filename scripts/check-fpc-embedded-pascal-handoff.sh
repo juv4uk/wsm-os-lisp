@@ -33,6 +33,12 @@ mkdir -p "$OUT/units" "$OUT/bin"
 file "$OBJ" > "$OUT/object-format.txt"
 nm -g "$OBJ" > "$OUT/object-global-symbols.txt"
 nm -u "$OBJ" > "$OUT/object-undefined-symbols.txt" 2>&1 || true
+actual_undefined="$(awk '{print $2}' "$OUT/object-undefined-symbols.txt" | sort | tr '\n' ' ')"
+expected_undefined="$(printf '%s\n' 'RTTI_$SYSTEM_$_BYTE$indirect' saved_boot_info wsm_cons wsm_fail_src wsm_target_phys_mem_offset | sort | tr '\n' ' ')"
+[[ "$actual_undefined" == "$expected_undefined" ]] || {
+  cat "$OUT/object-undefined-symbols.txt" >&2
+  fail "unexpected handoff unit imports"
+}
 
 for symbol in saved_boot_info wsm_target_phys_mem_offset wsm_cons wsm_fail_src; do
   grep -Fq "$symbol" "$OUT/object-undefined-symbols.txt" \
@@ -55,7 +61,7 @@ run_cell() {
   local log="$OUT/$cell.serial.log"
 
   if [[ -n "$env_name" ]]; then
-    env "$env_name"=1 timeout 180s bash scripts/build-uefi-image.sh "$OBJ" "$image" > "$OUT/$cell-build.txt" \
+    env WSM_OS_LINK_GC_SECTIONS=1 "$env_name"=1 WSM_OS_LINK_GC_SECTIONS=1 timeout 180s bash scripts/build-uefi-image.sh "$OBJ" "$image" > "$OUT/$cell-build.txt" \
       || fail "image build failed: $cell"
   else
     timeout 180s bash scripts/build-uefi-image.sh "$OBJ" "$image" > "$OUT/$cell-build.txt" \

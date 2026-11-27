@@ -54,16 +54,14 @@ mkdir -p "$out_dir"
   -FE"$out_dir" -FU"$out_dir" src/pascal_handoff.pas >/dev/null \
   || fail "FPC compile failed"
 
-as --64 src/rtl_min.s -o "$out_dir/rtl_min.o" || fail "rtl_min.s assemble failed"
-ld -r "$out_dir/pascal_handoff.o" "$out_dir/rtl_min.o" -o "$out_dir/handoff_fixture.o" \
-  || fail "relocatable merge failed"
+
 
 run_cell() {  # $1 = cell, $2 = transcript, $3 = extra env assignment (may be empty)
   local cell="$1" transcript="$2" extra="$3"
   local img="$out_dir/${cell}.img" log="$out_dir/${cell}.log"
 
   # shellcheck disable=SC2086
-  env $extra bash scripts/build-uefi-image.sh "$out_dir/handoff_fixture.o" "$img" >/dev/null \
+  env WSM_OS_LINK_GC_SECTIONS=1 $extra bash scripts/build-uefi-image.sh "$out_dir/pascal_handoff.o" "$img" >/dev/null \
     || fail "image ${cell}"
 
   [[ -z "$(nm -u target/kernel-x86_64)" ]] || fail "undefined symbols in ${cell}"

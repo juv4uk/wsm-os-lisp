@@ -1,112 +1,44 @@
-# Freestanding Pascal-прототип: Linux-target object у UEFI-образі
-*Freestanding Pascal prototype: a Linux-target object inside the UEFI image*
+# Freestanding Pascal: Linux control and embedded UEFI witnesses
+*Freestanding Pascal: Linux control and embedded UEFI witnesses*
 
-**Дата:** 2026-11-26  
-**Статус:** **ЧАСТКОВЕ СВІДЧЕННЯ**, не завершення P1. Прототип показує, що вузький об'єкт FPC 3.2.2, зібраний із `-Tlinux`, можна включити до чинного x86-64 UEFI-образу й викликати через System V AMD64 ABI. Він **не** перевіряє `OS_TARGET=embedded`, не доводить сумісність embedded RTL і не завершує контракт P1.  
-**Задачі:** `WSM-OS-FPC-KERNEL-SKELETON` (P1, відкрита); передумова — `WSM-OS-FPC-TOOLCHAIN-PROBE` / [#113](https://github.com/juv4uk/wsm-os-lisp/issues/113) (P0, відкрита).
+**Оновлено:** 2026-11-27  
+**Статус:** Linux-target UNIT control and embedded UNIT/QEMU witness pass; embedded Pascal BootInfo handoff P1 gate is now automated.
 
----
+## 1. Чинна модель
 
-## 1. Що саме показує прототип
+Kernel-facing Pascal code is a `unit`, not a `program`. The assembly entry owns startup, stack, BootInfo parsing/runtime context, and system services. A Pascal unit exports a narrow function with an explicit System V AMD64 ABI and imports only the Assembly mechanisms it actually uses.
 
-| Твердження | Межа доказу |
-| --- | --- |
-| FPC 3.2.2 компілює `src/pascal_probe.pas` у ELF64 object | Компілятор запускається явно з `-Tlinux`; це **не** embedded target |
-| Об'єкт можна включити до UEFI-образу з чинними `src/entry.s`, `src/runtime.s` і `src/linker.ld` | П'ять unresolved symbols задовольняються окремими no-op символами в `src/rtl_min.s`; це лінкерні satisfiers для цього зрізу, не реалізація RTL |
-| Pascal-функція викликає `wsm_cons` і повертає tagged word | Доведений вузький виклик `wsm_entry(ctx)`; інші типи, unit services та Pascal runtime не доведені |
-| QEMU виводить очікуваний BOOT + RESULT transcript | Скрипт порівнює нормалізовані рядки після вилучення CR, а не сирі байти з урахуванням усіх line endings |
-| `nm -u` фінального ядра порожній | Це доводить, що всі символи фінального link мають визначення; не доводить, що no-op hooks безпечні для довільної програми |
+- `src/pascal_probe.pas` is a unit and is the FPC 3.2.2 Linux-target control.
+- `src/pascal_handoff.pas` is a unit that reads BootInfo, validates the Optional tag/value, and compares its result with the independent Assembly reader.
+- `src/rtl_min.s` is retained as historical evidence of early no-op PROGRAM hooks. Active unit-control and embedded handoff scripts no longer link it.
 
-Важлива різниця: `src/entry.s::_start` зберігає BootInfo, викликає асемблерний `wsm_boot_handoff`, готує `RuntimeContext` і лише потім викликає `wsm_entry(&runtime_context)`. Pascal-функція отримує **RuntimeContext pointer**, а не BootInfo. Валідація або розбір UEFI handoff у Pascal тут не реалізовані; негативні випадки відсутнього чи пошкодженого handoff цим гейтом не доводяться.
+## 2. Linux-target control
 
-Поточний очікуваний transcript:
+`scripts/check-fpc-kernel-skeleton.sh` pins FPC 3.2.2 and compiles `src/pascal_probe.pas` with `-Tlinux -Cn`. The resulting unit object has only one undefined symbol, `wsm_cons`, which is implemented by `src/runtime.s`. It links directly into the existing UEFI image without no-op RTL satisfiers.
 
-```text
-WSM-OS BOOT schema=1 arch=x86_64 status=ok
-WSM-OS RESULT schema=1 value=(sym1 . sym2) status=ok
-```
+`scripts/check-pascal-handoff.sh` remains the FPC 3.2.2 Linux-target control for BootInfo parsing. It compiles the handoff unit and uses explicit section garbage collection only for unused type metadata; it does not link `src/rtl_min.s`.
 
-Файл `artifacts/nucleus-witness-pascal-entry-qemu-serial-transcript.txt` зараз має той самий Git blob SHA, що й ASM baseline `artifacts/qemu-serial-transcript.txt`. Але P1 wrapper передає `run-qemu-uefi.sh` саме Pascal-specific копію як expected transcript; окремо з ASM baseline порівнюється лише рядок `WSM-OS RESULT`. Тому **повна transcript-parity з ASM не захищена від майбутнього дрейфу Pascal-копії**: сьогодні файли ідентичні, але gate не перевіряє, що це лишиться так. Це окремий follow-up у [#113](https://github.com/juv4uk/wsm-os-lisp/issues/113): передавати `artifacts/qemu-serial-transcript.txt` як канонічний expected transcript і перевіряти, що Pascal mirror лишається копією. Перевірка `7b4cf4c` усе ще додає корисну RESULT-рівність. Порівняння нормалізує CR: це рівність рядків після нормалізації, не побайтова тотожність сирих файлів із різними line endings. Жодна з цих перевірок не доводить, що Pascal уже обробляє UEFI handoff.
+## 3. Embedded target witness
 
-## 2. Компілятор і ABI — що насправді використано
+The pinned FPC 3.3.1 `x86_64-embedded` snapshot is checksum-pinned in [FPC-EMBEDDED-PROBE-2026-11-27.md](research/FPC-EMBEDDED-PROBE-2026-11-27.md). It compiles a Pascal unit, links into the existing UEFI image, and boots in OVMF/QEMU without no-op RTL stubs. A controlled Assembly callee and Pascal callback exercise Microsoft x64 ABI function-pointer/callback behavior.
 
-`scripts/check-fpc-kernel-skeleton.sh`:
+## 4. BootInfo handoff P1
 
-- вимагає FPC версії `3.2.2` (або явного `WSM_FPC_VERSION`);
-- знаходить `ppcx64` та RTL units у каталозі `x86_64-linux`;
-- компілює з `-Tlinux -O- -Xs- -CX -Cn`;
-- асемблює `src/rtl_min.s`, зливає об'єкти через `ld -r`, а потім передає результат до чинного UEFI image builder;
-- перевіряє `nm -u target/kernel-x86_64` і запускає bounded QEMU witness.
+`scripts/check-fpc-embedded-pascal-handoff.sh` compiles `src/pascal_handoff.pas` with the pinned embedded compiler and runs four UEFI/QEMU cells:
+- valid BootInfo;
+- missing BootInfo;
+- invalid Optional tag;
+- Some tag with zero physical-memory offset.
 
-Отже, цей прототип використовує **Linux-target FPC 3.2.2**. Те, що його об'єкт виконується в нашому UEFI/QEMU образі, показує сумісність саме цього вузького машинного коду та виклику System V AMD64. Це не підміняє перевірку upstream FPC 3.3.1 `x86_64-embedded` з [#113](https://github.com/juv4uk/wsm-os-lisp).
+The Pascal unit reads the record itself and compares it with the independent Assembly value. The final kernel must have an empty `nm -u`; the only permitted pre-link imports are the Assembly boundary symbols plus one unused Byte RTTI metadata section removed by the explicit test-profile `--gc-sections` pass. No no-op RTL hooks are used.
 
-Фрагмент Pascal:
+## 5. Program lifecycle is a separate runtime
 
-```pascal
-function wsm_cons(ctx: Pointer; car, cdr: TWord): TWord; cdecl;
-  external name 'wsm_cons';
+A minimal FPC PROGRAM has five startup/init/finalization/threadvar hooks. A PROGRAM using threadvar and class exceptions has a substantially larger set of exception, Object/VMT and threadvar dependencies. These are classified by `scripts/probe-fpc-embedded.sh`; they are not implemented by the kernel UNIT path. Do not turn a Pascal PROGRAM into a kernel entry until those services have a real runtime contract and positive/negative witnesses.
 
-function wsm_entry(ctx: Pointer): TWord; public name 'wsm_entry';
-begin
-  Result := wsm_cons(ctx, SYMBOL_A, SYMBOL_B);
-end;
-```
+## 6. Boundaries
 
-На цій Linux x86-64 toolchain `cdecl` використовує System V AMD64: перші три цілочисельні аргументи проходять через `RDI`, `RSI`, `RDX`, результат — у `RAX`. Це збігається з наявним asm runtime ABI для цього конкретного прототипу. Переносити висновок на інший target або інший FPC ABI без окремого виміру не можна.
-
-`SYMBOL_A` і `SYMBOL_B` у файлі — локальні test-fixture слова для двох symbol IDs. Це не новий реєстр семантики й не загальні конструктори значень; production-код не повинен копіювати ці значення замість споживання pinned target contract.
-
-## 3. П'ять RTL hooks: визначені для лінкера, не реалізовані як сервіси
-
-`src/rtl_min.s` визначає п'ять символів, на які посилається Linux-target object:
-
-| Символ | Поточне визначення | Чого воно **не** забезпечує |
-| --- | --- | --- |
-| `fpc_initializeunits` | `ret` | не запускає ініціалізацію юнітів |
-| `fpc_do_exit` | `ret` | не реалізує завершення програми чи процесу |
-| `INIT$_$SYSTEM` | `ret` | не ініціалізує `System` |
-| `FINALIZE$_$OBJPAS` | `ret` | не виконує фіналізацію `objpas` |
-| `THREADVARLIST_$SYSTEM$indirect` | нульовий terminator | не підтримує threadvar |
-
-У цьому fixture asm `_start` напряму викликає `wsm_entry`; він не запускає звичайний FPC program main/init/finalize lifecycle. Тому ці визначення задовольняють посилання лінкера, але не стають робочою реалізацією відповідних послуг. Зокрема, `fpc_do_exit: ret` **не можна** використовувати як загальну реалізацію виходу з програми. Будь-який новий шлях, який реально викликає ці hooks, потребує окремої реалізації та позитивних/негативних свідків. Не додавати нові no-op заглушки, щоб приховати невідомі unresolved symbols.
-
-## 4. Чого прототип не доводить
-
-- Не перевіряє `OS_TARGET=embedded` і не закриває P0.
-- Не передає BootInfo у Pascal і не перевіряє відсутній/пошкоджений handoff на Pascal-межі.
-- Не доводить, що Pascal безпечно запускає FPC initialization/finalization або threadvar lifecycle.
-- Не реалізує рядки, I/O, винятки, власну купу, GC, driver policy, image loader чи REPL.
-- Не доводить продуктивність або перевагу часу ітерації.
-- Не скасовує `src/runtime.s`; на цьому зрізі асемблер і далі надає системний runtime.
-
-## 5. Відтворення на поточному контрольному toolchain
-
-```bash
-sudo apt-get install -y --no-install-recommends \
-  qemu-system-x86 ovmf mtools dosfstools gdisk binutils fp-compiler
-bash scripts/check-fpc-kernel-skeleton.sh
-```
-
-Версія компілятора перевіряється скриптом; шляхи можна явно задати через `FPC_PPCX64` і `FPC_UNITS_DIR`. Workflow: `.github/workflows/fpc-kernel-skeleton.yml`.
-
-## 6. Що потрібно для завершення P0 і P1
-
-**P0 — embedded-target перевірка (#113):**
-
-1. Отримати точний upstream `x86_64-embedded` archive, обчислити SHA-256 і звірити його з записаним pin/source commit.
-2. Зібрати мінімальний Pascal object саме через embedded compiler, не через `-Tlinux`.
-3. Зафіксувати object format, symbols, unresolved imports, startup/runtime dependencies, linker map і size.
-4. Спробувати link із нашим `src/linker.ld`; кожну відсутню послугу класифікувати. Не підкладати no-op hook без доказу, що цей execution path його не викликає.
-5. Зберегти bounded QEMU witness, якщо збірка/лінкування доходять до нього. До цього P0 лишається відкритим.
-
-**P1 — Pascal kernel skeleton:**
-
-1. Виконуватися лише після закриття P0; використовувати pinned embedded toolchain.
-2. Чітко визначити, яку частину UEFI handoff отримує Pascal, і перевірити її межі.
-3. Додати негативні свідки на відсутній та malformed handoff: названа ABI-condition, не тиша і не продовження з припущеним станом.
-4. Вивести незмінний BOOT transcript і перевірити порожній undefined-symbol set фінального образу.
-5. Лише тоді позначати P1 як завершений.
-
-P2 після цього порівнює той самий вертикальний сценарій на Pascal та ASM+Lisp і вимірює цикл «правка → збірка → перевірка». Поточний Linux-target прототип — корисна базова проба, але не завершення P1.
-
----
+- The embedded unit witness does not authorize production migration.
+- Assembly remains the owner of the production entry, BootInfo parsing, stack, runtime and device mechanisms.
+- P1 proves the bounded BootInfo handoff path only when the new four-cell embedded QEMU gate passes; P2 still requires semantic parity and the measured edit-build-test loop.
+- `src/rtl_min.s` is historical only; active unit tests do not link its no-op symbols.

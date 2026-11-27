@@ -176,7 +176,7 @@ typedef uintptr_t Value;
 
 - For the pinned `x86_64-embedded` target, use explicitly exported Pascal `unit` functions for kernel experiments; do not compile a Pascal `program` as a kernel entry until startup, initialization/finalization, threadvar and exception services have an explicit runtime contract and tests.
 - Never satisfy unresolved FPC RTL symbols with empty/no-op stubs. Classify each symbol; the bounded test profile may use `--gc-sections` only for proven-unused metadata, and must verify the final kernel has an empty `nm -u`.
-- The current passing witness is test-only. ASM still owns the production entry, stack, BootInfo handling and runtime until the separate P1/P2 gates pass.
+- The current passing witness is test-only. ASM still owns the production entry, stack, BootInfo handling and runtime until the separate P1/P2 gates pass. The historical `src/rtl_min.s` no-op hooks are not linked by active unit-control or embedded handoff workflows.
 
 ### 1. Рівні: де живе робота
 

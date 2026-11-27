@@ -11,6 +11,14 @@ on:
       - "tests/fpc_embedded_kernel_probe.pas"
       - "tests/fpc_embedded_efi_abi_stub.s"
       - "tests/fpc_embedded_program_features.pas"
+      - "tests/fpc_embedded_minimal_program.pas"
+      - "src/pascal_probe.pas"
+      - "src/pascal_handoff.pas"
+      - "scripts/check-fpc-kernel-skeleton.sh"
+      - "scripts/check-pascal-handoff.sh"
+      - "scripts/check-fpc-embedded-pascal-handoff.sh"
+      - "src/rtl_min.s"
+      - "docs/FPC-KERNEL-SKELETON.md"
       - "scripts/check-fpc-embedded-kernel-probe.sh"
       - "scripts/build-uefi-image.sh"
       - "scripts/run-qemu-uefi.sh"
@@ -45,6 +53,8 @@ jobs:
         run: timeout 300s bash scripts/probe-fpc-embedded.sh
       - name: Prove embedded Pascal unit in UEFI QEMU without RTL stubs
         run: timeout 300s bash scripts/check-fpc-embedded-kernel-probe.sh
+      - name: Prove Pascal BootInfo handoff on embedded target (P1)
+        run: timeout 300s bash scripts/check-fpc-embedded-pascal-handoff.sh
       - name: Upload embedded probe evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -53,5 +63,6 @@ jobs:
           path: |
             target/fpc-embedded-probe/
             target/fpc-embedded-kernel-probe/
+            target/fpc-embedded-pascal-handoff/
           if-no-files-found: warn
           retention-days: 30

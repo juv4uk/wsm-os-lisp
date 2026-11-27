@@ -87,8 +87,8 @@ PROGRAM_OUT="$OUT/program-probe"
 mkdir -p "$PROGRAM_OUT/units" "$PROGRAM_OUT/bin"
 "$COMPILER" -Tembedded -Px86_64 -n -Fu"$RTL_DIR" \
   -FU"$PROGRAM_OUT/units" -FE"$PROGRAM_OUT/bin" -Cn -O- -al \
-  "$ROOT/src/pascal_probe.pas" > "$PROGRAM_OUT/compile.txt" 2>&1
-PROGRAM_OBJ="$PROGRAM_OUT/units/pascal_probe.o"
+  "$ROOT/tests/fpc_embedded_minimal_program.pas" > "$PROGRAM_OUT/compile.txt" 2>&1
+PROGRAM_OBJ="$PROGRAM_OUT/units/fpc_embedded_minimal_program.o"
 [[ -s "$PROGRAM_OBJ" ]] || {
   echo "PROBE_FATAL=program_probe_object_missing"
   exit 14

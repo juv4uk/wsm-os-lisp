@@ -1,7 +1,7 @@
 # ===========================================================================
-# src/rtl_min.s — the entire RTL surface this target admits
+# src/rtl_min.s — LEGACY historical no-op hooks; not linked by active unit tests
 #
-# FPC emits five references for any program, and nothing else, when the program
+# Early FPC PROGRAM experiments emitted five references when the program
 # is compiled with -Cn (no link stage) and linked by us:
 #
 #   fpc_initializeunits            unit initialisation entry
@@ -10,15 +10,14 @@
 #   FINALIZE$_$OBJPAS              objpas finaliser
 #   THREADVARLIST_$SYSTEM$indirect threadvar table
 #
-# Here they are no-ops with a fixed shape. That is the honest definition of
-# "minimal RTL" for this slice: the hooks exist so the object links, and they
-# do nothing. No strings, no I/O, no exceptions, no heap, no unit state.
+# These definitions are no-ops with a fixed shape. They are historical evidence, not
+# an active RTL. Current kernel experiments use Pascal UNITs and fail closed
+# on unresolved imports. No active unit test may link this file.
 #
-# Any program that needs one of those services must add the mechanism to this
-# file explicitly, with a witness — the point of the file is that the surface
-# is countable (five symbols, not "the RTL").
+# Any future PROGRAM runtime must implement and witness the real services;
+# do not extend these no-op definitions.
 #
-# See docs/FPC-KERNEL-SKELETON.md and ADR-006.
+# See docs/FPC-KERNEL-SKELETON.md and docs/research/FPC-EMBEDDED-PROBE-2026-11-27.md.
 # ===========================================================================
 .text
 
