@@ -126,8 +126,9 @@ jobs:
           bash scripts/run-qemu-uefi.sh "${GITHUB_WORKSPACE}/current-sens-d1-cond.img"
           python3 - <<'PY'
           import json
+          import os
           from pathlib import Path
-          path = Path("${GITHUB_WORKSPACE}/current-sens-d1-cond-manifest.json")
+          path = Path(os.environ["CURRENT_SENS_MANIFEST"])
           data = json.loads(path.read_text())
           data["status"] = "PASS"
           data["qemu_observation"] = "WSM-OS RESULT schema=1 value=42 status=ok"
