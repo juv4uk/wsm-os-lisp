@@ -1,4 +1,4 @@
-unit FpcEmbeddedProbe;
+unit fpc_embedded_probe;
 
 {$mode objfpc}
 
