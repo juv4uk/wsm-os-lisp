@@ -138,3 +138,6 @@ Linux-target контроль історично дав 4/4; новий embedded
 Перший результат (один повтор, лише smoke datapoint): ASM/Pascal value pins byte-identical; value та OOM дали однакові повні `WSM-OS` рядки. `COMPILE`: asm 14 ms, Pascal 33 ms; `BUILD`: asm 1241 ms, Pascal 1119 ms; `BOOT+verify`: asm 2622 ms, Pascal 2626 ms. Артефакт [15234370801](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46073255854/artifacts/15234370801). Workflow тепер запускає три повтори.
 
 Цей workflow працює на GitHub-hosted runner з TCG/OVMF. Його часи — CI datapoints, не вимірювання на фізичному i5-6400. P2 не закривається лише від першого зеленого smoke run: потрібні три повтори, перегляд усіх артефактів і окремий фізичний замір на власному хості.
+
+
+The legacy declaration is intentionally narrow: it preserves the old Linux-target control runner for reproducing archived numbers, but does not permit it to serve as the active W3 acceptance gate.

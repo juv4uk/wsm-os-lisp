@@ -59,7 +59,7 @@
   (script "scripts/check-fpc-parity.sh"
    "Legacy FPC 3.2.2 Linux-target W3 runner. Active acceptance moved to pinned FPC 3.3.1 x86_64-embedded via scripts/check-fpc-embedded-parity.sh; historical Linux measurements are retained in docs/FPC-PARITY-P2.md."
    "Keep only as a historical reproducer while the embedded gate gains three-repeat and physical-host evidence; then remove.")
-))
+)
 
  (arbiter-budget
   ; ADR-005 W5: the arbiter's share of hand-written code is a published number
