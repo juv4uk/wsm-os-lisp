@@ -4,18 +4,20 @@ set -euo pipefail
 # Condition-distinguishability witness (issue #40, DEVICE-CAP-VERTICAL-1).
 #
 # Acceptance: a transport/device failure must be distinguishable from a Lisp
-# semantic failure on the canonical pure-ASM target path (ADR-004, zero Rust).
+# semantic failure on the freestanding x86 target ABI v11 path. Language choice
+# is not restricted; current SENS semantics are supplied by verified CML lowering.
 #
 # Both failures use the same structured line
 #   WSM-OS CONDITION schema=1 kind=<NAME> source=<code> value=<word>
 # and differ in a machine-checkable way:
 #
-#   Lisp semantic failure : kind=TYPE/...  source=0          (no substrate code)
+#   Lisp semantic failure : kind=TYPE/...  source=0          (no substrate code, current SENS D3 SelectorHead)
 #   device/ABI failure    : kind=ABI       source=0x4D49_4Fxx (substrate code)
 #
 # This gate also guards the offending-value field of a semantic failure: for
-# (car 11) the reported value MUST be the bad word (fixnum 11 -> 91), not the
-# condition kind (regression witnessed 2026-09-17: value=2).
+# (перше 11) the reported value MUST be the bad word (fixnum 11 -> 91), not the
+# condition kind (regression witnessed 2026-09-17: value=2). The archived
+# D9 Lisp fixture predates Contract 12.0 and is not compiled by this gate.
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
