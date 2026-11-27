@@ -66,8 +66,13 @@ fi
 as --64 "${as_extra[@]}" "$ROOT_DIR/src/entry.s" -o "$BUILD_DIR/entry.o"
 as --64 "${as_extra[@]}" "$ROOT_DIR/src/runtime.s" -o "$BUILD_DIR/runtime.o"
 
-# Link freestanding kernel ELF
-ld -m elf_x86_64 -T "$ROOT_DIR/src/linker.ld" \
+# Link freestanding kernel ELF. Garbage collection is opt-in and used only
+# by isolated FPC embedded ABI witnesses to drop unreferenced procedural RTTI.
+ld_flags=(-m elf_x86_64)
+if [[ "${WSM_OS_LINK_GC_SECTIONS:-0}" == "1" ]]; then
+  ld_flags+=(--gc-sections)
+fi
+ld "${ld_flags[@]}" -T "$ROOT_DIR/src/linker.ld" \
   "$BUILD_DIR/entry.o" \
   "$BUILD_DIR/runtime.o" \
   "$FIXTURE_OBJ" \
