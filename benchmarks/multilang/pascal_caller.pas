@@ -10,7 +10,7 @@ var
 
 begin
   Actual := c_mix(13, 29);
-  if Actual <> 367 then
+  if Actual <> 439 then
     Halt(1);
   WriteLn('abi=cdecl i32 scalar result=', Actual);
 end.

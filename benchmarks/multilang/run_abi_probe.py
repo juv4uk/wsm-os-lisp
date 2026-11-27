@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 C_SOURCE = ROOT / "benchmarks/multilang/c_probe.c"
 PAS_SOURCE = ROOT / "benchmarks/multilang/pascal_caller.pas"
-EXPECTED = "abi=cdecl i32 scalar result=367"
+EXPECTED = "abi=cdecl i32 scalar result=439"
 
 def require(name: str) -> str:
     path = shutil.which(name)

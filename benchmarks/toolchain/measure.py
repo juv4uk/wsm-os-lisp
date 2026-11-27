@@ -114,8 +114,8 @@ def main() -> int:
         "source_sha256": sources,
         "flags": {
             "fpc": "-O- -vw (native Linux target)",
-            "tcc": "-std=c11 -Wall (TCC default fast compile)",
-            "clang": "-std=c11 -O0 -Wall -Wextra -Werror",
+            "tcc": "-std=c99 -Wall (TCC default fast compile)",
+            "clang": "-std=c99 -O0 -Wall -Wextra -Werror",
             "gcc": "-std=c11 -O0 -Wall -Wextra -Werror",
         },
         "note": "Unoptimized fast-feedback probe; not a production performance comparison.",
