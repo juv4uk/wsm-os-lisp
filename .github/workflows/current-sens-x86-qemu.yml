@@ -68,25 +68,25 @@ jobs:
       - name: Generate x86 from verified current SENS source
         working-directory: cml
         env:
-          CML_CURRENT_SENS_X86_ASM_OUT: ${{ github.workspace }}/current-sens-d1-cond.s
+          CML_CURRENT_SENS_MMIO_X86_ASM_OUT: ${{ github.workspace }}/current-sens-d1-eq-cond-mmio.s
         run: |
           cargo test --test wsm_os_current_x86_bridge_test \
-            current_sens_source_cond_lowers_to_exact_d1_x86_and_v11_imports \
+            current_sens_d1_eq_cond_wraps_explicit_mmio_machine_operations \
             -- --exact --nocapture
 
       - name: Assemble current SENS object and pin provenance
         working-directory: wsm-os-lisp
         run: |
-          as --64 "${GITHUB_WORKSPACE}/current-sens-d1-cond.s" \
-            -o "${GITHUB_WORKSPACE}/current-sens-d1-cond.o"
+          as --64 "${GITHUB_WORKSPACE}/current-sens-d1-eq-cond-mmio.s" \
+            -o "${GITHUB_WORKSPACE}/current-sens-d1-eq-cond-mmio.o"
           CML_SHA="$(git -C "${GITHUB_WORKSPACE}/cml" rev-parse HEAD)"
           SENS_SHA="$(git -C "${GITHUB_WORKSPACE}/cml/external/sens" rev-parse HEAD)"
           TARGET_SHA="$(git -C "${GITHUB_WORKSPACE}/wsm-target-contract" rev-parse HEAD)"
           SOURCE='((функція (mmio) ((функція (_) (за-умовою ((тотожне? (mmio-read32 mmio 20) 1) 42))) (mmio-write32 mmio 20 1))) (mmio-capability))'
           SOURCE_SHA="$(printf '%s' "$SOURCE" | sha256sum | awk '{print $1}')"
-          ASM_SHA="$(sha256sum "${GITHUB_WORKSPACE}/current-sens-d1-cond.s" | awk '{print $1}')"
-          OBJ_SHA="$(sha256sum "${GITHUB_WORKSPACE}/current-sens-d1-cond.o" | awk '{print $1}')"
-          cat > "${GITHUB_WORKSPACE}/current-sens-d1-cond-manifest.json" <<EOF
+          ASM_SHA="$(sha256sum "${GITHUB_WORKSPACE}/current-sens-d1-eq-cond-mmio.s" | awk '{print $1}')"
+          OBJ_SHA="$(sha256sum "${GITHUB_WORKSPACE}/current-sens-d1-eq-cond-mmio.o" | awk '{print $1}')"
+          cat > "${GITHUB_WORKSPACE}/current-sens-d1-eq-cond-mmio-manifest.json" <<EOF
           {
             "schema": "wsm-os-current-sens-d1-eq-cond-mmio-qemu/1",
             "status": "pending-qemu",
@@ -102,6 +102,8 @@ jobs:
             "semantic_scope": ["D1 EQ", "two-field D3 COND"],
             "machine_scope": ["MMIO capability", "MMIO write32 device_status=1", "MMIO read32 device_status"],
             "device": "QEMU q35 virtio-blk-pci common-config device_status offset 20",
+            "machine_scope": ["MMIO capability", "MMIO write32 device_status=1", "MMIO read32 device_status"],
+            "device": "QEMU q35 virtio-blk-pci common-config device_status offset 20",
             "conformance_note": "The CML SENS submodule is pinned to the 11.8-era API. This is a current-domain D1/COND runtime witness, not a claim of complete SENS Contract 12.0 conformance."
           }
           EOF
@@ -110,24 +112,24 @@ jobs:
         working-directory: wsm-os-lisp
         run: |
           bash scripts/build-uefi-image.sh \
-            "${GITHUB_WORKSPACE}/current-sens-d1-cond.o" \
-            "${GITHUB_WORKSPACE}/current-sens-d1-cond.img"
+            "${GITHUB_WORKSPACE}/current-sens-d1-eq-cond-mmio.o" \
+            "${GITHUB_WORKSPACE}/current-sens-d1-eq-cond-mmio.img"
 
-      - name: Execute current SENS D1/COND artifact in QEMU
+      - name: Execute current SENS D1/EQ/COND + MMIO artifact in QEMU
         working-directory: wsm-os-lisp
         env:
           WSM_QEMU_TRANSCRIPT: ${{ github.workspace }}/expected-current-sens-transcript.txt
           WSM_QEMU_DATA_DISK: ${{ github.workspace }}/virtio-data.raw
           WSM_QEMU_VIRTIO_ADDR: "5"
           WSM_QEMU_VIRTIO_DISABLE_LEGACY: "1"
-          CURRENT_SENS_MANIFEST: ${{ github.workspace }}/current-sens-d1-cond-manifest.json
+          CURRENT_SENS_MANIFEST: ${{ github.workspace }}/current-sens-d1-eq-cond-mmio-manifest.json
         run: |
           truncate -s 1M "$WSM_QEMU_DATA_DISK"
           cat > "$WSM_QEMU_TRANSCRIPT" <<'EOF'
           WSM-OS BOOT schema=1 arch=x86_64 status=ok
           WSM-OS RESULT schema=1 value=42 status=ok
           EOF
-          bash scripts/run-qemu-uefi.sh "${GITHUB_WORKSPACE}/current-sens-d1-cond.img"
+          bash scripts/run-qemu-uefi.sh "${GITHUB_WORKSPACE}/current-sens-d1-eq-cond-mmio.img"
           python3 - <<'PY'
           import json
           import os
@@ -143,11 +145,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: current-sens-d1-cond-qemu
+          name: current-sens-d1-eq-cond-mmio-qemu
           path: |
-            current-sens-d1-cond.s
-            current-sens-d1-cond.o
-            current-sens-d1-cond.img
-            current-sens-d1-cond-manifest.json
+            current-sens-d1-eq-cond-mmio.s
+            current-sens-d1-eq-cond-mmio.o
+            current-sens-d1-eq-cond-mmio.img
+            current-sens-d1-eq-cond-mmio-manifest.json
             wsm-os-lisp/target/kernel-x86_64
           if-no-files-found: warn
