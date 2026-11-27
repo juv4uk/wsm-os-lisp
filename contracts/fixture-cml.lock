@@ -1,0 +1,5 @@
+;; Historical provenance only: committed fixture.o / fixture.s were generated
+;; before the Contract 12 x86 SID8 retirement, and remain a boot smoke fixture.
+;; They are NOT evidence that the current CML source path compiles Contract 12.
+(fixture-cml-revision "48f9b1566f899a48132bbff44ecf33f816e2cbd9")
+(fixture-status . historical-pre-contract-12)
