@@ -105,14 +105,14 @@ if [ "$COMPILE_RC" -eq 0 ] && [ -f "$OBJ" ]; then
         ABI_ASM_OK=0
       fi
     }
-    require_abi_pattern 'movq[[:space:]]+\\$4,%r9'
-    require_abi_pattern 'movq[[:space:]]+\\$3,%r8'
-    require_abi_pattern 'movq[[:space:]]+\\$2,%rdx'
-    require_abi_pattern 'movq[[:space:]]+\\$1,%rcx'
-    require_abi_pattern 'call[[:space:]]+\\*'
-    require_abi_pattern 'movq[[:space:]]+%rcx,-8\\(%rbp\\)'
-    require_abi_pattern 'movq[[:space:]]+%rdx,-16\\(%rbp\\)'
-    require_abi_pattern 'leaq[[:space:]]+-80\\(%rsp\\),%rsp'
+    require_abi_pattern 'movq[[:space:]]+[$]4,%r9'
+    require_abi_pattern 'movq[[:space:]]+[$]3,%r8'
+    require_abi_pattern 'movq[[:space:]]+[$]2,%rdx'
+    require_abi_pattern 'movq[[:space:]]+[$]1,%rcx'
+    require_abi_pattern 'call[[:space:]]+[*]'
+    require_abi_pattern 'movq[[:space:]]+%rcx,-8[(]%rbp[)]'
+    require_abi_pattern 'movq[[:space:]]+%rdx,-16[(]%rbp[)]'
+    require_abi_pattern 'leaq[[:space:]]+-80[(]%rsp[)],%rsp'
     if [ "$ABI_ASM_OK" -eq 1 ]; then
       echo "MS_ABI_DISASSEMBLY=PASS"
     else
