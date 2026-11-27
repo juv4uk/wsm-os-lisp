@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: juv4uk/cml
-          ref: 79b3d69102b8d45e0f949e77049120b50cdd31be
+          ref: 004362ea3dbda8a0d2f73eb69c5b7ae43e07a609
           path: cml
           submodules: recursive
 
