@@ -3,6 +3,7 @@
 
 **Date/Дата**: 2026-11-26
 **Status/Статус**: **ACCEPTED** — директива власника / owner directive (2026-11-26)
+**Deciders/Хто вирішив**: juv4uk, owner-ратифікація 2026-11-27
 **Supersedes/Заміщує**: [ADR-004](ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md) (production boundary)
 **Related**: [ADR-005](ADR-005-TRUST-BOUNDARY-ARBITER-NOT-KERNELLESS.md), [research/FPC-AS-OS-SUBSTRATE-2026-11-26](research/FPC-AS-OS-SUBSTRATE-2026-11-26.md), [research/PRIOR-ART-NO-KERNEL-2026-11-26](research/PRIOR-ART-NO-KERNEL-2026-11-26.md), `juv4uk/wsm-lazarus` (`docs/decisions/2026-09-18-fpc-first-vertical-ADR.md`, PROPOSED)
 

@@ -16,5 +16,7 @@
  (owner-identities
   "85576956+juv4uk@users.noreply.github.com")
  (confirmed
+  (confirmed "ADR-006" "2026-11-27" "Підтверджую ADR-006: Free Pascal як хост-мова; RUST=0; P0-P4 лишаються evidence-gated.")
+  (confirmed "ADR-007" "2026-11-27" "Підтверджую локальний ADR-007: PciConfig/Mmio розділені, BOOT0=UNPROVEN, RmControl легальний hosted-шлях; MMIO лише firmware/bare-metal.")
   ; (confirmed "ADR-00N" "YYYY-MM-DD" "what the owner confirmed")
   ))

@@ -2,8 +2,8 @@
 *ADR-007: Separation of PciConfig and Mmio; BOOT0 = UNPROVEN on hosted Linux*
 
 **Date/Дата**: 2026-11-27
-**Status/Статус**: **PROPOSED** — відповіді власника дано в чаті 2026-11-27; git-ратифікація ще не виконана
-**Deciders/Хто вирішив**: власник (`juv4uk`), directive 2026-11-27; коміт-підпис власника потрібен для `ACCEPTED`
+**Status/Статус**: **ACCEPTED** — owner-ратифікація 2026-11-27
+**Deciders/Хто вирішив**: juv4uk, owner-ратифікація 2026-11-27
 **Related**: [ADR-005](ADR-005-TRUST-BOUNDARY-ARBITER-NOT-KERNELLESS.md), [ADR-006](ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md), [MMIO-PHYS-MAP-FAIL-CLOSED-EVIDENCE](MMIO-PHYS-MAP-FAIL-CLOSED-EVIDENCE.md), [CAPABILITY-IDENTITY-ADVERSARIAL-EVIDENCE](CAPABILITY-IDENTITY-ADVERSARIAL-EVIDENCE.md), `juv4uk/gp107-nvidia-re` `docs/04-bar-identity.md` (commits `c03a171`, `2c2b746`)
 
 ---
