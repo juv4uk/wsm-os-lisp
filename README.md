@@ -128,7 +128,7 @@ is documented in [`docs/DEFINITION-CAPSULE.md`](docs/DEFINITION-CAPSULE.md).
 The frozen `(cons (quote A) (quote B))` fixture now passes the complete first
 execution chain: pinned upstream semantic witness, CML-generated object, hosted runtime,
 freestanding UEFI image, and bounded QEMU execution all agree on `(A . B)`.
-This is `QEMU-BOOT-PARITY`, not a physical-hardware claim. It is a historical pre-Contract-12 fixture and does not prove that the currently pinned CML compiler path is Contract-12-compliant; see [docs/TARGET-ABI.md](docs/TARGET-ABI.md) and [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109).
+This is `QEMU-BOOT-PARITY`, not a physical-hardware claim. The committed object remains a historical pre-Contract-12 CML fixture (its generator revision is separately pinned in `contracts/fixture-cml.lock`). The current CML source pin is `84c1cff`; its freestanding x86 backend now rejects legacy SID8/Cond paths and its focused Contract 12 D1/Pair/COND workflow passes. The root CML AST/IR and SENS submodule are not yet fully migrated, and the current fixture has not been regenerated through the current-mechanism path; see [docs/TARGET-ABI.md](docs/TARGET-ABI.md) and [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109).
 
 ---
 
@@ -262,7 +262,7 @@ assemble плюс link — медіана 168 мс, і саме з цим чис
 перший ланцюжок виконання: зафіксований семантичний свідок SENS, CML-згенерований
 об'єкт, hosted-середовище виконання, автономний (freestanding) UEFI-образ
 та обмежене виконання в QEMU погоджуються щодо результату `(A . B)`.
-Це `QEMU-BOOT-PARITY`, а не твердження про роботу на фізичному обладнанні. Це історична фікстура до Contract 12.0 і вона не доводить відповідність Contract 12.0 поточного pinned CML compiler path; див. [docs/TARGET-ABI.md](docs/TARGET-ABI.md) та [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109).
+Це `QEMU-BOOT-PARITY`, а не твердження про роботу на фізичному обладнанні. Закріплений object лишається історичною CML-фікстурою до Contract 12.0 (окремий pin генератора — `contracts/fixture-cml.lock`). Поточний CML pin `84c1cff` уже відхиляє legacy SID8/Cond у freestanding x86 backend; focused workflow Contract 12 D1/Pair/COND проходить. Кореневі CML AST/IR і SENS submodule ще не повністю мігровані, а поточну fixture ще не перебудовано через новий mechanism path; див. [docs/TARGET-ABI.md](docs/TARGET-ABI.md) та [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109).
 
 ## Ліцензія
 
