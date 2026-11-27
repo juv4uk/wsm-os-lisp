@@ -5,7 +5,7 @@
 ## Authorities
 
 - **Language meaning:** [SENS Contract 12.0](https://github.com/juv4uk/sens/blob/main/contracts/language-contract-12.lisp).
-- **Machine representation:** [wsm-target-contract](https://github.com/juv4uk/wsm-target-contract), pinned by `target-abi-pin.lisp` to commit `8e2e761661ef2a49901f68c0b2e333b5b06c3f1e`, ABI version 11.
+- **Machine representation:** [wsm-target-contract](https://github.com/juv4uk/wsm-target-contract), pinned by `target-abi-pin.lisp` to commit `b2176f95e1965d6c3c425dd42bde95958d5d4469`, ABI version 11.
 - **Compiler/lowering:** CML. It lowers admitted SENS identities to the versioned target imports; it does not define language semantics.
 - **Runtime/OS mechanism and execution evidence:** this repository.
 
