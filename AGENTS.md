@@ -17,7 +17,7 @@
 - **D1 / D3:** допущені предикати відповідають лише точним D1:0 або D1:1. D3:000 — структурне `()`, а не NO, число чи predicate bit. COND має рівно два поля; не відновлювати старі трипольові/істиннісні режими.
 - **Числа:** математична драбина починається з D12: D12, D24, D48, D96, D192, ... . D7 — текстова поверхня, не числовий домен.
 - **Legacy retirement:** SID8, Sens8 і Function8 не мають активного семантичного, reader, compiler, evaluator, Zig/T5M або runtime дозволу. Історичні згадки дозволені лише як не-виконуване походження/архів. Будь-який живий маршрут є міграційним дефектом.
-- **Міграційний стан цього репозиторію:** ратифікація Contract 12.0 не означає, що target ABI/runtime уже відповідає йому. Виявлені розбіжності, зокрема старий SID8 kind у pinned target ABI v8 та legacy `wsm_atom`/`wsm_eq` результати, відстежуються в [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109). Не оголошувати відповідність до завершення позитивних і негативних нативних/QEMU свідків.
+- **Міграційний стан цього репозиторію:** target ABI pin оновлено до v10 (`wsm-target-contract@33dea24a949b4e6e0808a6c770a3c9cac63d6765`); runtime має окремі `wsm_atom_predicate_bit` / `wsm_eq_predicate_bit`, а QEMU positive witness проходить. Повна відповідність ще не доведена: CML pin містить активний SID8 dispatch, а COND/D12 та повна hosted/QEMU parity ще не закриті. Статус і критерії ведуться в [#109](https://github.com/juv4uk/wsm-os-lisp). Не оголошувати Contract 12.0 conformance до завершення позитивних і негативних свідків усіх меж.
 - **Мовна політика:** за директивою власника та [ADR-009](docs/ADR-009-OPEN-LANGUAGE-AND-CODE-REUSE.md) немає blanket-заборон або каталогових обмежень для жодної мови, включно з Rust, C, Pascal, Assembly та іншими. Мову обирають за вимогами компонента, повторним використанням і виміряними доказами. ADR-004/006 зберігають історію попередніх рішень, але їхні мовні заборони більше не діють. Незмінні межі: семантична влада SENS Contract 12.0, чинний target ABI/boot contract, безпека апаратних операцій та evidence gates P0–P4. Доки P2 parity witness не зелений, `src/runtime.s` лишається поточним перевіреним механізмом, а не мовною забороною. Дослідження Mach/XNU у [#41](https://github.com/juv4uk/wsm-os-lisp/issues/41) саме по собі не змінює boot chain чи ABI.
 
 <!-- SENS-CONTRACT-12-CURRENT-AUTHORITY-20261119:END -->
@@ -267,7 +267,7 @@ Read `/home/agents/ecosystem/AGENTS.md`, the owner profile, resource policy,
 [`docs/ADR-001-COMPILER-FIRST.md`](docs/ADR-001-COMPILER-FIRST.md) and
 [`tasks.lisp`](tasks.lisp) before changing code.
 
-- `my-lisp` owns language semantics.
+- `sens` owns SENS/WSM language semantics under the ratified Contract 12.0; `my-lisp` is a historical/reference implementation only.
 - CML owns parsing, semantic admission, IR and assembly emission.
 - `wsm-os-lisp` has no blanket language prohibition; choose the implementation language per component and evidence (ADR-009).
 - `wsm-os-lisp` owns its target ABI, minimal assembly primitives, boot image and platform evidence.
@@ -283,7 +283,7 @@ policy, [`docs/ADR-001-COMPILER-FIRST.md`](docs/ADR-001-COMPILER-FIRST.md),
 [`docs/ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md`](docs/ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md) і
 [`tasks.lisp`](tasks.lisp) перед будь-якою зміною коду.
 
-- `my-lisp` володіє семантикою мови-джерела.
+- `sens` володіє семантикою SENS/WSM за ратифікованим Contract 12.0; `my-lisp` — лише історична/довідкова реалізація.
 - CML володіє синтаксичним розбором, семантичним доступом, IR і асемблерною
   емісією.
 - Для `wsm-os-lisp` немає blanket-заборон на мови; мову реалізації обирають для кожного компонента окремо за технічною придатністю та доказами (ADR-009).
