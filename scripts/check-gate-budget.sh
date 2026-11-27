@@ -26,7 +26,7 @@ esac
 shell_gates=(
   check-role-authority.sh
   check-semantic-authority.sh
-  check-no-rust.sh
+  check-language-policy.sh
   check-shell-safety.sh
   check-task-dag.sh
   check-build-variance.sh
