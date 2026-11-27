@@ -1,12 +1,15 @@
-; WSM-X86-P0 baseline — generated/owned compatibility profile
-; Українською: поточна доведена підмножина freestanding x86_64.
+; WSM-X86-P0 baseline — current mechanism scope under SENS Contract 12.0.
+; Українською: доведена freestanding x86_64 підмножина; не повна реалізація мови.
 ((kind . wsm-x86-profile)
  (profile . "WSM-X86-P0")
- (status . confirmed)
+ (semantic-authority . "juv4uk/sens:contracts/language-contract-12.lisp")
+ (target-abi-version . 10)
+ (status . confirmed-mechanism-subset)
  (values . (nil canonical-t fixnum symbol cons predicate-bit))
  (reserved-representations . (legacy-true-tag))
  (forms . (quote cond primitive-call))
- (runtime . (cons car cdr atom eq predicate-bit-0 predicate-bit-1 predicate-bit-bits fail))
+ (runtime . (cons car cdr atom-predicate-bit eq-predicate-bit predicate-bit-0 predicate-bit-1 predicate-bit-bits fail))
+ (legacy-abi-symbols . (wsm_atom wsm_eq))
  (errors . (out-of-memory type abi-violation))
- (evidence . ((hosted . pass) (qemu . pass) (physical-hardware . unconfirmed)))
- (excludes . (lambda application closure strings bytes bignum rational reader evaluator gc)))
+ (evidence . ((hosted . partial) (qemu . predicate-carrier-only) (physical-hardware . unconfirmed)))
+ (excludes . (lambda application closure strings bytes bignum rational reader evaluator gc d12-arithmetic)))
