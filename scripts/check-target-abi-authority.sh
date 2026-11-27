@@ -45,6 +45,10 @@ grep -Fq "(kinds-defined-so-far . (string game-handle rational predicate-bit))" 
 grep -Fq "(current-predicate-operations . ((atom-import . wsm_atom_predicate_bit) (eq-import . wsm_eq_predicate_bit)" "$PROJECTION"
 grep -Fq "wsm_atom_predicate_bit" "$PROJECTION"
 grep -Fq "wsm_eq_predicate_bit" "$PROJECTION"
+if grep -Fq "wsm_atom " "$PROJECTION" || grep -Fq "wsm_eq " "$PROJECTION"; then
+  echo "legacy truth-valued atom/eq imports remain in active target ABI" >&2
+  exit 1
+fi
 grep -Fq "wsm_predicate_bit_0" "$PROJECTION"
 grep -Fq "wsm_predicate_bit_1" "$PROJECTION"
 grep -Fq "wsm_predicate_bit_bits" "$PROJECTION"
