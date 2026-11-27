@@ -60,13 +60,12 @@ run_cell() {
   local image="$OUT/$cell.img"
   local log="$OUT/$cell.serial.log"
 
+  local -a build_env=(WSM_OS_LINK_GC_SECTIONS=1)
   if [[ -n "$env_name" ]]; then
-    env WSM_OS_LINK_GC_SECTIONS=1 "$env_name"=1 WSM_OS_LINK_GC_SECTIONS=1 timeout 180s bash scripts/build-uefi-image.sh "$OBJ" "$image" > "$OUT/$cell-build.txt" \
-      || fail "image build failed: $cell"
-  else
-    timeout 180s bash scripts/build-uefi-image.sh "$OBJ" "$image" > "$OUT/$cell-build.txt" \
-      || fail "image build failed: $cell"
+    build_env+=("$env_name=1")
   fi
+  env "${build_env[@]}" timeout 180s bash scripts/build-uefi-image.sh "$OBJ" "$image" > "$OUT/$cell-build.txt" \
+    || fail "image build failed: $cell"
 
   nm -u target/kernel-x86_64 > "$OUT/$cell-kernel-undefined.txt" 2>&1 || true
   [[ ! -s "$OUT/$cell-kernel-undefined.txt" ]] || {
