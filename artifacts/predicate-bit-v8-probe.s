@@ -76,6 +76,36 @@ wsm_entry:
     cmpl $1, %eax
     jne .Lfail
 
+    # Contract 12 D1 ATOM: NIL is an atom -> exact D1:1 carrier.
+    movq %r13, %rdi
+    movq $1, %rsi
+    call wsm_atom_predicate_bit
+    cmpq %r12, %rax
+    jne .Lfail
+
+    # A pair is not an atom -> exact D1:0 carrier.
+    movq %r13, %rdi
+    leaq .Lpredicate_probe_pair(%rip), %rsi
+    call wsm_atom_predicate_bit
+    cmpq %rbx, %rax
+    jne .Lfail
+
+    # Contract 12 D1 EQ: identical admitted atoms -> D1:1.
+    movq %r13, %rdi
+    movq $1, %rsi
+    movq $1, %rdx
+    call wsm_eq_predicate_bit
+    cmpq %r12, %rax
+    jne .Lfail
+
+    # Distinct admitted atoms -> D1:0 (not NIL).
+    movq %r13, %rdi
+    movq $1, %rsi
+    movq $11, %rdx
+    call wsm_eq_predicate_bit
+    cmpq %rbx, %rax
+    jne .Lfail
+
     movq $11, %rax                   # target Fixnum 1: witness passed
     jmp .Ldone
 
@@ -86,3 +116,10 @@ wsm_entry:
     popq %r12
     popq %rbx
     ret
+
+
+.data
+.balign 16
+.Lpredicate_probe_pair:
+    .quad 1
+    .quad 1
