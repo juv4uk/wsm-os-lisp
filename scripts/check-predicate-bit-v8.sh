@@ -2,9 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-work="$(mktemp -d /tmp/wsm-predicate-bit-v10.XXXXXX)"
+work="$(mktemp -d /tmp/wsm-predicate-bit-v11.XXXXXX)"
 trap 'rm -rf "$work"' EXIT
-out="$ROOT_DIR/target/predicate-bit-v10"
+out="$ROOT_DIR/target/predicate-bit-v11"
 mkdir -p "$out"
 
 as --64 "$ROOT_DIR/artifacts/predicate-bit-v8-probe.s" -o "$work/positive.o"
@@ -37,11 +37,11 @@ runtime_sha="$(sha256sum "$ROOT_DIR/src/runtime.s" | awk '{print $1}')"
 
 cat >"$out/witness.json" <<EOF
 {
-  "schema": "wsm-os-predicate-bit-v10/v1",
+  "schema": "wsm-os-predicate-bit-v11/v1",
   "issue": 86,
   "status": "PASS",
-  "target_contract_commit": "33dea24a949b4e6e0808a6c770a3c9cac63d6765",
-  "target_contract_version": 10,
+  "target_contract_commit": "b2176f95e1965d6c3c425dd42bde95958d5d4469",
+  "target_contract_version": 11,
   "boxed_kind_predicate_bit": 5,
   "bit_width": 1,
   "local_session_handles": [1, 2],
@@ -63,5 +63,5 @@ cat >"$out/witness.json" <<EOF
 }
 EOF
 
-echo "PREDICATE-BIT-V10: PASS"
+echo "PREDICATE-BIT-V11: PASS"
 echo "stable-singletons=true exact-bits=0,1 malformed-handle=ABI-fail-closed"
