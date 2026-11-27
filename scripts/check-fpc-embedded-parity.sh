@@ -26,6 +26,23 @@ done
 cmp -s "$VALUE_PIN_ASM" "$VALUE_PIN_PASCAL" \
   || fail "canonical value pins diverged; Pascal pin must equal ASM baseline"
 mkdir -p "$OUT/units" "$OUT/bin"
+{
+  echo "captured_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "--- uname ---"
+  uname -a
+  echo "--- os-release ---"
+  [[ ! -f /etc/os-release ]] || cat /etc/os-release
+  echo "--- cpu ---"
+  grep -m1 -E 'model name|Hardware' /proc/cpuinfo || true
+  echo "logical_cpus=$(nproc 2>/dev/null || echo unknown)"
+  if command -v lscpu >/dev/null 2>&1; then lscpu; fi
+  echo "--- memory ---"
+  if command -v free >/dev/null 2>&1; then free -h; fi
+  echo "--- qemu ---"
+  qemu-system-x86_64 --version | head -1
+  echo "--- fpc ---"
+  "$COMPILER" -iV
+} > "$OUT/host-profile.txt"
 rm -f "$OUT/compile.tsv" "$OUT/cycle.tsv"
 : > "$OUT/compile.tsv"
 : > "$OUT/cycle.tsv"

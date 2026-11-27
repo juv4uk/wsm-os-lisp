@@ -2,7 +2,7 @@
 *P2 матриця паритету: два субстрати, два сценарії — і куди насправді йде час циклу*
 
 **Дата**: 2026-11-26
-**Статус**: **ЧАСТКОВЕ EVIDENCE — P2 не закрито**. P0/P1 embedded witnesses pass; the first embedded W3 run passes 4/4 cells and pin identity. Three-repeat rerun and physical i5-6400 measurement remain open.
+**Статус**: **ЧАСТКОВЕ EVIDENCE — P2 не закрито**. P0/P1 embedded witnesses pass; the three-repeat embedded W3 run passes 4/4 cells and pin identity. Only physical i5-6400 measurement and energy/human-time evidence remain open.
 **Задача**: `WSM-OS-FPC-PARITY-VERTICAL-W3`
 **Гейт**: `bash scripts/check-fpc-embedded-parity.sh` after `bash scripts/probe-fpc-embedded.sh`; CI `.github/workflows/fpc-parity.yml`
 
@@ -135,9 +135,23 @@ Linux-target контроль історично дав 4/4; новий embedded
 - порожній `nm -u` у фінальному Pascal kernel;
 - compile, image-build і QEMU+verify час окремо, із сирими TSV та SHA-256 образів.
 
-Перший результат (один повтор, лише smoke datapoint): ASM/Pascal value pins byte-identical; value та OOM дали однакові повні `WSM-OS` рядки. `COMPILE`: asm 14 ms, Pascal 33 ms; `BUILD`: asm 1241 ms, Pascal 1119 ms; `BOOT+verify`: asm 2622 ms, Pascal 2626 ms. Артефакт [15234370801](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46073255854/artifacts/15234370801). Workflow тепер запускає три повтори.
+Триразовий результат: ASM/Pascal value pins byte-identical; value та OOM дали однакові повні `WSM-OS` рядки у всіх 12 клітинках. Медіани: `COMPILE` asm 13 ms / Pascal 29 ms; `BUILD` asm 1143 ms / Pascal 1148 ms; `BOOT+verify` asm 2213 ms / Pascal 2243 ms. Артефакт [15233832422](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46073748394/artifacts/15233832422). Це hosted TCG datapoints, не фізичний benchmark.
 
 Цей workflow працює на GitHub-hosted runner з TCG/OVMF. Його часи — CI datapoints, не вимірювання на фізичному i5-6400. P2 не закривається лише від першого зеленого smoke run: потрібні три повтори, перегляд усіх артефактів і окремий фізичний замір на власному хості.
 
 
 The legacy declaration is intentionally narrow: it preserves the old Linux-target control runner for reproducing archived numbers, but does not permit it to serve as the active W3 acceptance gate.
+
+
+## 7. Замір на локальному хості (WSL/Linux)
+
+Для вимірювання циклу на власному CPU виконай у WSL/Linux з каталогу репозиторію:
+
+```sh
+sudo apt-get update
+sudo apt-get install -y qemu-system-x86 ovmf mtools dosfstools gdisk binutils curl python3
+bash scripts/probe-fpc-embedded.sh
+WSM_P2_REPEATS=5 bash scripts/check-fpc-embedded-parity.sh
+```
+
+Артефакт `target/fpc-embedded-parity/host-profile.txt` фіксує CPU, ОС, пам'ять, QEMU та FPC; `compile.tsv` і `cycle.tsv` містять сирі заміри. Передай ці файли разом із serial logs та SHA-256 образів для порівняння з CI. Це вимір часу розробницького циклу (компіляція, створення образу, TCG/OVMF boot і перевірка transcript), **не** GPU benchmark і не вимір швидкодії GTX 1050 Ti. QEMU тут працює через TCG і навантажує CPU.

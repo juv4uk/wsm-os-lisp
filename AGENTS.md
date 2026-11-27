@@ -176,7 +176,7 @@ typedef uintptr_t Value;
 
 - For the pinned `x86_64-embedded` target, use explicitly exported Pascal `unit` functions for kernel experiments; do not compile a Pascal `program` as a kernel entry until startup, initialization/finalization, threadvar and exception services have an explicit runtime contract and tests.
 - Never satisfy unresolved FPC RTL symbols with empty/no-op stubs. Classify each symbol; the bounded test profile may use `--gc-sections` only for proven-unused metadata, and must verify the final kernel has an empty `nm -u`.
-- The P0 embedded unit/ABI witness, bounded P1 BootInfo handoff, and W3 value/OOM parity smoke gate now pass in test-only UEFI/QEMU. This does not authorize production migration: ASM still owns production entry, stack, BootInfo discovery/translation and runtime until broader P2 parity plus physical-host cycle evidence pass. The historical `src/rtl_min.s` no-op hooks are not linked by active unit-control or embedded handoff workflows.
+- The P0/P1 witnesses and three-repeat W3 value/OOM parity gate pass in test-only embedded TCG/OVMF. This proves only a narrow vertical, not a full SENS runtime. It does not authorize production migration: ASM still owns production entry, stack, BootInfo discovery/translation and runtime until broader runtime parity and physical-host cycle evidence pass. The historical `src/rtl_min.s` no-op hooks are not linked by active unit-control or embedded handoff workflows.
 
 ### 1. Рівні: де живе робота
 

@@ -365,3 +365,17 @@ Four cells passed:
 The gate asserts byte-identical canonical value pins before building, compares each complete QEMU transcript with its pin, compares all `WSM-OS` lines between substrates, and verifies the final Pascal kernel has no undefined symbols. Both Pascal units import only Assembly `wsm_cons`; no FPC PROGRAM startup or `rtl_min.s` stubs are linked.
 
 One-repeat hosted TCG datapoint: compile asm 14 ms / Pascal 33 ms; image build 1241 ms / 1119 ms; QEMU+verify 2622 ms / 2626 ms. This is a smoke datapoint, not a statistically meaningful benchmark or the owner's i5-6400 measurement. The workflow has been raised to three repeats; physical-host cycle, human-time and RAPL measurements remain open. The W3 result proves only the tiny value/OOM vertical, not a full SENS runtime or production parity. Production Assembly ownership remains unchanged.
+
+
+## Evidence update — three-repeat embedded W3 parity (2026-11-27)
+
+The pinned embedded W3 parity workflow passed three repeats: [run #46073748394](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46073748394), [artifact 15233832422](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46073748394/artifacts/15233832422).
+
+All 12 cells passed (ASM/Pascal × value/named OOM × 3 repeats). The gate asserts canonical value-pin byte identity, full transcript matches, ASM/Pascal `WSM-OS` line equality, and an empty final Pascal kernel undefined-symbol table. The two Pascal UNIT objects import only Assembly `wsm_cons`; no PROGRAM startup hooks or no-op RTL stubs are linked.
+
+Three-repeat medians on the GitHub-hosted TCG/OVMF runner:
+- compile: ASM 13 ms, Pascal 29 ms;
+- image build: ASM 1143 ms, Pascal 1148 ms;
+- QEMU boot + transcript verification: ASM 2213 ms, Pascal 2243 ms.
+
+For this tiny vertical, Pascal's compile time is about 16 ms higher, while image-build and boot/verification times are effectively within the observed run-to-run noise. This does not establish general Pascal performance or driver superiority. The owner’s physical i5-6400 cycle, GPU workloads, RAPL energy and human edit time remain unmeasured; broader runtime parity and production migration remain separate gates.

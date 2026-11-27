@@ -58,7 +58,7 @@
    "Image determinism is currently unproven in CI. Rewrite against the current build path, then gate it.")
   (script "scripts/check-fpc-parity.sh"
    "Legacy FPC 3.2.2 Linux-target W3 runner. Active acceptance moved to pinned FPC 3.3.1 x86_64-embedded via scripts/check-fpc-embedded-parity.sh; historical Linux measurements are retained in docs/FPC-PARITY-P2.md."
-   "Keep only as a historical reproducer while the embedded gate gains three-repeat and physical-host evidence; then remove.")
+   "Keep only as a historical reproducer until the physical-host embedded cycle is measured; then remove.")
 )
 
  (arbiter-budget
