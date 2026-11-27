@@ -128,7 +128,7 @@ is documented in [`docs/DEFINITION-CAPSULE.md`](docs/DEFINITION-CAPSULE.md).
 The frozen `(cons (quote A) (quote B))` fixture now passes the complete first
 execution chain: pinned upstream semantic witness, CML-generated object, hosted runtime,
 freestanding UEFI image, and bounded QEMU execution all agree on `(A . B)`.
-This is `QEMU-BOOT-PARITY`, not a physical-hardware claim.
+This is `QEMU-BOOT-PARITY`, not a physical-hardware claim. It is a historical pre-Contract-12 fixture and does not prove that the currently pinned CML compiler path is Contract-12-compliant; see [docs/TARGET-ABI.md](docs/TARGET-ABI.md) and [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109).
 
 ---
 
@@ -262,7 +262,7 @@ assemble плюс link — медіана 168 мс, і саме з цим чис
 перший ланцюжок виконання: зафіксований семантичний свідок SENS, CML-згенерований
 об'єкт, hosted-середовище виконання, автономний (freestanding) UEFI-образ
 та обмежене виконання в QEMU погоджуються щодо результату `(A . B)`.
-Це `QEMU-BOOT-PARITY`, а не твердження про роботу на фізичному обладнанні.
+Це `QEMU-BOOT-PARITY`, а не твердження про роботу на фізичному обладнанні. Це історична фікстура до Contract 12.0 і вона не доводить відповідність Contract 12.0 поточного pinned CML compiler path; див. [docs/TARGET-ABI.md](docs/TARGET-ABI.md) та [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109).
 
 ## Ліцензія
 
