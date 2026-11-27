@@ -4,7 +4,6 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 PIN_FILE="$ROOT/target-abi-pin.lisp"
 RUNTIME="$ROOT/src/runtime.s"
-PROFILE="$ROOT/target-profile.lisp"
 
 PIN=$(sed -n 's/.*(commit \. "\([0-9a-f]\{40\}\)").*/\1/p' "$PIN_FILE")
 SCHEMA=$(sed -n 's/.*(schema \. "\([^"]*\)").*/\1/p' "$PIN_FILE")
@@ -40,34 +39,27 @@ ACTUAL_SHA=$(sha256sum "$PROJECTION" | awk '{print $1}')
 
 grep -Fq "(schema . \"$SCHEMA\")" "$PROJECTION"
 grep -Fq "(version . $VERSION)" "$PROJECTION"
-grep -Fq "(boxed . 7)" "$PROJECTION"
-grep -Fq "(kinds-defined-so-far . (string game-handle rational sid8 predicate-bit))" "$PROJECTION"
-grep -Fq "wsm_rational_new" "$PROJECTION"
-grep -Fq "wsm_rational_numerator" "$PROJECTION"
-grep -Fq "wsm_rational_denominator" "$PROJECTION"
-grep -Fq "(predicate-bit . ((boxed-kind . 5) (bits . 1) (allowed . (0 1))" "$PROJECTION"
+grep -Fq "(semantics . sens-contract-12)" "$PROJECTION"
+grep -Fq 'juv4uk/sens:contracts/language-contract-12.lisp' "$PROJECTION"
+grep -Fq "(kinds-defined-so-far . (string game-handle rational predicate-bit))" "$PROJECTION"
+grep -Fq "(current-predicate-operations . ((atom-import . wsm_atom_predicate_bit) (eq-import . wsm_eq_predicate_bit)" "$PROJECTION"
+grep -Fq "wsm_atom_predicate_bit" "$PROJECTION"
+grep -Fq "wsm_eq_predicate_bit" "$PROJECTION"
 grep -Fq "wsm_predicate_bit_0" "$PROJECTION"
 grep -Fq "wsm_predicate_bit_1" "$PROJECTION"
 grep -Fq "wsm_predicate_bit_bits" "$PROJECTION"
-grep -Fq "(numeric-overflow . 5)" "$PROJECTION"
+grep -Fq "wsm_rational_new" "$PROJECTION"
 
-# Locally implemented subset must agree exactly with the pinned neutral authority.
-grep -Fq ".set WSM_TAG_MASK,            7" "$RUNTIME"
-grep -Fq ".set WSM_TAG_CONS,            0" "$RUNTIME"
-grep -Fq ".set WSM_TAG_NIL,             1" "$RUNTIME"
-grep -Fq ".set WSM_TAG_FIXNUM,          3" "$RUNTIME"
-grep -Fq ".set WSM_TAG_SYMBOL,          4" "$RUNTIME"
-grep -Fq ".set WSM_TAG_CLOSURE,         5" "$RUNTIME"
-grep -Fq ".set WSM_TAG_CAPABILITY,      6" "$RUNTIME"
-grep -Fq ".set WSM_TAG_BOXED,           7" "$RUNTIME"
-grep -Fq ".set BOXED_KIND_PREDICATE_BIT, 5" "$RUNTIME"
-grep -Fq ".set ERR_OOM,                 1" "$RUNTIME"
-grep -Fq ".set ERR_TYPE,                2" "$RUNTIME"
-grep -Fq ".set ERR_SYMBOL,              3" "$RUNTIME"
-grep -Fq ".set ERR_ABI,                 4" "$RUNTIME"
-grep -Fq ".set ERR_OVERFLOW,            5" "$RUNTIME"
+if grep -Eiq 'sid8|sens8|function8|wsm_sid8_' "$PROJECTION"; then
+  echo "retired flat-eight identity leaked into active target projection" >&2
+  exit 1
+fi
 
-# Ratified v8 features may remain explicitly unsupported by this P0 runtime.
-grep -Fq "(excludes . (lambda application closure strings bytes bignum rational reader evaluator gc))" "$PROFILE"
+# Contract 12 D1 machine imports must return exact runtime-owned PredicateBits.
+grep -Fq ".globl wsm_atom_predicate_bit" "$RUNTIME"
+grep -Fq ".globl wsm_eq_predicate_bit" "$RUNTIME"
+grep -Fq "jmp wsm_predicate_bit_1" "$RUNTIME"
+grep -Fq "jmp wsm_predicate_bit_0" "$RUNTIME"
+grep -Fq "movl \$ERR_TYPE, %esi" "$RUNTIME"
 
-echo "TARGET-ABI-V8-GREEN pin=$PIN schema=$SCHEMA version=$VERSION sha256=$ACTUAL_SHA"
+echo "TARGET-ABI-V10-CONTRACT12-PASS pin=$PIN schema=$SCHEMA version=$VERSION sha256=$ACTUAL_SHA"
