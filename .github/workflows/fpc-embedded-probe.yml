@@ -8,6 +8,16 @@ on:
       - "scripts/probe-fpc-embedded.sh"
       - "tests/fpc_embedded_probe.pas"
       - "tests/fpc_embedded_entry.s"
+      - "tests/fpc_embedded_kernel_probe.pas"
+      - "scripts/check-fpc-embedded-kernel-probe.sh"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/ovmf-env.sh"
+      - "src/entry.s"
+      - "src/runtime.s"
+      - "src/bootloader-config.bin"
+      - "artifacts/bootx64.efi"
+      - "artifacts/qemu-serial-transcript.txt"
       - ".github/workflows/fpc-embedded-probe.yml"
       - "src/linker.ld"
 
@@ -28,14 +38,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            binutils file curl
+            binutils file curl qemu-system-x86 ovmf mtools dosfstools gdisk
       - name: Collect checksum-pinned FPC embedded compile/link and MS ABI evidence
         run: timeout 300s bash scripts/probe-fpc-embedded.sh
+      - name: Prove embedded Pascal unit in UEFI QEMU without RTL stubs
+        run: timeout 300s bash scripts/check-fpc-embedded-kernel-probe.sh
       - name: Upload embedded probe evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: fpc-embedded-probe-${{ github.sha }}
-          path: target/fpc-embedded-probe/
+          path: |
+            target/fpc-embedded-probe/
+            target/fpc-embedded-kernel-probe/
           if-no-files-found: warn
           retention-days: 30
