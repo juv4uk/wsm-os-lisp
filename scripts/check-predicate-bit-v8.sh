@@ -7,8 +7,8 @@ trap 'rm -rf "$work"' EXIT
 out="$ROOT_DIR/target/predicate-bit-v10"
 mkdir -p "$out"
 
-as --64 "$ROOT_DIR/artifacts/predicate-bit-v10-probe.s" -o "$work/positive.o"
-as --64 "$ROOT_DIR/artifacts/predicate-bit-v10-malformed-probe.s" -o "$work/malformed.o"
+as --64 "$ROOT_DIR/artifacts/predicate-bit-v8-probe.s" -o "$work/positive.o"
+as --64 "$ROOT_DIR/artifacts/predicate-bit-v8-malformed-probe.s" -o "$work/malformed.o"
 
 bash "$ROOT_DIR/scripts/build-uefi-image.sh" "$work/positive.o" "$work/positive.img" >/dev/null
 bash "$ROOT_DIR/scripts/build-uefi-image.sh" "$work/malformed.o" "$work/malformed.img" >/dev/null
@@ -40,7 +40,7 @@ cat >"$out/witness.json" <<EOF
   "schema": "wsm-os-predicate-bit-v10/v1",
   "issue": 86,
   "status": "PASS",
-  "target_contract_commit": "b5ec3211f6bd07fb7c4a5f704875892eff145b91",
+  "target_contract_commit": "33dea24a949b4e6e0808a6c770a3c9cac63d6765",
   "target_contract_version": 10,
   "boxed_kind_predicate_bit": 5,
   "bit_width": 1,
@@ -52,7 +52,12 @@ cat >"$out/witness.json" <<EOF
   "aliases_fixnum_0_or_1": false,
   "aliases_canonical_symbol_t": false,
   "malformed_boxed_handle_fails_closed": true,
-  "semantic_interpretation": "external-SENS-authority",
+  "semantic_interpretation": "SENS-Contract-12-D1",
+  "atom_predicate_bit_import": "PASS",
+  "eq_predicate_bit_equal_atoms": "PASS",
+  "eq_predicate_bit_distinct_atoms": "PASS",
+  "atom_empty_list_is_atom": true,
+  "atom_pair_is_not_atom": true,
   "target_pin_file_sha256": "$pin_sha",
   "runtime_source_sha256": "$runtime_sha"
 }
