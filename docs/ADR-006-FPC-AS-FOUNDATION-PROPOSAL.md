@@ -379,3 +379,12 @@ Three-repeat medians on the GitHub-hosted TCG/OVMF runner:
 - QEMU boot + transcript verification: ASM 2213 ms, Pascal 2243 ms.
 
 For this tiny vertical, Pascal's compile time is about 16 ms higher, while image-build and boot/verification times are effectively within the observed run-to-run noise. This does not establish general Pascal performance or driver superiority. The owner’s physical i5-6400 cycle, GPU workloads, RAPL energy and human edit time remain unmeasured; broader runtime parity and production migration remain separate gates.
+
+
+## Evidence update — embedded W3 three-repeat host-profile run (2026-11-27)
+
+The latest embedded W3 run passed three repeats: [run #46074055427](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46074055427), [artifact 15233758284](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46074055427/artifacts/15233758284). All 12 ASM/Pascal value/named-OOM cells passed; canonical value pins were byte-identical, complete transcripts matched, and final Pascal kernels had empty undefined-symbol tables.
+
+Three-repeat medians: compile ASM 13 ms / Pascal 31 ms; image build 1173 / 1197 ms; QEMU+verification 1978 / 2018 ms. The host profile identifies GitHub's runner as AMD EPYC 9V74 (4 vCPU), Ubuntu 26.04.1, 15 GiB RAM, QEMU 10.2.1. These measurements are not from the owner's i5-6400.
+
+The W3 parity gate for this narrow vertical is green. Broader runtime parity, physical-host cycle timing, RAPL energy and human edit time remain unmeasured; this evidence does not authorize production migration.

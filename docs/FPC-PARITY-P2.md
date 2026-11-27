@@ -114,15 +114,15 @@ Linux-target контроль історично дав 4/4; новий embedded
 
 ## 6. Embedded-target W3 gate — 2026-11-27
 
-**Статус:** перший embedded CI run #46073255854 завершився SUCCESS; 4/4 клітинки та pin identity PASS. Linux-target вимір вище лишається історичним control і не підміняє embedded результат. Старий `scripts/check-fpc-parity.sh` явно задекларований як legacy у `policy-enforcement.lisp`; active acceptance path — лише embedded workflow. Workflow тепер налаштовано на три повтори для стабільнішої медіани.
+**Статус:** триразовий embedded CI run #46074055427 завершився SUCCESS; 12/12 клітинок та canonical pin identity PASS. Linux-target вимір вище лишається історичним control і не підміняє embedded результат. Старий `scripts/check-fpc-parity.sh` задекларований як legacy у `policy-enforcement.lisp`; active acceptance path — embedded workflow.
 
-Новий `scripts/check-fpc-embedded-parity.sh` використовує checksum-pinned FPC 3.3.1 `x86_64-embedded` toolchain, встановлену `scripts/probe-fpc-embedded.sh`. Обидва Pascal сценарії — окремі `unit` модулі:
+`scripts/check-fpc-embedded-parity.sh` використовує checksum-pinned FPC 3.3.1 `x86_64-embedded` toolchain, встановлену `scripts/probe-fpc-embedded.sh`. Обидва Pascal сценарії — окремі `unit` модулі:
 - value: `src/pascal_probe.pas`;
 - named OOM: `src/pascal_probe_oom.pas`.
 
 Для обох об'єктів очікується рівно один зовнішній символ — Assembly `wsm_cons`. Жоден FPC PROGRAM startup hook і жоден `rtl_min.s` no-op stub не лінкується.
 
-Чотири клітини:
+Чотири клітини на кожен повтор:
 1. ASM value;
 2. ASM named OOM;
 3. embedded Pascal value;
@@ -133,15 +133,18 @@ Linux-target контроль історично дав 4/4; новий embedded
 - кожен повний QEMU serial transcript проти відповідного pin;
 - усі рядки `WSM-OS` між ASM і Pascal для value та OOM;
 - порожній `nm -u` у фінальному Pascal kernel;
-- compile, image-build і QEMU+verify час окремо, із сирими TSV та SHA-256 образів.
+- compile, image-build і QEMU+verify час окремо, із сирими TSV, SHA-256 образів і host profile.
 
-Триразовий результат: ASM/Pascal value pins byte-identical; value та OOM дали однакові повні `WSM-OS` рядки у всіх 12 клітинках. Медіани: `COMPILE` asm 13 ms / Pascal 29 ms; `BUILD` asm 1143 ms / Pascal 1148 ms; `BOOT+verify` asm 2213 ms / Pascal 2243 ms. Артефакт [15233832422](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46073748394/artifacts/15233832422). Це hosted TCG datapoints, не фізичний benchmark.
+Триразовий результат (12/12 клітинок): canonical value pins byte-identical; value та OOM дали однакові повні `WSM-OS` рядки. Медіани на GitHub-hosted runner:
+- `COMPILE`: asm 13 ms / Pascal 31 ms;
+- `BUILD`: asm 1173 ms / Pascal 1197 ms;
+- `BOOT+verify`: asm 1978 ms / Pascal 2018 ms.
 
-Цей workflow працює на GitHub-hosted runner з TCG/OVMF. Його часи — CI datapoints, не вимірювання на фізичному i5-6400. P2 не закривається лише від першого зеленого smoke run: потрібні три повтори, перегляд усіх артефактів і окремий фізичний замір на власному хості.
+Артефакт [15233758284](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46074055427/artifacts/15233758284). `host-profile.txt` підтверджує runner: AMD EPYC 9V74, 4 vCPU, Ubuntu 26.04.1, 15 GiB RAM, QEMU 10.2.1. Це не твій i5-6400 і не GPU benchmark.
 
+Цей результат закриває повторюваний embedded W3 smoke/parity gate для вузького value/OOM зрізу. P2 як ширша production-оцінка не закривається: фізичний замір на i5-6400, RAPL energy, людський час редагування та ширший SENS runtime parity залишаються відкритими.
 
 The legacy declaration is intentionally narrow: it preserves the old Linux-target control runner for reproducing archived numbers, but does not permit it to serve as the active W3 acceptance gate.
-
 
 ## 7. Замір на локальному хості (WSL/Linux)
 
