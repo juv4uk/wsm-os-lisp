@@ -1,7 +1,9 @@
 ;; Current CML source pin consumed by the x86 freestanding compiler toolchain.
-;; Verified on 2026-11-27: Contract 12 D1 target v11 focused workflow SUCCESS.
-;; This compiler rejects legacy flat SID8 calls before x86 machine-code emission.
-(cml-revision "84c1cff43adbcbf78a2bb1bf6b932b15a24208f8")
+;; Verified on 2026-11-27: focused current-SENS-to-x86 bridge passed; QEMU
+;; end-to-end job below exercises its D1/two-field COND output on WSM runtime.
+;; CML's SENS submodule remains 11.8-era; this is not full Contract 12 adoption.
+(cml-revision "8f55b0361c9fc3c3c1a9601fd4363e511819047d")
 (sens-submodule-revision "d0787a40fcea36501747732aa61b6de19fe29c70")
 (target-abi-revision "b2176f95e1965d6c3c425dd42bde95958d5d4469")
 (x86-legacy-sid8-dispatch . retired)
+(current-sens-d1-cond-qemu . pending)
