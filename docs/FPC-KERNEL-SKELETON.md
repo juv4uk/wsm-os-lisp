@@ -40,5 +40,20 @@ A minimal FPC PROGRAM has five startup/init/finalization/threadvar hooks. A PROG
 
 - The embedded unit witness does not authorize production migration.
 - Assembly remains the owner of the production entry, BootInfo parsing, stack, runtime and device mechanisms.
-- P1 proves the bounded BootInfo handoff path only when the new four-cell embedded QEMU gate passes; P2 still requires semantic parity and the measured edit-build-test loop.
+- P1 bounded BootInfo handoff passed in [embedded FPC/QEMU run #46072798082](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46072798082), artifact [15233506926](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46072798082/artifacts/15233506926): 4/4 valid/missing/badtag/zerooffset cells. P2 still requires semantic parity and the measured edit-build-test loop.
 - `src/rtl_min.s` is historical only; active unit tests do not link its no-op symbols.
+
+
+## 7. Результат P1: embedded Pascal BootInfo handoff — PASS
+
+GitHub Actions [run #46072798082](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46072798082) завершився SUCCESS; [артефакт 15233506926](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46072798082/artifacts/15233506926) містить об'єкт, map, серійні журнали та фінальні `nm -u`.
+
+Чотири OVMF/QEMU клітини:
+- valid → `WSM-OS RESULT schema=1 value=(sym1 . sym2) status=ok`;
+- missing BootInfo → ABI source `1212239361`;
+- bad Optional tag → ABI source `1212239362`, value `2`;
+- Some + zero offset → ABI source `1212239363`.
+
+Pascal unit читає BootInfo tag за `+0x58`, 64-bit offset за `+0x60` побайтно та звіряє його з незалежним Assembly `wsm_target_phys_mem_offset`. Кожна клітина має порожній фінальний `nm -u`; жоден no-op RTL hook не лінкується.
+
+Межа доказу: Pascal читає pointer із Assembly-owned `saved_boot_info`; bootloader record discovery, фізичне відображення та production runtime залишаються Assembly-owned. Це закриває чотири визначені handoff cases, але не доводить валідацію кожного поля/версії BootInfo чи довільно пошкоджених записів. P2 parity gate залишається відкритим.

@@ -54,6 +54,7 @@ echo "EMBEDDED_HANDOFF_UNIT_COMPILE=PASS"
 echo "HANDOFF_EXTERNALS=saved_boot_info,wsm_target_phys_mem_offset,wsm_cons,wsm_fail_src"
 
 run_cell() {
+  # Apply the same section-GC profile to valid and negative cells; this only drops unused Byte RTTI.
   local cell="$1"
   local transcript="$2"
   local env_name="$3"

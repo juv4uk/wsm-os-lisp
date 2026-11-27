@@ -335,3 +335,18 @@ The PROGRAM lifecycle was separately classified: the minimal program object requ
 Evidence: [research report](research/FPC-EMBEDDED-PROBE-2026-11-27.md), [CI run #46071610953](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46071610953), [artifact 15232149812](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46071610953/artifacts/15232149812).
 
 This closes the toolchain-feasibility question for a narrow embedded Pascal UNIT, not the production architecture decision. The test does not validate BootInfo in Pascal or call a real UEFI Boot Services entry. P1 handoff and P2 parity remain separate gates; `src/runtime.s` and `src/entry.s` remain unchanged. This addendum does not ratify ADR-006 or authorize production Pascal migration.
+
+
+## Evidence update — P1 embedded Pascal BootInfo handoff (2026-11-27)
+
+The pinned FPC 3.3.1 `x86_64-embedded` UNIT path now reads the BootInfo Optional field itself and compares it with the independent Assembly value. [GitHub Actions run #46072798082](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46072798082) passed all four OVMF/QEMU cells; [artifact 15233506926](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46072798082/artifacts/15233506926) preserves object symbols, final kernel undefined-symbol checks, images and serial logs.
+
+Observed results:
+- valid: canonical `(sym1 . sym2)` result;
+- missing BootInfo: ABI condition source `1212239361`;
+- invalid Optional tag: ABI condition source `1212239362`, value `2`;
+- Some with zero offset: ABI condition source `1212239363`.
+
+The Pascal unit reads tag at `BootInfo+0x58`, the u64 at `+0x60`, and compares it with Assembly's `wsm_target_phys_mem_offset`. The final kernel has no undefined symbols. No no-op RTL stubs are linked.
+
+This closes the bounded P1 handoff witness, not the full boot contract: Assembly still owns BootInfo discovery and physical translation; the Pascal unit uses the Assembly-owned `saved_boot_info` pointer. Arbitrary malformed headers/versions and broader corruption are not yet covered. P2 parity and production migration remain separate gates.
