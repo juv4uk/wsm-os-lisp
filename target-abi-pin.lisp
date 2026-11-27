@@ -1,9 +1,9 @@
-; Exact neutral target ABI observed by the zero-Rust runtime.
-; Representation authority only; Lisp meaning remains in my-lisp.
+; Exact neutral target ABI observed by the Contract 12.0 runtime.
+; SENS language meaning is owned by juv4uk/sens Contract 12.0.
 ((kind . wsm-target-abi-pin)
  (repository . "https://github.com/juv4uk/wsm-target-contract.git")
- (commit . "b5ec3211f6bd07fb7c4a5f704875892eff145b91")
+ (commit . "33dea24a949b4e6e0808a6c770a3c9cac63d6765")
  (schema . "wsm-os-target-v1")
- (version . 8)
+ (version . 10)
  (projection . "target-contract.lisp")
- (projection-sha256 . "3c477aecb46bc3ab87b6d35b705b2a52964a8c551022014b5a9ff160f8ae6b41"))
+ (projection-sha256 . "dbe558b025b2fdca0b429815429a6bc9e62bff793e26f8d8d4dbbd59807d0a56"))
