@@ -1,0 +1,3 @@
+[submodule "wsm-lazarus"]
+	path = external/wsm-lazarus
+	url = https://github.com/juv4uk/wsm-lazarus.git
