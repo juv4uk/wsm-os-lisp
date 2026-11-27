@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 OUT="${WSM_P2_OUT_DIR:-target/fpc-embedded-parity}"
-REPEATS="${WSM_P2_REPEATS:-1}"
+REPEATS="${WSM_P2_REPEATS:-3}"
 BASE="$ROOT_DIR/target/fpc-embedded-probe"
 COMPILER="$BASE/install/bin/x86_64-linux/ppcrossx64"
 RTL_DIR="$BASE/install/units/x86_64-embedded/rtl"

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# LEGACY Linux-target control only. P2 acceptance uses check-fpc-embedded-parity.sh.
 # ADR-006 P2 gate: parity matrix plus the iteration measurement.
 #
 # Two substrates (assembly, Pascal) x two scenarios (a value, a named failure).

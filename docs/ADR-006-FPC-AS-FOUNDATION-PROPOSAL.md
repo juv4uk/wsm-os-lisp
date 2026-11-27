@@ -350,3 +350,18 @@ Observed results:
 The Pascal unit reads tag at `BootInfo+0x58`, the u64 at `+0x60`, and compares it with Assembly's `wsm_target_phys_mem_offset`. The final kernel has no undefined symbols. No no-op RTL stubs are linked.
 
 This closes the bounded P1 handoff witness, not the full boot contract: Assembly still owns BootInfo discovery and physical translation; the Pascal unit uses the Assembly-owned `saved_boot_info` pointer. Arbitrary malformed headers/versions and broader corruption are not yet covered. P2 parity and production migration remain separate gates.
+
+
+## Evidence update — embedded W3 value/OOM parity smoke run (2026-11-27)
+
+The first pinned FPC 3.3.1 `x86_64-embedded` W3 run passed: [GitHub Actions #46073255854](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46073255854), [artifact 15234370801](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46073255854/artifacts/15234370801).
+
+Four cells passed:
+- Assembly value;
+- Assembly named OOM;
+- Pascal UNIT value;
+- Pascal UNIT named OOM.
+
+The gate asserts byte-identical canonical value pins before building, compares each complete QEMU transcript with its pin, compares all `WSM-OS` lines between substrates, and verifies the final Pascal kernel has no undefined symbols. Both Pascal units import only Assembly `wsm_cons`; no FPC PROGRAM startup or `rtl_min.s` stubs are linked.
+
+One-repeat hosted TCG datapoint: compile asm 14 ms / Pascal 33 ms; image build 1241 ms / 1119 ms; QEMU+verify 2622 ms / 2626 ms. This is a smoke datapoint, not a statistically meaningful benchmark or the owner's i5-6400 measurement. The workflow has been raised to three repeats; physical-host cycle, human-time and RAPL measurements remain open. The W3 result proves only the tiny value/OOM vertical, not a full SENS runtime or production parity. Production Assembly ownership remains unchanged.

@@ -2,9 +2,9 @@
 *P2 матриця паритету: два субстрати, два сценарії — і куди насправді йде час циклу*
 
 **Дата**: 2026-11-26
-**Статус**: **ЧАСТКОВЕ EVIDENCE — P2 не закрито**. У межах Linux-target контрольного зрізу доведено 4/4 клітинки й виміряно цикл на одній машині. Embedded-target і Pascal-side UEFI handoff негативні свідки ще відсутні; задача W3 лишається відкритою.
+**Статус**: **ЧАСТКОВЕ EVIDENCE — P2 не закрито**. P0/P1 embedded witnesses pass; the first embedded W3 run passes 4/4 cells and pin identity. Three-repeat rerun and physical i5-6400 measurement remain open.
 **Задача**: `WSM-OS-FPC-PARITY-VERTICAL-W3`
-**Гейт**: `bash scripts/check-fpc-parity.sh`, CI `.github/workflows/fpc-parity.yml`
+**Гейт**: `bash scripts/check-fpc-embedded-parity.sh` after `bash scripts/probe-fpc-embedded.sh`; CI `.github/workflows/fpc-parity.yml`
 
 ---
 
@@ -95,8 +95,9 @@ PIN-IDENTITY-PASS: artifacts/qemu-serial-transcript.txt ==
 
 ```bash
 sudo apt-get install -y --no-install-recommends \
-  qemu-system-x86 ovmf mtools dosfstools gdisk binutils fp-compiler
-WSM_P2_REPEATS=3 bash scripts/check-fpc-parity.sh
+  qemu-system-x86 ovmf mtools dosfstools gdisk binutils curl python3
+bash scripts/probe-fpc-embedded.sh
+WSM_P2_REPEATS=3 bash scripts/check-fpc-embedded-parity.sh
 ```
 
 `WSM_P2_REPEATS` задає кількість повторів; медіани рахуються з `target/fpc-parity/cycle.tsv`
@@ -106,14 +107,14 @@ WSM_P2_REPEATS=3 bash scripts/check-fpc-parity.sh
 
 ## Українською: одне речення
 
-Асемблер і Pascal у чотирьох клітинках Linux-target прототипу дають однакові `WSM-OS`-рядки після нормалізації CR; вимір циклу показав близько 1% compile time (277 мс проти ~15.6 с образу й завантаження). Це часткове свідчення, а не закриття P2 чи доказ `x86_64-embedded`.
+Linux-target контроль історично дав 4/4; новий embedded-target W3 smoke run також дав 4/4 і byte-identical value pins. Це ще не закриває P2: потрібні три повтори й фізичний замір на i5-6400.
 
 
 ---
 
 ## 6. Embedded-target W3 gate — 2026-11-27
 
-**Статус:** новий embedded parity gate реалізовано; CI run очікується. Linux-target вимір вище лишається історичним control і не підміняє embedded результат.
+**Статус:** перший embedded CI run #46073255854 завершився SUCCESS; 4/4 клітинки та pin identity PASS. Linux-target вимір вище лишається історичним control і не підміняє embedded результат. Workflow тепер налаштовано на три повтори для стабільнішої медіани.
 
 Новий `scripts/check-fpc-embedded-parity.sh` використовує checksum-pinned FPC 3.3.1 `x86_64-embedded` toolchain, встановлену `scripts/probe-fpc-embedded.sh`. Обидва Pascal сценарії — окремі `unit` модулі:
 - value: `src/pascal_probe.pas`;
@@ -134,4 +135,6 @@ WSM_P2_REPEATS=3 bash scripts/check-fpc-parity.sh
 - порожній `nm -u` у фінальному Pascal kernel;
 - compile, image-build і QEMU+verify час окремо, із сирими TSV та SHA-256 образів.
 
-Цей workflow працює на GitHub-hosted runner з TCG/OVMF. Його часи — CI datapoints, не вимірювання на фізичному i5-6400. P2 не закривається лише від створення gate: потрібні зелений CI, перегляд усіх артефактів і окремий фізичний замір на власному хості.
+Перший результат (один повтор, лише smoke datapoint): ASM/Pascal value pins byte-identical; value та OOM дали однакові повні `WSM-OS` рядки. `COMPILE`: asm 14 ms, Pascal 33 ms; `BUILD`: asm 1241 ms, Pascal 1119 ms; `BOOT+verify`: asm 2622 ms, Pascal 2626 ms. Артефакт [15234370801](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46073255854/artifacts/15234370801). Workflow тепер запускає три повтори.
+
+Цей workflow працює на GitHub-hosted runner з TCG/OVMF. Його часи — CI datapoints, не вимірювання на фізичному i5-6400. P2 не закривається лише від першого зеленого smoke run: потрібні три повтори, перегляд усіх артефактів і окремий фізичний замір на власному хості.

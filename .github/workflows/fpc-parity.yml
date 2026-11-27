@@ -53,7 +53,7 @@ jobs:
       - name: Pin and verify FPC x86_64-embedded toolchain
         run: timeout 300s bash scripts/probe-fpc-embedded.sh
       - name: Compare ASM and Pascal value/OOM paths on embedded target
-        run: WSM_P2_REPEATS=1 timeout 300s bash scripts/check-fpc-embedded-parity.sh
+        run: WSM_P2_REPEATS=3 timeout 300s bash scripts/check-fpc-embedded-parity.sh
       - name: Upload embedded parity and cycle records
         if: always()
         uses: actions/upload-artifact@v4
