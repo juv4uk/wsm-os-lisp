@@ -49,6 +49,16 @@ jobs:
         run: bash scripts/check-target-observer-bounded.sh
       - name: Verify CML fixture provenance
         run: bash scripts/check-cml-provenance.sh
+      - uses: actions/checkout@v4
+        with:
+          repository: juv4uk/wsm-target-contract
+          ref: b2176f95e1965d6c3c425dd42bde95958d5d4469
+          path: wsm-target-contract
+          persist-credentials: false
+          submodules: false
+      - name: Seed pinned target ABI source for Cargo
+        run: |
+          git config --global url."file://${GITHUB_WORKSPACE}/wsm-target-contract".insteadOf "https://github.com/juv4uk/wsm-target-contract.git"
       - name: Setup pinned CML compiler toolchain
         run: |
           CML_REV="$(sed -n 's/.*(cml-revision "\([0-9a-f]\{40\}\)").*/\1/p' contracts/cml.lock)"
