@@ -32,7 +32,7 @@ def command_version(command: str) -> str:
     executable = shutil.which(command)
     if not executable:
         raise RuntimeError(f"required compiler not found: {command}")
-    args = [executable, "-iV"] if command == "fpc" else [executable, "--version"]
+    args = [executable, "-iV"] if command == "fpc" else ([executable, "-v"] if command == "tcc" else [executable, "--version"])
     result = subprocess.run(args, text=True, stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, check=False, timeout=10)
     line = next((line.strip() for line in result.stdout.splitlines() if line.strip()), "unknown")
@@ -52,9 +52,9 @@ def main() -> int:
 
     specs = [
         ("fpc", ["fpc", "-O-", "-vw", "-FE{out}", "-FU{out}", "-o{bin}", str(PAS_SOURCE)]),
-        ("tcc", ["tcc", "-std=c11", "-Wall", str(C_SOURCE), "-o", "{bin}"]),
-        ("clang", ["clang", "-std=c11", "-O0", "-Wall", "-Wextra", "-Werror", str(C_SOURCE), "-o", "{bin}"]),
-        ("gcc", ["gcc", "-std=c11", "-O0", "-Wall", "-Wextra", "-Werror", str(C_SOURCE), "-o", "{bin}"]),
+        ("tcc", ["tcc", "-std=c99", "-Wall", str(C_SOURCE), "-o", "{bin}"]),
+        ("clang", ["clang", "-std=c99", "-O0", "-Wall", "-Wextra", "-Werror", str(C_SOURCE), "-o", "{bin}"]),
+        ("gcc", ["gcc", "-std=c99", "-O0", "-Wall", "-Wextra", "-Werror", str(C_SOURCE), "-o", "{bin}"]),
     ]
     sources = {
         "c_sha256": hashlib.sha256(C_SOURCE.read_bytes()).hexdigest(),
