@@ -87,6 +87,8 @@ The freestanding P0 profile does not yet claim all of these semantic paths are i
 - **Компілятор і lowering:** CML. Він знижує допущені SENS-ідентичності до версійованих target imports, але не визначає семантику мови.
 - **Runtime, ОС і докази виконання:** цей репозиторій.
 
+**Застереження щодо міграції компілятора:** `contracts/cml.lock` досі закріплює CML `48f9b1566f899a48132bbff44ecf33f816e2cbd9`, у x86 backend якого є активна таблиця прямої диспетчеризації SID8. Перевірений знімок CML `master@ccd38c9c6facbf463f2baaae537882d017161cc1` уже має точні D1 emitters (`wsm_atom_predicate_bit` / `wsm_eq_predicate_bit`), але також зберігає SID8 fallback. Жоден з цих станів не є чистим production-компілятором Contract 12.0, доки fallback не буде вилучено або зроблено невиконуваним і не покрито негативними тестами. Runtime v10 має нові імпорти, а окрема QEMU-фікстура перевіряє позитивні D1-відповіді; це ще не доводить повний шлях pinned CML → runtime.
+
 Згенерована проєкція `target-contract.lisp` є джерелом істини ABI. Цей документ лише пояснює її.
 
 ## Представлення слова
