@@ -11,6 +11,7 @@ on:
     branches: [main]
     paths:
       - "benchmarks/toolchain/**"
+      - "benchmarks/multilang/**"
       - ".github/workflows/toolchain-iteration-benchmark.yml"
 
 permissions:
