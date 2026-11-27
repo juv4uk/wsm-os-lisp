@@ -83,7 +83,7 @@ The freestanding P0 profile does not yet claim all of these semantic paths are i
 ## Джерела влади
 
 - **Мовне значення:** [SENS Contract 12.0](https://github.com/juv4uk/sens/blob/main/contracts/language-contract-12.lisp).
-- **Машинне представлення:** [wsm-target-contract](https://github.com/juv4uk/wsm-target-contract), pin у `target-abi-pin.lisp`: commit `8e2e761661ef2a49901f68c0b2e333b5b06c3f1e`, ABI версії 10.
+- **Машинне представлення:** [wsm-target-contract](https://github.com/juv4uk/wsm-target-contract), pin у `target-abi-pin.lisp`: commit `b2176f95e1965d6c3c425dd42bde95958d5d4469`, ABI версії 11.
 - **Компілятор і lowering:** CML. Він знижує допущені SENS-ідентичності до версійованих target imports, але не визначає семантику мови.
 - **Runtime, ОС і докази виконання:** цей репозиторій.
 
