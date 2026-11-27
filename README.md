@@ -262,7 +262,7 @@ assemble плюс link — медіана 168 мс, і саме з цим чис
 перший ланцюжок виконання: зафіксований семантичний свідок SENS, CML-згенерований
 об'єкт, hosted-середовище виконання, автономний (freestanding) UEFI-образ
 та обмежене виконання в QEMU погоджуються щодо результату `(A . B)`.
-Це `QEMU-BOOT-PARITY`, а не твердження про роботу на фізичному обладнанні. Закріплений object лишається історичною CML-фікстурою до Contract 12.0 (окремий pin генератора — `contracts/fixture-cml.lock`). Поточний CML pin `84c1cff` уже відхиляє legacy SID8/Cond у freestanding x86 backend; focused workflow Contract 12 D1/Pair/COND проходить. Кореневі CML AST/IR і SENS submodule ще не повністю мігровані, а поточну fixture ще не перебудовано через новий mechanism path; див. [docs/TARGET-ABI.md](docs/TARGET-ABI.md) та [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109).
+Це `QEMU-BOOT-PARITY`, а не твердження про роботу на фізичному обладнанні. Закріплений object лишається історичною CML-фікстурою до Contract 12.0 (окремий pin генератора — `contracts/fixture-cml.lock`). Поточний CML pin `8f55b03` відхиляє legacy SID8/Cond у freestanding x86 backend і має окремий current-SENS D1/двопольовий COND assembly test. Додано workflow [current-SENS → WSM QEMU](.github/workflows/current-sens-x86-qemu.yml), який перебудовує цей асемблерний об'єкт і запускає його на WSM runtime; його результат ще очікується. CML SENS submodule все ще API епохи 11.8, тому це не доказ повної відповідності Contract 12.0. Кореневі CML AST/IR та інші backends іще не повністю мігровані; див. [docs/TARGET-ABI.md](docs/TARGET-ABI.md) та [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109).
 
 ## Ліцензія
 
