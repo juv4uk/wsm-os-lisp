@@ -3,9 +3,10 @@
 ;; to freestanding x86 without SID8 dispatch; finite D1/EQ/COND polling is
 ;; covered by CML test and WSM QEMU integration.
 ;; CML's SENS submodule remains Contract 11.8-era; not full Contract 12.0 yet.
-(cml-revision "79b3d69102b8d45e0f949e77049120b50cdd31be")
+(cml-revision "004362ea3dbda8a0d2f73eb69c5b7ae43e07a609")
 (sens-submodule-revision "d0787a40fcea36501747732aa61b6de19fe29c70")
 (target-abi-revision "b2176f95e1965d6c3c425dd42bde95958d5d4469")
 (x86-legacy-sid8-dispatch . retired)
 (current-sens-d1-eq-cond-mmio-qemu . pending)
+(current-sens-selector-type-failure-qemu . pending)
 (current-sens-bounded-mmio-poll-qemu . pending)
