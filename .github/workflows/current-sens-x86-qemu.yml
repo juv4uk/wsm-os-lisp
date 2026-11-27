@@ -114,8 +114,6 @@ jobs:
       - name: Execute current SENS D1/COND artifact in QEMU
         working-directory: wsm-os-lisp
         env:
-          OVMF_CODE: /usr/share/OVMF/OVMF_CODE.fd
-          OVMF_VARS: /usr/share/OVMF/OVMF_VARS.fd
           WSM_QEMU_TRANSCRIPT: ${{ github.workspace }}/expected-current-sens-transcript.txt
           CURRENT_SENS_MANIFEST: ${{ github.workspace }}/current-sens-d1-cond-manifest.json
         run: |
