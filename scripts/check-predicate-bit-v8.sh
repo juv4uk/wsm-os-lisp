@@ -2,13 +2,13 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-work="$(mktemp -d /tmp/wsm-predicate-bit-v8.XXXXXX)"
+work="$(mktemp -d /tmp/wsm-predicate-bit-v10.XXXXXX)"
 trap 'rm -rf "$work"' EXIT
-out="$ROOT_DIR/target/predicate-bit-v8"
+out="$ROOT_DIR/target/predicate-bit-v10"
 mkdir -p "$out"
 
-as --64 "$ROOT_DIR/artifacts/predicate-bit-v8-probe.s" -o "$work/positive.o"
-as --64 "$ROOT_DIR/artifacts/predicate-bit-v8-malformed-probe.s" -o "$work/malformed.o"
+as --64 "$ROOT_DIR/artifacts/predicate-bit-v10-probe.s" -o "$work/positive.o"
+as --64 "$ROOT_DIR/artifacts/predicate-bit-v10-malformed-probe.s" -o "$work/malformed.o"
 
 bash "$ROOT_DIR/scripts/build-uefi-image.sh" "$work/positive.o" "$work/positive.img" >/dev/null
 bash "$ROOT_DIR/scripts/build-uefi-image.sh" "$work/malformed.o" "$work/malformed.img" >/dev/null
@@ -37,11 +37,11 @@ runtime_sha="$(sha256sum "$ROOT_DIR/src/runtime.s" | awk '{print $1}')"
 
 cat >"$out/witness.json" <<EOF
 {
-  "schema": "wsm-os-predicate-bit-v8/v1",
+  "schema": "wsm-os-predicate-bit-v10/v1",
   "issue": 86,
   "status": "PASS",
   "target_contract_commit": "b5ec3211f6bd07fb7c4a5f704875892eff145b91",
-  "target_contract_version": 8,
+  "target_contract_version": 10,
   "boxed_kind_predicate_bit": 5,
   "bit_width": 1,
   "local_session_handles": [1, 2],
@@ -58,5 +58,5 @@ cat >"$out/witness.json" <<EOF
 }
 EOF
 
-echo "PREDICATE-BIT-V8: PASS"
+echo "PREDICATE-BIT-V10: PASS"
 echo "stable-singletons=true exact-bits=0,1 malformed-handle=ABI-fail-closed"
