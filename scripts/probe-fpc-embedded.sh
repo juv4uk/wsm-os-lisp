@@ -94,16 +94,25 @@ else
 fi
 
 if [ "$COMPILE_RC" -eq 0 ] && [ -f "$OBJ" ]; then
-  set +e
-  ld -T "$ROOT/src/linker.ld" -Map="$OUT/embedded-link.map" -o "$OUT/embedded-link.elf" "$OBJ" > "$OUT/link.txt" 2>&1
-  LINK_RC=$?
-  set -e
-  echo "LINK_EXIT=$LINK_RC"
-  cat "$OUT/link.txt"
-  if [ -f "$OUT/embedded-link.elf" ]; then
-    file "$OUT/embedded-link.elf" > "$OUT/final-format.txt"
-    nm -u "$OUT/embedded-link.elf" > "$OUT/final-undefined-symbols.txt" 2>&1 || true
-    size "$OUT/embedded-link.elf" > "$OUT/final-size.txt" 2>&1 || true
+  as --64 -o "$OUT/units/fpc_embedded_entry.o" "$ROOT/tests/fpc_embedded_entry.s" > "$OUT/assembly.txt" 2>&1
+  AS_RC=$?
+  echo "ASSEMBLY_EXIT=$AS_RC"
+  cat "$OUT/assembly.txt"
+  if [ "$AS_RC" -eq 0 ]; then
+    set +e
+    ld -T "$ROOT/src/linker.ld" -Map="$OUT/embedded-link.map" \
+      -o "$OUT/embedded-link.elf" "$OUT/units/fpc_embedded_entry.o" "$OBJ" > "$OUT/link.txt" 2>&1
+    LINK_RC=$?
+    set -e
+    echo "LINK_EXIT=$LINK_RC"
+    cat "$OUT/link.txt"
+    if [ -f "$OUT/embedded-link.elf" ]; then
+      file "$OUT/embedded-link.elf" > "$OUT/final-format.txt"
+      nm -u "$OUT/embedded-link.elf" > "$OUT/final-undefined-symbols.txt" 2>&1 || true
+      nm -g "$OUT/embedded-link.elf" > "$OUT/final-global-symbols.txt" 2>&1 || true
+      objdump -d "$OUT/embedded-link.elf" > "$OUT/final-disassembly.txt" 2>&1 || true
+      size "$OUT/embedded-link.elf" > "$OUT/final-size.txt" 2>&1 || true
+    fi
   fi
 else
   echo "LINK_STATUS=SKIPPED_COMPILE_FAILED"
