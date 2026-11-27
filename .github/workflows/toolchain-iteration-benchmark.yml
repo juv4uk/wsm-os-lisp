@@ -1,0 +1,45 @@
+name: Toolchain iteration benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: "Warm samples per compiler (minimum 5)"
+        required: false
+        default: "15"
+  push:
+    branches: [main]
+    paths:
+      - "benchmarks/toolchain/**"
+      - ".github/workflows/toolchain-iteration-benchmark.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: toolchain-iteration-benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned-family compiler packages
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            fp-compiler tcc clang gcc
+      - name: Record toolchain iteration latency
+        env:
+          WSM_TOOLCHAIN_RUNS: ${{ github.event.inputs.runs || '15' }}
+          WSM_TOOLCHAIN_OUT: target/toolchain-iteration-benchmark
+        run: python3 benchmarks/toolchain/measure.py
+      - name: Upload raw samples and summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolchain-iteration-${{ github.sha }}
+          path: target/toolchain-iteration-benchmark/
+          if-no-files-found: warn
