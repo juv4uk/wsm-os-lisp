@@ -8,9 +8,13 @@ set -euo pipefail
 # common-config register through an opaque MMIO capability:
 #
 #   fixture: ((lambda (mmio)
-#               ((lambda (_) (eq (mmio-read32 mmio 20) 1))
+#               ((lambda (_) (mmio-read32 mmio 20))
 #                (mmio-write32 mmio 20 1)))
 #             (mmio-capability))
+#
+# The fixture returns the raw read-back fixnum 1. It deliberately does not
+# call the historical Lisp EQ entry: EQ is a D1 predicate and must enter via
+# the verified current-SENS PredicateBit mechanism, not a retired SID8 alias.
 #
 # Register 20 (0x14) is virtio-pci common-config device_status: writing 1
 # (ACKNOWLEDGE) and reading it back must yield 1.
@@ -19,7 +23,9 @@ set -euo pipefail
 # value in %rcx through .Ldecode_check_mmio_cap, which clobbers %rcx with the
 # capability nonce, so every store wrote low32(nonce << 16 >> 3) == 0x4868E000
 # instead of the intended value; the read back was 0 and the fixture yielded
-# nil. The fixture itself never sees a physical or virtual address.
+# nil. The fixture itself never sees a physical or virtual address. The final
+# result is the raw device_status word (1), so this mechanism witness does not
+# infer equality semantics from the device register.
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -47,9 +53,14 @@ fixture_lisp="$ROOT_DIR/artifacts/d2-virtio-blk-status-fixture.lisp"
 }
 
 # The generated asm must actually request the MMIO substrate operations.
-if ! grep -q 'call wsm_mmio_write32' "$work/fixture.s" || \
+if ! grep -q 'call wsm_mmio_capability' "$work/fixture.s" || \
+   ! grep -q 'call wsm_mmio_write32' "$work/fixture.s" || \
    ! grep -q 'call wsm_mmio_read32' "$work/fixture.s"; then
-  echo "MMIO-DEVICE-OP: FAIL (CML did not emit wsm_mmio_read32/write32)" >&2
+  echo "MMIO-DEVICE-OP: FAIL (CML did not emit all MMIO machine-mechanism imports)" >&2
+  exit 1
+fi
+if grep -Eq 'call wsm_eq([[:space:]]|$)|call wsm_atom([[:space:]]|$)' "$work/fixture.s"; then
+  echo "MMIO-DEVICE-OP: FAIL (legacy truth-valued predicate import leaked into current device fixture)" >&2
   exit 1
 fi
 
@@ -71,4 +82,4 @@ observed="$(WSM_QEMU_DATA_DISK="$data_disk" \
 }
 
 printf '%s\n' "$observed"
-echo "MMIO-DEVICE-OP: PASS (Lisp device op writes/reads real virtio-blk device_status via opaque MMIO capability)"
+echo "MMIO-DEVICE-OP: PASS (compiler-owned MMIO machine ops write/read virtio-blk device_status; raw read-back=1; no legacy predicate import)"
