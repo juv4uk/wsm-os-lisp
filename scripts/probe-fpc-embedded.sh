@@ -98,8 +98,393 @@ if [ "$COMPILE_RC" -eq 0 ] && [ -f "$OBJ" ]; then
   if [ -f "$FPC_ASM" ]; then
     cp "$FPC_ASM" "$OUT/fpc-generated-assembly.s"
     ABI_ASM_OK=1
-    for pattern in 'movq $4,%r9' 'movq $3,%r8' 'movq $2,%rdx' \
-      'movq $1,%rcx' 'call *' 'movq %rcx,-8(%rbp)' 'movq %rdx,-16(%rbp)'; do
+    for pattern in 
+      if ! grep -Fq "$pattern" "$FPC_ASM"; then
+        echo "MS_ABI_PATTERN_MISSING=$pattern"
+        ABI_ASM_OK=0
+      fi
+    done
+    if [ "$ABI_ASM_OK" -eq 1 ]; then
+      echo "MS_ABI_DISASSEMBLY=PASS"
+    else
+      echo "MS_ABI_DISASSEMBLY=FAIL"
+      exit 12
+    fi
+  else
+    echo "MS_ABI_DISASSEMBLY=FAIL"
+    exit 9
+  fi
+  as --64 -o "$OUT/units/fpc_embedded_entry.o" "$ROOT/tests/fpc_embedded_entry.s" > "$OUT/assembly.txt" 2>&1
+  AS_RC=$?
+  echo "ASSEMBLY_EXIT=$AS_RC"
+  cat "$OUT/assembly.txt"
+  if [ "$AS_RC" -eq 0 ]; then
+    set +e
+    ld --gc-sections -T "$ROOT/src/linker.ld" -Map="$OUT/embedded-link.map" \
+      -o "$OUT/embedded-link.elf" "$OUT/units/fpc_embedded_entry.o" "$OBJ" > "$OUT/link.txt" 2>&1
+    LINK_RC=$?
+    set -e
+    echo "LINK_EXIT=$LINK_RC"
+    cat "$OUT/link.txt"
+    if [ -f "$OUT/embedded-link.elf" ]; then
+      file "$OUT/embedded-link.elf" > "$OUT/final-format.txt"
+      nm -u "$OUT/embedded-link.elf" > "$OUT/final-undefined-symbols.txt" 2>&1 || true
+      nm -g "$OUT/embedded-link.elf" > "$OUT/final-global-symbols.txt" 2>&1 || true
+      objdump -d "$OUT/embedded-link.elf" > "$OUT/final-disassembly.txt" 2>&1 || true
+      size "$OUT/embedded-link.elf" > "$OUT/final-size.txt" 2>&1 || true
+      if [ -s "$OUT/final-undefined-symbols.txt" ]; then
+        echo "FINAL_UNDEFINED_SYMBOLS=FAIL"
+        cat "$OUT/final-undefined-symbols.txt"
+        exit 10
+      fi
+      echo "FINAL_UNDEFINED_SYMBOLS=NONE"
+    fi
+  fi
+else
+  echo "LINK_STATUS=SKIPPED_COMPILE_FAILED"
+fi
+
+echo "QEMU_WITNESS=NOT_ATTEMPTED"
+echo "P0_ACCEPTANCE=NOT_ESTABLISHED"
+echo "FPC_EMBEDDED_PROBE=EVIDENCE_COLLECTED"
+movq\\t$4,%r9' 
+      if ! grep -Fq "$pattern" "$FPC_ASM"; then
+        echo "MS_ABI_PATTERN_MISSING=$pattern"
+        ABI_ASM_OK=0
+      fi
+    done
+    if [ "$ABI_ASM_OK" -eq 1 ]; then
+      echo "MS_ABI_DISASSEMBLY=PASS"
+    else
+      echo "MS_ABI_DISASSEMBLY=FAIL"
+    fi
+  else
+    echo "MS_ABI_DISASSEMBLY=FAIL"
+    exit 9
+  fi
+  as --64 -o "$OUT/units/fpc_embedded_entry.o" "$ROOT/tests/fpc_embedded_entry.s" > "$OUT/assembly.txt" 2>&1
+  AS_RC=$?
+  echo "ASSEMBLY_EXIT=$AS_RC"
+  cat "$OUT/assembly.txt"
+  if [ "$AS_RC" -eq 0 ]; then
+    set +e
+    ld --gc-sections -T "$ROOT/src/linker.ld" -Map="$OUT/embedded-link.map" \
+      -o "$OUT/embedded-link.elf" "$OUT/units/fpc_embedded_entry.o" "$OBJ" > "$OUT/link.txt" 2>&1
+    LINK_RC=$?
+    set -e
+    echo "LINK_EXIT=$LINK_RC"
+    cat "$OUT/link.txt"
+    if [ -f "$OUT/embedded-link.elf" ]; then
+      file "$OUT/embedded-link.elf" > "$OUT/final-format.txt"
+      nm -u "$OUT/embedded-link.elf" > "$OUT/final-undefined-symbols.txt" 2>&1 || true
+      nm -g "$OUT/embedded-link.elf" > "$OUT/final-global-symbols.txt" 2>&1 || true
+      objdump -d "$OUT/embedded-link.elf" > "$OUT/final-disassembly.txt" 2>&1 || true
+      size "$OUT/embedded-link.elf" > "$OUT/final-size.txt" 2>&1 || true
+      if [ -s "$OUT/final-undefined-symbols.txt" ]; then
+        echo "FINAL_UNDEFINED_SYMBOLS=FAIL"
+        cat "$OUT/final-undefined-symbols.txt"
+        exit 10
+      fi
+      echo "FINAL_UNDEFINED_SYMBOLS=NONE"
+    fi
+  fi
+else
+  echo "LINK_STATUS=SKIPPED_COMPILE_FAILED"
+fi
+
+echo "QEMU_WITNESS=NOT_ATTEMPTED"
+echo "P0_ACCEPTANCE=NOT_ESTABLISHED"
+echo "FPC_EMBEDDED_PROBE=EVIDENCE_COLLECTED"
+movq\\t$3,%r8' 
+      if ! grep -Fq "$pattern" "$FPC_ASM"; then
+        echo "MS_ABI_PATTERN_MISSING=$pattern"
+        ABI_ASM_OK=0
+      fi
+    done
+    if [ "$ABI_ASM_OK" -eq 1 ]; then
+      echo "MS_ABI_DISASSEMBLY=PASS"
+    else
+      echo "MS_ABI_DISASSEMBLY=FAIL"
+    fi
+  else
+    echo "MS_ABI_DISASSEMBLY=FAIL"
+    exit 9
+  fi
+  as --64 -o "$OUT/units/fpc_embedded_entry.o" "$ROOT/tests/fpc_embedded_entry.s" > "$OUT/assembly.txt" 2>&1
+  AS_RC=$?
+  echo "ASSEMBLY_EXIT=$AS_RC"
+  cat "$OUT/assembly.txt"
+  if [ "$AS_RC" -eq 0 ]; then
+    set +e
+    ld --gc-sections -T "$ROOT/src/linker.ld" -Map="$OUT/embedded-link.map" \
+      -o "$OUT/embedded-link.elf" "$OUT/units/fpc_embedded_entry.o" "$OBJ" > "$OUT/link.txt" 2>&1
+    LINK_RC=$?
+    set -e
+    echo "LINK_EXIT=$LINK_RC"
+    cat "$OUT/link.txt"
+    if [ -f "$OUT/embedded-link.elf" ]; then
+      file "$OUT/embedded-link.elf" > "$OUT/final-format.txt"
+      nm -u "$OUT/embedded-link.elf" > "$OUT/final-undefined-symbols.txt" 2>&1 || true
+      nm -g "$OUT/embedded-link.elf" > "$OUT/final-global-symbols.txt" 2>&1 || true
+      objdump -d "$OUT/embedded-link.elf" > "$OUT/final-disassembly.txt" 2>&1 || true
+      size "$OUT/embedded-link.elf" > "$OUT/final-size.txt" 2>&1 || true
+      if [ -s "$OUT/final-undefined-symbols.txt" ]; then
+        echo "FINAL_UNDEFINED_SYMBOLS=FAIL"
+        cat "$OUT/final-undefined-symbols.txt"
+        exit 10
+      fi
+      echo "FINAL_UNDEFINED_SYMBOLS=NONE"
+    fi
+  fi
+else
+  echo "LINK_STATUS=SKIPPED_COMPILE_FAILED"
+fi
+
+echo "QEMU_WITNESS=NOT_ATTEMPTED"
+echo "P0_ACCEPTANCE=NOT_ESTABLISHED"
+echo "FPC_EMBEDDED_PROBE=EVIDENCE_COLLECTED"
+movq\\t$2,%rdx' \
+      
+      if ! grep -Fq "$pattern" "$FPC_ASM"; then
+        echo "MS_ABI_PATTERN_MISSING=$pattern"
+        ABI_ASM_OK=0
+      fi
+    done
+    if [ "$ABI_ASM_OK" -eq 1 ]; then
+      echo "MS_ABI_DISASSEMBLY=PASS"
+    else
+      echo "MS_ABI_DISASSEMBLY=FAIL"
+    fi
+  else
+    echo "MS_ABI_DISASSEMBLY=FAIL"
+    exit 9
+  fi
+  as --64 -o "$OUT/units/fpc_embedded_entry.o" "$ROOT/tests/fpc_embedded_entry.s" > "$OUT/assembly.txt" 2>&1
+  AS_RC=$?
+  echo "ASSEMBLY_EXIT=$AS_RC"
+  cat "$OUT/assembly.txt"
+  if [ "$AS_RC" -eq 0 ]; then
+    set +e
+    ld --gc-sections -T "$ROOT/src/linker.ld" -Map="$OUT/embedded-link.map" \
+      -o "$OUT/embedded-link.elf" "$OUT/units/fpc_embedded_entry.o" "$OBJ" > "$OUT/link.txt" 2>&1
+    LINK_RC=$?
+    set -e
+    echo "LINK_EXIT=$LINK_RC"
+    cat "$OUT/link.txt"
+    if [ -f "$OUT/embedded-link.elf" ]; then
+      file "$OUT/embedded-link.elf" > "$OUT/final-format.txt"
+      nm -u "$OUT/embedded-link.elf" > "$OUT/final-undefined-symbols.txt" 2>&1 || true
+      nm -g "$OUT/embedded-link.elf" > "$OUT/final-global-symbols.txt" 2>&1 || true
+      objdump -d "$OUT/embedded-link.elf" > "$OUT/final-disassembly.txt" 2>&1 || true
+      size "$OUT/embedded-link.elf" > "$OUT/final-size.txt" 2>&1 || true
+      if [ -s "$OUT/final-undefined-symbols.txt" ]; then
+        echo "FINAL_UNDEFINED_SYMBOLS=FAIL"
+        cat "$OUT/final-undefined-symbols.txt"
+        exit 10
+      fi
+      echo "FINAL_UNDEFINED_SYMBOLS=NONE"
+    fi
+  fi
+else
+  echo "LINK_STATUS=SKIPPED_COMPILE_FAILED"
+fi
+
+echo "QEMU_WITNESS=NOT_ATTEMPTED"
+echo "P0_ACCEPTANCE=NOT_ESTABLISHED"
+echo "FPC_EMBEDDED_PROBE=EVIDENCE_COLLECTED"
+movq\\t$1,%rcx' 
+      if ! grep -Fq "$pattern" "$FPC_ASM"; then
+        echo "MS_ABI_PATTERN_MISSING=$pattern"
+        ABI_ASM_OK=0
+      fi
+    done
+    if [ "$ABI_ASM_OK" -eq 1 ]; then
+      echo "MS_ABI_DISASSEMBLY=PASS"
+    else
+      echo "MS_ABI_DISASSEMBLY=FAIL"
+    fi
+  else
+    echo "MS_ABI_DISASSEMBLY=FAIL"
+    exit 9
+  fi
+  as --64 -o "$OUT/units/fpc_embedded_entry.o" "$ROOT/tests/fpc_embedded_entry.s" > "$OUT/assembly.txt" 2>&1
+  AS_RC=$?
+  echo "ASSEMBLY_EXIT=$AS_RC"
+  cat "$OUT/assembly.txt"
+  if [ "$AS_RC" -eq 0 ]; then
+    set +e
+    ld --gc-sections -T "$ROOT/src/linker.ld" -Map="$OUT/embedded-link.map" \
+      -o "$OUT/embedded-link.elf" "$OUT/units/fpc_embedded_entry.o" "$OBJ" > "$OUT/link.txt" 2>&1
+    LINK_RC=$?
+    set -e
+    echo "LINK_EXIT=$LINK_RC"
+    cat "$OUT/link.txt"
+    if [ -f "$OUT/embedded-link.elf" ]; then
+      file "$OUT/embedded-link.elf" > "$OUT/final-format.txt"
+      nm -u "$OUT/embedded-link.elf" > "$OUT/final-undefined-symbols.txt" 2>&1 || true
+      nm -g "$OUT/embedded-link.elf" > "$OUT/final-global-symbols.txt" 2>&1 || true
+      objdump -d "$OUT/embedded-link.elf" > "$OUT/final-disassembly.txt" 2>&1 || true
+      size "$OUT/embedded-link.elf" > "$OUT/final-size.txt" 2>&1 || true
+      if [ -s "$OUT/final-undefined-symbols.txt" ]; then
+        echo "FINAL_UNDEFINED_SYMBOLS=FAIL"
+        cat "$OUT/final-undefined-symbols.txt"
+        exit 10
+      fi
+      echo "FINAL_UNDEFINED_SYMBOLS=NONE"
+    fi
+  fi
+else
+  echo "LINK_STATUS=SKIPPED_COMPILE_FAILED"
+fi
+
+echo "QEMU_WITNESS=NOT_ATTEMPTED"
+echo "P0_ACCEPTANCE=NOT_ESTABLISHED"
+echo "FPC_EMBEDDED_PROBE=EVIDENCE_COLLECTED"
+call\\t*' 
+      if ! grep -Fq "$pattern" "$FPC_ASM"; then
+        echo "MS_ABI_PATTERN_MISSING=$pattern"
+        ABI_ASM_OK=0
+      fi
+    done
+    if [ "$ABI_ASM_OK" -eq 1 ]; then
+      echo "MS_ABI_DISASSEMBLY=PASS"
+    else
+      echo "MS_ABI_DISASSEMBLY=FAIL"
+    fi
+  else
+    echo "MS_ABI_DISASSEMBLY=FAIL"
+    exit 9
+  fi
+  as --64 -o "$OUT/units/fpc_embedded_entry.o" "$ROOT/tests/fpc_embedded_entry.s" > "$OUT/assembly.txt" 2>&1
+  AS_RC=$?
+  echo "ASSEMBLY_EXIT=$AS_RC"
+  cat "$OUT/assembly.txt"
+  if [ "$AS_RC" -eq 0 ]; then
+    set +e
+    ld --gc-sections -T "$ROOT/src/linker.ld" -Map="$OUT/embedded-link.map" \
+      -o "$OUT/embedded-link.elf" "$OUT/units/fpc_embedded_entry.o" "$OBJ" > "$OUT/link.txt" 2>&1
+    LINK_RC=$?
+    set -e
+    echo "LINK_EXIT=$LINK_RC"
+    cat "$OUT/link.txt"
+    if [ -f "$OUT/embedded-link.elf" ]; then
+      file "$OUT/embedded-link.elf" > "$OUT/final-format.txt"
+      nm -u "$OUT/embedded-link.elf" > "$OUT/final-undefined-symbols.txt" 2>&1 || true
+      nm -g "$OUT/embedded-link.elf" > "$OUT/final-global-symbols.txt" 2>&1 || true
+      objdump -d "$OUT/embedded-link.elf" > "$OUT/final-disassembly.txt" 2>&1 || true
+      size "$OUT/embedded-link.elf" > "$OUT/final-size.txt" 2>&1 || true
+      if [ -s "$OUT/final-undefined-symbols.txt" ]; then
+        echo "FINAL_UNDEFINED_SYMBOLS=FAIL"
+        cat "$OUT/final-undefined-symbols.txt"
+        exit 10
+      fi
+      echo "FINAL_UNDEFINED_SYMBOLS=NONE"
+    fi
+  fi
+else
+  echo "LINK_STATUS=SKIPPED_COMPILE_FAILED"
+fi
+
+echo "QEMU_WITNESS=NOT_ATTEMPTED"
+echo "P0_ACCEPTANCE=NOT_ESTABLISHED"
+echo "FPC_EMBEDDED_PROBE=EVIDENCE_COLLECTED"
+movq\\t%rcx,-8(%rbp)' 
+      if ! grep -Fq "$pattern" "$FPC_ASM"; then
+        echo "MS_ABI_PATTERN_MISSING=$pattern"
+        ABI_ASM_OK=0
+      fi
+    done
+    if [ "$ABI_ASM_OK" -eq 1 ]; then
+      echo "MS_ABI_DISASSEMBLY=PASS"
+    else
+      echo "MS_ABI_DISASSEMBLY=FAIL"
+    fi
+  else
+    echo "MS_ABI_DISASSEMBLY=FAIL"
+    exit 9
+  fi
+  as --64 -o "$OUT/units/fpc_embedded_entry.o" "$ROOT/tests/fpc_embedded_entry.s" > "$OUT/assembly.txt" 2>&1
+  AS_RC=$?
+  echo "ASSEMBLY_EXIT=$AS_RC"
+  cat "$OUT/assembly.txt"
+  if [ "$AS_RC" -eq 0 ]; then
+    set +e
+    ld --gc-sections -T "$ROOT/src/linker.ld" -Map="$OUT/embedded-link.map" \
+      -o "$OUT/embedded-link.elf" "$OUT/units/fpc_embedded_entry.o" "$OBJ" > "$OUT/link.txt" 2>&1
+    LINK_RC=$?
+    set -e
+    echo "LINK_EXIT=$LINK_RC"
+    cat "$OUT/link.txt"
+    if [ -f "$OUT/embedded-link.elf" ]; then
+      file "$OUT/embedded-link.elf" > "$OUT/final-format.txt"
+      nm -u "$OUT/embedded-link.elf" > "$OUT/final-undefined-symbols.txt" 2>&1 || true
+      nm -g "$OUT/embedded-link.elf" > "$OUT/final-global-symbols.txt" 2>&1 || true
+      objdump -d "$OUT/embedded-link.elf" > "$OUT/final-disassembly.txt" 2>&1 || true
+      size "$OUT/embedded-link.elf" > "$OUT/final-size.txt" 2>&1 || true
+      if [ -s "$OUT/final-undefined-symbols.txt" ]; then
+        echo "FINAL_UNDEFINED_SYMBOLS=FAIL"
+        cat "$OUT/final-undefined-symbols.txt"
+        exit 10
+      fi
+      echo "FINAL_UNDEFINED_SYMBOLS=NONE"
+    fi
+  fi
+else
+  echo "LINK_STATUS=SKIPPED_COMPILE_FAILED"
+fi
+
+echo "QEMU_WITNESS=NOT_ATTEMPTED"
+echo "P0_ACCEPTANCE=NOT_ESTABLISHED"
+echo "FPC_EMBEDDED_PROBE=EVIDENCE_COLLECTED"
+movq\\t%rdx,-16(%rbp)' 
+      if ! grep -Fq "$pattern" "$FPC_ASM"; then
+        echo "MS_ABI_PATTERN_MISSING=$pattern"
+        ABI_ASM_OK=0
+      fi
+    done
+    if [ "$ABI_ASM_OK" -eq 1 ]; then
+      echo "MS_ABI_DISASSEMBLY=PASS"
+    else
+      echo "MS_ABI_DISASSEMBLY=FAIL"
+    fi
+  else
+    echo "MS_ABI_DISASSEMBLY=FAIL"
+    exit 9
+  fi
+  as --64 -o "$OUT/units/fpc_embedded_entry.o" "$ROOT/tests/fpc_embedded_entry.s" > "$OUT/assembly.txt" 2>&1
+  AS_RC=$?
+  echo "ASSEMBLY_EXIT=$AS_RC"
+  cat "$OUT/assembly.txt"
+  if [ "$AS_RC" -eq 0 ]; then
+    set +e
+    ld --gc-sections -T "$ROOT/src/linker.ld" -Map="$OUT/embedded-link.map" \
+      -o "$OUT/embedded-link.elf" "$OUT/units/fpc_embedded_entry.o" "$OBJ" > "$OUT/link.txt" 2>&1
+    LINK_RC=$?
+    set -e
+    echo "LINK_EXIT=$LINK_RC"
+    cat "$OUT/link.txt"
+    if [ -f "$OUT/embedded-link.elf" ]; then
+      file "$OUT/embedded-link.elf" > "$OUT/final-format.txt"
+      nm -u "$OUT/embedded-link.elf" > "$OUT/final-undefined-symbols.txt" 2>&1 || true
+      nm -g "$OUT/embedded-link.elf" > "$OUT/final-global-symbols.txt" 2>&1 || true
+      objdump -d "$OUT/embedded-link.elf" > "$OUT/final-disassembly.txt" 2>&1 || true
+      size "$OUT/embedded-link.elf" > "$OUT/final-size.txt" 2>&1 || true
+      if [ -s "$OUT/final-undefined-symbols.txt" ]; then
+        echo "FINAL_UNDEFINED_SYMBOLS=FAIL"
+        cat "$OUT/final-undefined-symbols.txt"
+        exit 10
+      fi
+      echo "FINAL_UNDEFINED_SYMBOLS=NONE"
+    fi
+  fi
+else
+  echo "LINK_STATUS=SKIPPED_COMPILE_FAILED"
+fi
+
+echo "QEMU_WITNESS=NOT_ATTEMPTED"
+echo "P0_ACCEPTANCE=NOT_ESTABLISHED"
+echo "FPC_EMBEDDED_PROBE=EVIDENCE_COLLECTED"
+leaq\\t-80(%rsp),%rsp'; do
       if ! grep -Fq "$pattern" "$FPC_ASM"; then
         echo "MS_ABI_PATTERN_MISSING=$pattern"
         ABI_ASM_OK=0
