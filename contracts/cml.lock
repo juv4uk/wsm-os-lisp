@@ -1,9 +1,11 @@
 ;; Current CML source pin consumed by the x86 freestanding compiler toolchain.
-;; Verified on 2026-11-27: focused current-SENS-to-x86 bridge passed; QEMU
-;; end-to-end job below exercises its D1/two-field COND output on WSM runtime.
-;; CML's SENS submodule remains 11.8-era; this is not full Contract 12 adoption.
-(cml-revision "8f55b0361c9fc3c3c1a9601fd4363e511819047d")
+;; Verified 2026-11-27: current SENS source and MMIO target operations lower
+;; to freestanding x86 without SID8 dispatch; finite D1/EQ/COND polling is
+;; covered by CML test and WSM QEMU integration.
+;; CML's SENS submodule remains Contract 11.8-era; not full Contract 12.0 yet.
+(cml-revision "79b3d69102b8d45e0f949e77049120b50cdd31be")
 (sens-submodule-revision "d0787a40fcea36501747732aa61b6de19fe29c70")
 (target-abi-revision "b2176f95e1965d6c3c425dd42bde95958d5d4469")
 (x86-legacy-sid8-dispatch . retired)
-(current-sens-d1-cond-qemu . pending)
+(current-sens-d1-eq-cond-mmio-qemu . pending)
+(current-sens-bounded-mmio-poll-qemu . pending)
