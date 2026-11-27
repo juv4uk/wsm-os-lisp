@@ -1,0 +1,147 @@
+name: Current SENS D1/COND to WSM x86 QEMU
+
+on:
+  push:
+    paths:
+      - "contracts/cml.lock"
+      - "target-abi-pin.lisp"
+      - "src/entry.s"
+      - "src/runtime.s"
+      - "src/linker.ld"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/ovmf-env.sh"
+      - "artifacts/bootx64.efi"
+      - ".github/workflows/current-sens-x86-qemu.yml"
+  pull_request:
+    paths:
+      - "contracts/cml.lock"
+      - "target-abi-pin.lisp"
+      - "src/entry.s"
+      - "src/runtime.s"
+      - "src/linker.ld"
+      - "scripts/build-uefi-image.sh"
+      - "scripts/run-qemu-uefi.sh"
+      - "scripts/ovmf-env.sh"
+      - "artifacts/bootx64.efi"
+      - ".github/workflows/current-sens-x86-qemu.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  current-sens-d1-cond:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: wsm-os-lisp
+
+      - uses: actions/checkout@v4
+        with:
+          repository: juv4uk/cml
+          ref: 8f55b0361c9fc3c3c1a9601fd4363e511819047d
+          path: cml
+          submodules: recursive
+
+      - uses: actions/checkout@v4
+        with:
+          repository: juv4uk/wsm-target-contract
+          ref: b2176f95e1965d6c3c425dd42bde95958d5d4469
+          path: wsm-target-contract
+
+      - name: Use the pinned neutral target ABI source
+        run: |
+          git config --global url."file://${GITHUB_WORKSPACE}/wsm-target-contract".insteadOf "https://github.com/juv4uk/wsm-target-contract.git"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install UEFI/QEMU image dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 ovmf mtools dosfstools gdisk binutils
+
+      - name: Generate x86 from verified current SENS source
+        working-directory: cml
+        env:
+          CML_CURRENT_SENS_X86_ASM_OUT: ${{ github.workspace }}/current-sens-d1-cond.s
+        run: |
+          cargo test --test wsm_os_current_x86_bridge_test \
+            current_sens_source_cond_lowers_to_exact_d1_x86_and_v11_imports \
+            -- --exact --nocapture
+
+      - name: Assemble current SENS object and pin provenance
+        working-directory: wsm-os-lisp
+        run: |
+          as --64 "${GITHUB_WORKSPACE}/current-sens-d1-cond.s" \
+            -o "${GITHUB_WORKSPACE}/current-sens-d1-cond.o"
+          CML_SHA="$(git -C "${GITHUB_WORKSPACE}/cml" rev-parse HEAD)"
+          SENS_SHA="$(git -C "${GITHUB_WORKSPACE}/cml/external/sens" rev-parse HEAD)"
+          TARGET_SHA="$(git -C "${GITHUB_WORKSPACE}/wsm-target-contract" rev-parse HEAD)"
+          SOURCE='(за-умовою ((атом? 7) 42))'
+          SOURCE_SHA="$(printf '%s' "$SOURCE" | sha256sum | awk '{print $1}')"
+          ASM_SHA="$(sha256sum "${GITHUB_WORKSPACE}/current-sens-d1-cond.s" | awk '{print $1}')"
+          OBJ_SHA="$(sha256sum "${GITHUB_WORKSPACE}/current-sens-d1-cond.o" | awk '{print $1}')"
+          cat > "${GITHUB_WORKSPACE}/current-sens-d1-cond-manifest.json" <<EOF
+          {
+            "schema": "wsm-os-current-sens-d1-cond-qemu/1",
+            "status": "pending-qemu",
+            "source": "$SOURCE",
+            "source_sha256": "$SOURCE_SHA",
+            "cml_commit": "$CML_SHA",
+            "sens_submodule_commit": "$SENS_SHA",
+            "sens_contract_version": "11.8",
+            "target_abi_commit": "$TARGET_SHA",
+            "target_abi_version": 11,
+            "assembly_sha256": "$ASM_SHA",
+            "object_sha256": "$OBJ_SHA",
+            "semantic_scope": ["D1 ATOM", "D1 EQ", "two-field D3 COND"],
+            "conformance_note": "The CML SENS submodule is pinned to the 11.8-era API. This is a current-domain D1/COND runtime witness, not a claim of complete SENS Contract 12.0 conformance."
+          }
+          EOF
+
+      - name: Build the unchanged WSM UEFI runtime around the current CML object
+        working-directory: wsm-os-lisp
+        run: |
+          bash scripts/build-uefi-image.sh \
+            "${GITHUB_WORKSPACE}/current-sens-d1-cond.o" \
+            "${GITHUB_WORKSPACE}/current-sens-d1-cond.img"
+
+      - name: Execute current SENS D1/COND artifact in QEMU
+        working-directory: wsm-os-lisp
+        env:
+          OVMF_CODE: /usr/share/OVMF/OVMF_CODE.fd
+          OVMF_VARS: /usr/share/OVMF/OVMF_VARS.fd
+          WSM_QEMU_TRANSCRIPT: ${{ github.workspace }}/expected-current-sens-transcript.txt
+        run: |
+          cat > "$WSM_QEMU_TRANSCRIPT" <<'EOF'
+          WSM-OS BOOT schema=1 arch=x86_64 status=ok
+          WSM-OS RESULT schema=1 value=42 status=ok
+          EOF
+          bash scripts/run-qemu-uefi.sh "${GITHUB_WORKSPACE}/current-sens-d1-cond.img"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("${GITHUB_WORKSPACE}/current-sens-d1-cond-manifest.json")
+          data = json.loads(path.read_text())
+          data["status"] = "PASS"
+          data["qemu_observation"] = "WSM-OS RESULT schema=1 value=42 status=ok"
+          path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+          PY
+
+      - name: Upload pinned source-to-QEMU evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: current-sens-d1-cond-qemu
+          path: |
+            current-sens-d1-cond.s
+            current-sens-d1-cond.o
+            current-sens-d1-cond.img
+            current-sens-d1-cond-manifest.json
+            wsm-os-lisp/target/kernel-x86_64
+          if-no-files-found: warn
