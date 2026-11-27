@@ -116,7 +116,7 @@ def main() -> int:
             "fpc": "-O- -vw (native Linux target)",
             "tcc": "-std=c99 -Wall (TCC default fast compile)",
             "clang": "-std=c99 -O0 -Wall -Wextra -Werror",
-            "gcc": "-std=c11 -O0 -Wall -Wextra -Werror",
+            "gcc": "-std=c99 -O0 -Wall -Wextra -Werror",
         },
         "note": "Unoptimized fast-feedback probe; not a production performance comparison.",
         "results": {},

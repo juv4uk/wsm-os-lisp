@@ -1,6 +1,6 @@
 # Вимірювання циклу компіляції: FPC, TCC, Clang і GCC
 
-**Статус:** harness додано; результати очікують першого GitHub Actions запуску.  
+**Статус:** перший успішний hosted-runner вимір отримано; локальний вимір на машині власника ще потрібен.  
 **Завдання:** [#115](https://github.com/juv4uk/wsm-os-lisp/issues/115).  
 **Запуск:** workflow [Toolchain iteration benchmark](../../actions/workflows/toolchain-iteration-benchmark.yml).
 
@@ -42,3 +42,26 @@ python3 benchmarks/toolchain/measure.py
 ## Артефакти
 
 Workflow завантажує `samples.tsv` і `summary.json`. Після першого успішного запуску результати мають бути додані сюди з точним SHA workflow run, версіями toolchain і середовищем. До цього числові висновки не робляться.
+
+## Перший успішний результат
+
+**Workflow run:** [#46011261756](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46011261756)  
+**Commit:** `239849364a30571600e1d4863615ca1b328feed8`  
+**Середовище:** GitHub-hosted x86_64 runner, 4 vCPU, Linux/glibc 2.43, Python 3.14.4.  
+**Версії:** FPC 3.2.2, TCC 0.9.27, Clang 21.1.8, GCC 15.2.0.  
+**N:** 14 warm samples per compiler; окремо збережено перший cold sample.
+
+| Профіль | Compile P50 | Compile P90 | Build+run P50 | Build+run P90 | Бінарник |
+|---|---:|---:|---:|---:|---:|
+| FPC `-O-` | 34.37 ms | 34.79 ms | 37.00 ms | 37.47 ms | 191,072 B |
+| TCC `-std=c99` | 3.65 ms | 3.70 ms | 6.49 ms | 6.62 ms | 3,112 B |
+| Clang `-O0` | 54.09 ms | 55.98 ms | 57.09 ms | 59.13 ms | 16,000 B |
+| GCC `-O0` | 32.50 ms | 33.16 ms | 34.71 ms | 35.44 ms | 15,952 B |
+
+Усі чотири реалізації видали однаковий checksum. Сирі семпли та `summary.json` — у [workflow artifact](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46011261756).
+
+### Попереднє прочитання
+
+У цьому дуже малому fast-feedback тесті TCC виявився найшвидшим; GCC і FPC близькі за compile time, Clang повільніший. FPC не має автоматичної переваги лише через мову. Різниця у розмірі бінарника значна, але цей hosted Linux test включає FPC RTL і не є freestanding footprint виміром.
+
+Це не фінальний вибір інструментів: runner не є машиною власника, а мікропрограма не відображає розмір реальних компонентів. Наступний крок — повторити harness на машині власника та додати production-профіль з оптимізацією й реальним кодом із репозиторію.
