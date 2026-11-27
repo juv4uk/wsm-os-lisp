@@ -29,25 +29,26 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-# Resolve CML binary (same priority as the other #33/#40 gates).
-CML=""
-if [[ -n "${CML_BIN:-}" && -x "${CML_BIN}" ]]; then
-  CML="${CML_BIN}"
-elif [[ -x "$ROOT_DIR/../cml/target/release/cml" ]]; then
-  CML="$ROOT_DIR/../cml/target/release/cml"
-elif command -v cml >/dev/null 2>&1; then
-  CML="$(command -v cml)"
+# Generate this hardware operation directly from the current CML
+# MachinePrim IR. The fixture intentionally does not go through the retired
+# SID8 surface-call parser/lowerer.
+CML_BIN="${CML_BIN:-}"
+if [[ -n "$CML_BIN" ]]; then
+  CML_ROOT="${CML_ROOT:-$(cd "$(dirname "$CML_BIN")/../.." && pwd)}"
 else
-  echo "MMIO-DEVICE-OP: FAIL (no CML binary; set CML_BIN)" >&2
+  CML_ROOT="${CML_ROOT:-$ROOT_DIR/../cml}"
+fi
+if [[ ! -f "$CML_ROOT/Cargo.toml" || ! -f "$CML_ROOT/examples/emit-wsm-os-mmio-device-status.rs" ]]; then
+  echo "MMIO-DEVICE-OP: FAIL (current CML MMIO mechanism example unavailable at $CML_ROOT)" >&2
   exit 1
 fi
 
 work=$(mktemp -d /tmp/wsm-mmio-device.XXXXXX)
 trap 'rm -rf "$work"' EXIT
 
-fixture_lisp="$ROOT_DIR/artifacts/d2-virtio-blk-status-fixture.lisp"
-"$CML" x86-asm "$fixture_lisp" > "$work/fixture.s" 2>"$work/cml.err" || {
-  echo "MMIO-DEVICE-OP: FAIL (CML compile error)" >&2
+cargo run --quiet --release --manifest-path "$CML_ROOT/Cargo.toml" \
+  --example emit-wsm-os-mmio-device-status > "$work/fixture.s" 2>"$work/cml.err" || {
+  echo "MMIO-DEVICE-OP: FAIL (current CML MachinePrim emitter)" >&2
   cat "$work/cml.err" >&2
   exit 1
 }
