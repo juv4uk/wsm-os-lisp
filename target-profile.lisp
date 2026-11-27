@@ -3,7 +3,7 @@
 ((kind . wsm-x86-profile)
  (profile . "WSM-X86-P0")
  (semantic-authority . "juv4uk/sens:contracts/language-contract-12.lisp")
- (target-abi-version . 10)
+ (target-abi-version . 11)
  (status . confirmed-mechanism-subset)
  (values . (nil canonical-t fixnum symbol cons predicate-bit))
  (reserved-representations . (legacy-true-tag))
