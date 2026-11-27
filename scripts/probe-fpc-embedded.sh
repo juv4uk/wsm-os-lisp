@@ -97,14 +97,19 @@ if [ "$COMPILE_RC" -eq 0 ] && [ -f "$OBJ" ]; then
   FPC_ASM="$OUT/units/fpc_embedded_probe.s"
   if [ -f "$FPC_ASM" ]; then
     cp "$FPC_ASM" "$OUT/fpc-generated-assembly.s"
-    grep -Fq 'movq $4,%r9' "$FPC_ASM"
-    grep -Fq 'movq $3,%r8' "$FPC_ASM"
-    grep -Fq 'movq $2,%rdx' "$FPC_ASM"
-    grep -Fq 'movq $1,%rcx' "$FPC_ASM"
-    grep -Fq 'call *' "$FPC_ASM"
-    grep -Fq 'movq %rcx,-8(%rbp)' "$FPC_ASM"
-    grep -Fq 'movq %rdx,-16(%rbp)' "$FPC_ASM"
-    echo "MS_ABI_DISASSEMBLY=PASS"
+    ABI_ASM_OK=1
+    for pattern in 'movq $4,%r9' 'movq $3,%r8' 'movq $2,%rdx' \
+      'movq $1,%rcx' 'call *' 'movq %rcx,-8(%rbp)' 'movq %rdx,-16(%rbp)'; do
+      if ! grep -Fq "$pattern" "$FPC_ASM"; then
+        echo "MS_ABI_PATTERN_MISSING=$pattern"
+        ABI_ASM_OK=0
+      fi
+    done
+    if [ "$ABI_ASM_OK" -eq 1 ]; then
+      echo "MS_ABI_DISASSEMBLY=PASS"
+    else
+      echo "MS_ABI_DISASSEMBLY=FAIL"
+    fi
   else
     echo "MS_ABI_DISASSEMBLY=FAIL"
     exit 9
