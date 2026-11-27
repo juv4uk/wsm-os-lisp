@@ -72,7 +72,9 @@ for asm in "$ack_asm" "$never_asm"; do
 done
 
 build_image() { # <assembly> <image>
-  local assembly="$1" image="$2" object="$work/$(basename "$image").o"
+  local assembly="$1"
+  local image="$2"
+  local object="$work/$(basename "$image").o"
   as --64 "$assembly" -o "$object"
   bash "$ROOT_DIR/scripts/build-uefi-image.sh" "$object" "$image" >/dev/null
 }
