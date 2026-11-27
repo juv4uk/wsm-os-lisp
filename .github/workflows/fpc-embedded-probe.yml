@@ -7,6 +7,7 @@ on:
     paths:
       - "scripts/probe-fpc-embedded.sh"
       - "tests/fpc_embedded_probe.pas"
+      - "tests/fpc_embedded_entry.s"
       - ".github/workflows/fpc-embedded-probe.yml"
       - "src/linker.ld"
 
