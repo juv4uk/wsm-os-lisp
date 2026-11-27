@@ -1,283 +1,149 @@
-# wsm-os-lisp x86_64 target ABI — contract v8
+# wsm-os-lisp x86_64 target ABI — v10 / SENS Contract 12.0
 
-> [!WARNING]
-> **SENS Contract 12.0 migration is incomplete.** This document records the existing
-> target ABI v8 representation; it is not a SENS language contract and does not
-> attest Contract 12.0 conformance. The pinned v8 projection still contains the
-> historical `sid8` boxed kind, and the current runtime's `wsm_atom`/`wsm_eq`
-> return legacy WSM `t`/()` values. The PredicateBit carrier is only a
-> representation witness; it does not by itself prove SENS D1 predicate
-> semantics. None of these paths may be treated as SID8 authority or as a
-> substitute for exact D1 PredicateBit results. Migration and negative
-> witnesses are tracked in [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109);
-> normative language authority is
-> [SENS Contract 12.0](https://github.com/juv4uk/sens/blob/main/contracts/language-contract-12.lisp).
+> **Migration status: in progress.** This file describes the pinned machine representation and the D1 predicate boundary now implemented in the freestanding runtime. It does not claim full SENS Contract 12.0 conformance: D3:110 COND rejection witnesses, D12 numeric boundaries, native/QEMU parity for the complete admitted corpus, and zero-active-legacy inventory remain separate acceptance items in [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109).
 
-The source of truth is the dependency-free `no_std`
-[`wsm-os-target`](https://github.com/juv4uk/wsm-target-contract) crate in the
-neutral `wsm-target-contract` repository. Its `target-contract.lisp` is a
-generated projection checked byte-for-byte by crate tests. CML and this
-runtime consume that package rather than carrying separate numeric copies.
+## Authorities
 
-The target ABI describes representation and mechanism. It is **not** a second
-language specification: `sens` owns SENS/WSM meaning, while `cml` admits and
-lowers that meaning into this target representation.
+- **Language meaning:** [SENS Contract 12.0](https://github.com/juv4uk/sens/blob/main/contracts/language-contract-12.lisp).
+- **Machine representation:** [wsm-target-contract](https://github.com/juv4uk/wsm-target-contract), pinned by `target-abi-pin.lisp` to commit `33dea24a949b4e6e0808a6c770a3c9cac63d6765`, ABI version 10.
+- **Compiler/lowering:** CML. It lowers admitted SENS identities to the versioned target imports; it does not define language semantics.
+- **Runtime/OS mechanism and execution evidence:** this repository.
 
-## Value word
+The generated `target-contract.lisp` projection is the ABI source of truth. This document is explanatory and must not replace it.
 
-Values are 64-bit little-endian words with three low tag bits.
+## Word representation
 
-| Tag | Bits | Target meaning |
+Values are 64-bit little-endian words with three low tag bits (mask `7`).
+
+| Tag | Bits | Representation |
 |---|---:|---|
-| `cons` | `000` | non-zero, 16-byte-aligned pointer owned by runtime heap |
-| `nil` | `001` | immediate `()` and the only false WSM value |
-| `true` | `010` | **reserved legacy representation; not admitted as WSM `t`** |
-| `fixnum` | `011` | signed 61-bit exact integer payload |
-| `symbol` | `100` | non-zero, image-local interned symbol id; canonical `t` is `Symbol(SYMBOL_ID_MAX)` |
-| `closure` | `101` | pointer to a runtime-owned bounded closure descriptor |
-| `capability` | `110` | opaque, nonce-bearing substrate capability descriptor |
-| `boxed` | `111` | session-local runtime-owned boxed handle; concrete kind lives inside boxed object |
+| cons | `000` | runtime-owned pair pointer; nonzero and 16-byte aligned |
+| nil | `001` | structural empty list `()` |
+| true | `010` | reserved legacy representation; not a D1 answer |
+| fixnum | `011` | exact signed 61-bit integer |
+| symbol | `100` | nonzero image-local symbol id |
+| closure | `101` | runtime-owned closure descriptor pointer |
+| capability | `110` | opaque boot-provisioned capability id |
+| boxed | `111` | nonzero session-local handle into runtime-owned boxed values |
 
-The important semantic boundary is deliberate: the bit pattern historically
-named `Tag::True` remains reserved in target-contract v8 for representation
-history, but it is **not a second truth value**. Canonical WSM `t` is the
-ordinary symbol `t`, encoded as `CANONICAL_T = Symbol(SYMBOL_ID_MAX)`. Runtime,
-hosted rendering, QEMU result validation and future backends must fail closed
-if the legacy immediate is presented as semantic truth.
+The boxed kind discriminant lives inside the boxed object. Active kinds in ABI v10 are `string`, `game-handle`, `rational`, and `predicate-bit`; `SID8`, `Sens8`, and `Function8` are not active identities or executable routes. Historical mentions are provenance only.
 
-An aligned pointer shape alone is not enough to dereference a cons or closure.
-The runtime must also prove that the address names a complete object within
-the active arena range.
+`()` is structural D3:000, not D1:0, not a numeric zero, and not an implicit false predicate result. The legacy `true` tag is reserved and is not a semantic substitute for D1:1.
 
-## Cons and closure cells
+## PredicateBit and D1 imports
 
-```text
-cons:
-  offset 0: car, one 64-bit Value word
-  offset 8: cdr, one 64-bit Value word
-  size/alignment: 16 bytes
+A PredicateBit is a runtime-owned boxed singleton carrying exactly one bit, either 0 or 1. The two singleton words are distinct from NIL, fixnum 0/1, canonical symbol `t`, and the reserved legacy true tag.
 
-closure descriptor:
-  offset 0: definition_id (u32)
-  offset 8: environment_ref (Value)
-  size/alignment: 16 bytes
-```
+| Import | Arguments | Result / behavior |
+|---|---|---|
+| `wsm_predicate_bit_0(ctx)` | context | canonical D1:0 carrier |
+| `wsm_predicate_bit_1(ctx)` | context | canonical D1:1 carrier |
+| `wsm_predicate_bit_bits(ctx, value)` | context, PredicateBit | exact integer bit 0/1; malformed carrier fails closed |
+| `wsm_atom_predicate_bit(ctx, value)` | context, value | D1:1 for an admitted atom, D1:0 for a pair |
+| `wsm_eq_predicate_bit(ctx, left, right)` | context, two atoms | D1:1 for exact identity/equality, otherwise D1:0; a pair operand raises named Type |
 
-The first allocators are bounded and monotonic. Exhaustion calls the structured
-failure path; it never wraps or returns address zero.
+The runtime exports historical `wsm_atom` and `wsm_eq` symbols for old fixtures and migration comparison only. They return legacy WSM values and are **not** the active Contract 12.0 predicate route. Current CML emission must call the `*_predicate_bit` imports.
 
-## Function ABI
+Predicate semantics belong to SENS. The runtime only implements the admitted machine boundary: pair-vs-atom classification, atom-only equality, and canonical PredicateBit transport. It does not infer generic truthiness or coerce lists/numbers into predicate answers.
 
-Generated functions use the integer subset of System V AMD64. The public
-entry is:
+## Calling convention and errors
+
+Generated functions use the integer subset of System V AMD64:
 
 ```c
-Value wsm_entry(RuntimeContext *context);
+uint64_t wsm_entry(void *runtime_context);
 ```
 
-- `rdi`: opaque runtime context on entry;
-- `rax`: returned Value word;
-- stack: 16-byte aligned before every call;
-- red zone: forbidden;
-- direction flag: clear;
-- normal System V callee-saved registers remain preserved.
+- `rdi`: runtime context on entry;
+- `rax`: returned target word;
+- stack aligned to 16 bytes before every call;
+- red zone forbidden;
+- direction flag clear;
+- normal System V callee-saved registers preserved.
 
-Runtime imports are versioned mechanism. Current contract v8 includes:
+Error codes are fixed by the target projection: 1 out-of-memory, 2 Type, 3 invalid symbol, 4 ABI violation, 5 numeric overflow. `wsm_fail(ctx, code, offending_value, source_id)` is noreturn.
 
-```c
-Value    wsm_cons(RuntimeContext *, Value car, Value cdr);
-Value    wsm_car(RuntimeContext *, Value pair);
-Value    wsm_cdr(RuntimeContext *, Value pair);
-Value    wsm_eq(RuntimeContext *, Value left, Value right);
-Value    wsm_atom(RuntimeContext *, Value value);
-Value    wsm_closure_new(RuntimeContext *, uint32_t definition_id, Value environment_ref);
-uint32_t wsm_closure_definition(RuntimeContext *, Value closure);
-Value    wsm_closure_environment(RuntimeContext *, Value closure);
-Value    wsm_pci_config_capability(RuntimeContext *);
-Value    wsm_pci_config_read16(RuntimeContext *, Value capability, Value bus, Value device,
-                              Value function, Value offset);
-Value    wsm_mmio_capability(RuntimeContext *);
-Value    wsm_mmio_read32(RuntimeContext *, Value capability, Value offset);
-Value    wsm_mmio_write32(RuntimeContext *, Value capability, Value offset, Value value);
-Value    wsm_rational_new(RuntimeContext *, Value numerator, Value denominator);
-Value    wsm_rational_numerator(RuntimeContext *, Value rational);
-Value    wsm_rational_denominator(RuntimeContext *, Value rational);
-Value    wsm_sid8_new(RuntimeContext *, uint64_t bits);
-uint32_t wsm_sid8_bits(RuntimeContext *, Value sid8);
-Value    wsm_predicate_bit_0(RuntimeContext *);
-Value    wsm_predicate_bit_1(RuntimeContext *);
-uint32_t wsm_predicate_bit_bits(RuntimeContext *, Value predicate_bit);
-void     wsm_fail(RuntimeContext *, uint32_t error_code, Value offending_value,
-                  uint32_t source_id) /* noreturn */;
-```
+## Contract 12.0 semantic boundary
 
-Target v8 also defines `BoxedKind::PredicateBit = 5`: an exact one-bit,
-runtime-owned carrier with canonical singleton identity inside one runtime
-context. The target layer exposes only bit `0`/`1`; it does not define
-NO/YES, truthiness, or conditional semantics. The freestanding OS runtime
-therefore treats PredicateBit as representation-only and keeps historical
-`wsm_atom`/`wsm_eq` compatibility behavior separate.
+- D1 predicate answers are exact D1:0 or D1:1 only.
+- D3:000 `()` remains structural empty/no-witness where the named law permits it; it is never implicitly converted to D1:0.
+- D3 COND clauses have exactly two fields: `(test expression)`. D1:1 selects, D1:0 continues, and exhaustion returns D3:000. D3:000 as a test is a Type error.
+- D12 begins the exact numeric ladder: D12, D24, D48, D96, D192. D1/D7 are not arithmetic operands.
 
-The context layout is deliberately opaque to generated code. Device
-capabilities are mechanism, not language identities: a privileged import may
-act only on a descriptor that decodes correctly **and** matches an active
-nonce-bearing grant provisioned by the substrate. Legacy numeric capability
-IDs are not an alternate authority path.
-
-## Error ABI
-
-| Code | Meaning |
-|---:|---|
-| 1 | out of memory |
-| 2 | type error |
-| 3 | invalid/unresolved symbol id |
-| 4 | ABI invariant violation |
-| 5 | exact numeric overflow |
-
-These are admitted target observations, not permission for a backend to invent
-new language errors. An unknown numeric error code must not become a new
-semantic category; it is an ABI violation. Exact integers are never silently
-narrowed or coerced through `f32`/`f64` in the semantic runtime path.
-
-## Frozen first fixture
-
-```lisp
-(cons (quote A) (quote B))
-```
-
-Pinned upstream semantic-witness result:
-
-```text
-(A . B)
-```
-
-The evidence ladder remains explicit: hosted execution and QEMU execution must
-agree with the pinned `my-lisp` observation. A later physical-hardware run is
-a separate evidence graduation for the same pinned artifact.
+The freestanding P0 profile does not yet claim all of these semantic paths are implemented. Each path graduates only with positive and negative hosted and QEMU witnesses, exact source/artifact hashes, and parity against the pinned SENS authority.
 
 ---
 
-# wsm-os-lisp x86_64 цільовий ABI — контракт v8
+# wsm-os-lisp x86_64 цільовий ABI — v10 / SENS Contract 12.0
 
-> [!WARNING]
-> **Міграція на SENS Contract 12.0 не завершена.** Цей документ описує наявне
-> представлення target ABI v8; це не мовний контракт SENS і не доказ відповідності
-> Contract 12.0. Закріплена v8-проєкція досі містить історичний boxed kind
-> `sid8`, а поточний runtime `wsm_atom`/`wsm_eq` повертає застарілі WSM
-> `t`/()`. Носій PredicateBit поки є лише доказом представлення, а не
-> повної семантики предикатів SENS D1. Жоден із цих шляхів не можна трактувати
-> як SID8-владу або заміну точних D1 PredicateBit результатів. Міграція та
-> негативні свідки ведуться в [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109);
-> нормативне джерело мови — [SENS Contract 12.0](https://github.com/juv4uk/sens/blob/main/contracts/language-contract-12.lisp).
+> **Стан міграції: триває.** Документ описує закріплене машинне представлення та межу D1-предикатів, додану до freestanding runtime. Він не проголошує повну відповідність SENS Contract 12.0: окремо ще потрібні свідки відхилення некоректного D3:110 COND, числові межі D12, повна native/QEMU-парність і нуль активних legacy-маршрутів. Перелік приймання ведеться в [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109).
 
-Джерелом істини є незалежний `no_std`-крейт
-[`wsm-os-target`](https://github.com/juv4uk/wsm-target-contract) у нейтральному
-репозиторії `wsm-target-contract`. Його `target-contract.lisp` є згенерованою
-проекцією, яку тести перевіряють байт-у-байт. CML і цей runtime споживають
-один пакет замість локальних копій числових констант.
+## Джерела влади
 
-Target ABI описує представлення і механізм. Це **не друга специфікація мови**:
-`sens` володіє значенням SENS/WSM, а `cml` лише допускає і знижує його в це
-машинне представлення.
+- **Мовне значення:** [SENS Contract 12.0](https://github.com/juv4uk/sens/blob/main/contracts/language-contract-12.lisp).
+- **Машинне представлення:** [wsm-target-contract](https://github.com/juv4uk/wsm-target-contract), pin у `target-abi-pin.lisp`: commit `33dea24a949b4e6e0808a6c770a3c9cac63d6765`, ABI версії 10.
+- **Компілятор і lowering:** CML. Він знижує допущені SENS-ідентичності до версійованих target imports, але не визначає семантику мови.
+- **Runtime, ОС і докази виконання:** цей репозиторій.
 
-## Слово значення
+Згенерована проєкція `target-contract.lisp` є джерелом істини ABI. Цей документ лише пояснює її.
 
-Значення — 64-бітне little-endian слово з трьома молодшими бітами тегу.
+## Представлення слова
 
-| Тег | Біти | Значення на target-рівні |
+Значення — 64-бітні little-endian слова з трьома молодшими бітами тегу (маска `7`).
+
+| Тег | Біти | Представлення |
 |---|---:|---|
-| `cons` | `000` | ненульовий 16-байтно вирівняний вказівник на runtime heap |
-| `nil` | `001` | immediate `()` і єдине хибне значення WSM |
-| `true` | `010` | **зарезервоване legacy-представлення; не є WSM `t`** |
-| `fixnum` | `011` | точне знакове 61-бітне ціле |
-| `symbol` | `100` | ненульовий image-local symbol id; канонічне `t` = `Symbol(SYMBOL_ID_MAX)` |
-| `closure` | `101` | вказівник на bounded closure descriptor, яким володіє runtime |
-| `capability` | `110` | opaque nonce-bearing capability, виданий substrate |
-| `boxed` | `111` | session-local runtime-owned boxed handle; конкретний kind зберігається всередині boxed object |
+| cons | `000` | вказівник на пару у runtime heap; ненульовий, вирівняний на 16 байтів |
+| nil | `001` | структурний порожній список `()` |
+| true | `010` | зарезервоване legacy-представлення, не D1-відповідь |
+| fixnum | `011` | точне знакове 61-бітне ціле |
+| symbol | `100` | ненульовий image-local symbol id |
+| closure | `101` | вказівник на runtime-owned closure descriptor |
+| capability | `110` | opaque capability id, виданий під час boot |
+| boxed | `111` | ненульовий session-local handle на runtime-owned boxed value |
 
-Ключова семантична межа навмисна: бітовий шаблон, історично названий
-`Tag::True`, лишається reserved legacy representation у target-contract v8,
-але **не є другою істиною**. Канонічне WSM `t` — звичайний символ `t`, тобто
-`CANONICAL_T = Symbol(SYMBOL_ID_MAX)`. Runtime, hosted renderer, QEMU-validator
-і майбутні backends мають fail-closed відхиляти legacy immediate як семантичне
-`t`.
+Дискримінант boxed-kind зберігається всередині об'єкта. Активні види ABI v10: `string`, `game-handle`, `rational`, `predicate-bit`. `SID8`, `Sens8` і `Function8` не є активними ідентичностями чи виконуваними маршрутами; історичні згадки — лише provenance.
 
-Одного вирівняного pointer shape недостатньо для dereference `cons` або
-closure. Runtime також мусить довести, що адреса належить повному об'єкту в
-активній arena.
+`()` — структурне D3:000, а не D1:0, не числовий нуль і не неявна хибна відповідь предиката. Legacy-тег `true` зарезервований і не замінює D1:1.
 
-## Cons і closure
+## PredicateBit та імпорти D1
 
-```text
-cons:
-  offset 0: car, одне 64-бітне Value
-  offset 8: cdr, одне 64-бітне Value
-  size/alignment: 16 байт
+PredicateBit — runtime-owned boxed singleton із рівно одним бітом: 0 або 1. Два singleton-слова відрізняються від NIL, fixnum 0/1, канонічного символу `t` та зарезервованого legacy true tag.
 
-closure descriptor:
-  offset 0: definition_id (u32)
-  offset 8: environment_ref (Value)
-  size/alignment: 16 байт
-```
+| Імпорт | Аргументи | Результат / поведінка |
+|---|---|---|
+| `wsm_predicate_bit_0(ctx)` | context | канонічний носій D1:0 |
+| `wsm_predicate_bit_1(ctx)` | context | канонічний носій D1:1 |
+| `wsm_predicate_bit_bits(ctx, value)` | context, PredicateBit | точний біт 0/1; некоректний носій відхиляється |
+| `wsm_atom_predicate_bit(ctx, value)` | context, value | D1:1 для допущеного атома, D1:0 для пари |
+| `wsm_eq_predicate_bit(ctx, left, right)` | context, два атоми | D1:1 для точної рівності, інакше D1:0; пара спричиняє named Type |
 
-Алокатори bounded і monotonic. Вичерпання переходить у structured failure;
-ніякого wraparound чи нульової адреси.
+Історичні символи `wsm_atom` і `wsm_eq` залишені для старих fixtures та порівняння під час міграції. Вони повертають legacy WSM-значення й **не є активним шляхом предикатів Contract 12.0**. Поточна генерація CML має викликати `*_predicate_bit`.
 
-## ABI функцій
+Семантика предикатів належить SENS. Runtime реалізує лише допущену машинну межу: класифікацію пара/атом, рівність лише атомів і канонічне перенесення PredicateBit. Він не виводить загальну truthiness і не перетворює списки чи числа на відповіді предиката.
 
-Згенерований код використовує integer-підмножину System V AMD64:
+## Calling convention і помилки
+
+Згенеровані функції використовують integer-підмножину System V AMD64:
 
 ```c
-Value wsm_entry(RuntimeContext *context);
+uint64_t wsm_entry(void *runtime_context);
 ```
 
-`rdi` містить opaque runtime context, результат повертається в `rax`, стек
-вирівнюється до 16 байт перед call, red zone заборонений.
+- `rdi`: runtime context на вході;
+- `rax`: повернене target-слово;
+- стек вирівнюється на 16 байтів перед кожним call;
+- red zone заборонений;
+- direction flag очищений;
+- callee-saved регістри System V зберігаються.
 
-Поточний contract v8 містить механічні imports `cons/car/cdr/eq/atom`, bounded
-closure operations, PCI/MMIO capability operations, ратифіковані Rational
-imports (`wsm_rational_new/numerator/denominator`) та структурований
-`wsm_fail(context, error_code, offending_value, source_id)`. Ці imports не
-створюють нових мовних примітивів.
+Коди помилок визначені проєкцією: 1 out-of-memory, 2 Type, 3 invalid symbol, 4 ABI violation, 5 numeric overflow. `wsm_fail(ctx, code, offending_value, source_id)` не повертається.
 
-Target v8 також визначає `BoxedKind::PredicateBit = 5`: точний однобітний
-runtime-owned носій із канонічною singleton-ідентичністю в межах одного runtime
-context. Target-рівень переносить лише біт `0`/`1`; він не визначає NO/YES,
-truthiness чи семантику COND. Тому freestanding runtime трактує PredicateBit
-лише як представлення, а історичні `wsm_atom`/`wsm_eq` лишаються окремою
-compatibility-поведінкою.
+## Семантична межа Contract 12.0
 
-Capability має силу лише тоді, коли коректно декодується у поточний descriptor
-і збігається з активним nonce-bearing grant, виданим substrate. Старий numeric
-capability ID не є альтернативним шляхом authority.
+- D1-предикати повертають лише точні D1:0 або D1:1.
+- D3:000 `()` залишається структурним empty/no-witness там, де це дозволяє конкретний закон; він ніколи не перетворюється неявно на D1:0.
+- Клауза D3 COND має рівно два поля: `(test expression)`. D1:1 вибирає вираз, D1:0 продовжує пошук, вичерпання повертає D3:000. D3:000 як test — помилка Type.
+- Числова драбина D12 починається з D12, D24, D48, D96, D192. D1/D7 не є арифметичними операндами.
 
-## ABI помилок
-
-| Код | Значення |
-|---:|---|
-| 1 | нестача пам'яті |
-| 2 | помилка типу |
-| 3 | недійсний/нерозв'язаний symbol id |
-| 4 | порушення ABI |
-| 5 | переповнення точного числа |
-
-Ці коди є допущеними target observations, а не дозволом backend-у винаходити
-нові помилки мови. Невідомий numeric error code не може стати новою semantic
-category — це ABI violation. Точні integer-значення не можуть тихо звужуватись
-або проходити через `f32`/`f64` у semantic runtime path.
-
-## Заморожена перша фікстура
-
-```lisp
-(cons (quote A) (quote B))
-```
-
-Канонічний результат `my-lisp`:
-
-```text
-(A . B)
-```
-
-Hosted і QEMU execution мають збігатися з pinned `my-lisp` observation.
-Пізніший запуск на фізичному обладнанні є окремим підвищенням класу доказу для
-того самого зафіксованого артефакту.
+Freestanding P0 ще не заявляє, що всі ці семантичні маршрути реалізовані. Кожен маршрут отримує статус доведеного лише після позитивних і негативних hosted та QEMU-свідків, точних SHA джерел/артефактів і парності з pinned SENS authority.
