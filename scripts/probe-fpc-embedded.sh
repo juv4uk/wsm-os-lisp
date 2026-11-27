@@ -8,7 +8,9 @@ ARCHIVE_NAME="fpc-3.3.1.x86_64-embedded.built.on.x86_64-linux.tar.gz"
 BASE_URL="https://downloads.freepascal.org/fpc/snapshot/trunk/x86_64-embedded"
 ARCHIVE_URL="$BASE_URL/$ARCHIVE_NAME"
 README_URL="$BASE_URL/README-fpc-3.3.1.x86_64-embedded.built.on.x86_64-linux"
-EXPECTED_SOURCE_COMMIT="e3155f6eccd98f003c33a620996786e83ac79cd1"
+EXPECTED_SOURCE_COMMIT="2e77266e1eafbc802fcb93f59eab356eb588263d"
+EXPECTED_ARCHIVE_SHA256="a3e9e0a01c06b28acee6aca51c9d7a2980d965ac5180e8f53700fd2e000182a7"
+EXPECTED_COMPILER_VERSION="3.3.1-22061-g2e77266e1e"
 mkdir -p "$OUT/install" "$OUT/units" "$OUT/bin"
 cd "$ROOT"
 
@@ -25,6 +27,12 @@ if ! timeout 180s curl --fail --location --retry 3 --retry-delay 2 "$ARCHIVE_URL
   echo "PROBE_FATAL=archive_download_failed"; exit 3
 fi
 sha256sum "$OUT/$ARCHIVE_NAME" | tee "$OUT/archive.sha256"
+ACTUAL_ARCHIVE_SHA256=$(sha256sum "$OUT/$ARCHIVE_NAME" | cut -d " " -f1)
+if [ "$ACTUAL_ARCHIVE_SHA256" != "$EXPECTED_ARCHIVE_SHA256" ]; then
+  echo "PROBE_FATAL=archive_checksum_mismatch"
+  exit 4
+fi
+echo "ARCHIVE_CHECKSUM=PASS"
 stat -c 'ARCHIVE_BYTES=%s' "$OUT/$ARCHIVE_NAME" | tee "$OUT/archive.size"
 
 if ! timeout 60s curl --fail --location --retry 2 "$README_URL" -o "$OUT/upstream-readme.txt"; then
@@ -33,7 +41,12 @@ fi
 if ! grep -Fq "$EXPECTED_SOURCE_COMMIT" "$OUT/upstream-readme.txt"; then
   echo "PROBE_FATAL=source_commit_mismatch"; exit 5
 fi
+if ! grep -Fq "$EXPECTED_COMPILER_VERSION" "$OUT/upstream-readme.txt"; then
+  echo "PROBE_FATAL=compiler_version_mismatch"
+  exit 5
+fi
 echo "SOURCE_COMMIT_CHECK=PASS"
+echo "COMPILER_VERSION_PIN=PASS"
 
 if ! tar -xzf "$OUT/$ARCHIVE_NAME" -C "$OUT/install"; then
   echo "PROBE_FATAL=archive_extract_failed"; exit 6
