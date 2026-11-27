@@ -1,4 +1,4 @@
-name: Current SENS D1/COND to WSM x86 QEMU
+name: Current SENS D1/EQ/COND + MMIO to WSM x86 QEMU
 
 on:
   push:
@@ -32,7 +32,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  current-sens-d1-cond:
+  current-sens-d1-eq-cond-mmio:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: juv4uk/cml
-          ref: 8f55b0361c9fc3c3c1a9601fd4363e511819047d
+          ref: 79b3d69102b8d45e0f949e77049120b50cdd31be
           path: cml
           submodules: recursive
 
@@ -82,13 +82,13 @@ jobs:
           CML_SHA="$(git -C "${GITHUB_WORKSPACE}/cml" rev-parse HEAD)"
           SENS_SHA="$(git -C "${GITHUB_WORKSPACE}/cml/external/sens" rev-parse HEAD)"
           TARGET_SHA="$(git -C "${GITHUB_WORKSPACE}/wsm-target-contract" rev-parse HEAD)"
-          SOURCE='(за-умовою ((атом? 7) 42))'
+          SOURCE='((функція (mmio) ((функція (_) (за-умовою ((тотожне? (mmio-read32 mmio 20) 1) 42))) (mmio-write32 mmio 20 1))) (mmio-capability))'
           SOURCE_SHA="$(printf '%s' "$SOURCE" | sha256sum | awk '{print $1}')"
           ASM_SHA="$(sha256sum "${GITHUB_WORKSPACE}/current-sens-d1-cond.s" | awk '{print $1}')"
           OBJ_SHA="$(sha256sum "${GITHUB_WORKSPACE}/current-sens-d1-cond.o" | awk '{print $1}')"
           cat > "${GITHUB_WORKSPACE}/current-sens-d1-cond-manifest.json" <<EOF
           {
-            "schema": "wsm-os-current-sens-d1-cond-qemu/1",
+            "schema": "wsm-os-current-sens-d1-eq-cond-mmio-qemu/1",
             "status": "pending-qemu",
             "source": "$SOURCE",
             "source_sha256": "$SOURCE_SHA",
@@ -99,7 +99,9 @@ jobs:
             "target_abi_version": 11,
             "assembly_sha256": "$ASM_SHA",
             "object_sha256": "$OBJ_SHA",
-            "semantic_scope": ["D1 ATOM", "D1 EQ", "two-field D3 COND"],
+            "semantic_scope": ["D1 EQ", "two-field D3 COND"],
+            "machine_scope": ["MMIO capability", "MMIO write32 device_status=1", "MMIO read32 device_status"],
+            "device": "QEMU q35 virtio-blk-pci common-config device_status offset 20",
             "conformance_note": "The CML SENS submodule is pinned to the 11.8-era API. This is a current-domain D1/COND runtime witness, not a claim of complete SENS Contract 12.0 conformance."
           }
           EOF
@@ -115,8 +117,12 @@ jobs:
         working-directory: wsm-os-lisp
         env:
           WSM_QEMU_TRANSCRIPT: ${{ github.workspace }}/expected-current-sens-transcript.txt
+          WSM_QEMU_DATA_DISK: ${{ github.workspace }}/virtio-data.raw
+          WSM_QEMU_VIRTIO_ADDR: "5"
+          WSM_QEMU_VIRTIO_DISABLE_LEGACY: "1"
           CURRENT_SENS_MANIFEST: ${{ github.workspace }}/current-sens-d1-cond-manifest.json
         run: |
+          truncate -s 1M "$WSM_QEMU_DATA_DISK"
           cat > "$WSM_QEMU_TRANSCRIPT" <<'EOF'
           WSM-OS BOOT schema=1 arch=x86_64 status=ok
           WSM-OS RESULT schema=1 value=42 status=ok
