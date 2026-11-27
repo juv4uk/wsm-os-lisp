@@ -9,6 +9,8 @@
 - **Compiler/lowering:** CML. It lowers admitted SENS identities to the versioned target imports; it does not define language semantics.
 - **Runtime/OS mechanism and execution evidence:** this repository.
 
+**Compiler migration caveat:** `contracts/cml.lock` still pins CML `48f9b1566f899a48132bbff44ecf33f816e2cbd9`, whose x86 backend contains an active direct SID8 dispatch table. CML's inspected `master` snapshot `ccd38c9c6facbf463f2baaae537882d017161cc1` contains the newer exact-D1 emitters (`wsm_atom_predicate_bit` / `wsm_eq_predicate_bit`) but also retains the SID8 dispatch fallback. Neither snapshot is a clean Contract 12.0 production compiler until that fallback is removed or made non-executable and negative-tested. The current v10 runtime imports are implemented and the standalone QEMU fixture exercises positive D1 results; this does not prove the full pinned CML compiler path.
+
 The generated `target-contract.lisp` projection is the ABI source of truth. This document is explanatory and must not replace it.
 
 ## Word representation
