@@ -172,6 +172,12 @@ typedef uintptr_t Value;
 Цей розділ фіксує **процесні** вимоги до будь-якої роботи в цьому репозиторії.
 У репозиторії немає єдиної обов'язкової host-мови. Free Pascal, C, Rust, Assembly, Lisp та будь-які інші мови можуть використовуватися там, де вони технічно виправдані. ADR-006 описує попередню пропозицію щодо ролі FPC; мовні обмеження ADR-004/006 скасовані директивою власника та ADR-009. Поточний runtime не вважається перенесеним на нову мову без відповідного P0–P4 parity evidence.
 
+### Embedded Free Pascal kernel witness
+
+- For the pinned `x86_64-embedded` target, use explicitly exported Pascal `unit` functions for kernel experiments; do not compile a Pascal `program` as a kernel entry until startup, initialization/finalization, threadvar and exception services have an explicit runtime contract and tests.
+- Never satisfy unresolved FPC RTL symbols with empty/no-op stubs. Classify each symbol; the bounded test profile may use `--gc-sections` only for proven-unused metadata, and must verify the final kernel has an empty `nm -u`.
+- The current passing witness is test-only. ASM still owns the production entry, stack, BootInfo handling and runtime until the separate P1/P2 gates pass.
+
 ### 1. Рівні: де живе робота
 
 | Рівень | Що тут пишеться | Хто володіє |

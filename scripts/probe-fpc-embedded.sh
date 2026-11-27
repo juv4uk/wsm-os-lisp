@@ -81,6 +81,51 @@ objdump -r "$OBJ" > "$OUT/object-relocations.txt"
 size "$OBJ" > "$OUT/object-size.txt"
 echo "EMBEDDED_COMPILE=PASS"
 
+# A Pascal PROGRAM exercises startup/initialization/finalization/threadvar
+# hooks separately from the kernel-oriented UNIT path. Never stub these hooks.
+PROGRAM_OUT="$OUT/program-probe"
+mkdir -p "$PROGRAM_OUT/units" "$PROGRAM_OUT/bin"
+"$COMPILER" -Tembedded -Px86_64 -n -Fu"$RTL_DIR" \
+  -FU"$PROGRAM_OUT/units" -FE"$PROGRAM_OUT/bin" -Cn -O- -al \
+  "$ROOT/src/pascal_probe.pas" > "$PROGRAM_OUT/compile.txt" 2>&1
+PROGRAM_OBJ="$PROGRAM_OUT/units/pascal_probe.o"
+[[ -s "$PROGRAM_OBJ" ]] || {
+  echo "PROBE_FATAL=program_probe_object_missing"
+  exit 14
+}
+nm -u "$PROGRAM_OBJ" > "$PROGRAM_OUT/undefined-symbols.txt" 2>&1 || true
+for symbol in 'FINALIZE$_$OBJPAS' 'INIT$_$SYSTEM' \
+  'THREADVARLIST_$SYSTEM$indirect' 'fpc_do_exit' 'fpc_initializeunits' 'wsm_cons'; do
+  grep -Fq "$symbol" "$PROGRAM_OUT/undefined-symbols.txt" || {
+    echo "PROGRAM_HOOK_MISSING=$symbol"
+    exit 15
+  }
+done
+echo "PROGRAM_STARTUP_HOOKS=5"
+echo "PROGRAM_UNDEFINED_SYMBOLS=$(wc -l < "$PROGRAM_OUT/undefined-symbols.txt")"
+
+FEATURE_OUT="$OUT/program-features-probe"
+mkdir -p "$FEATURE_OUT/units" "$FEATURE_OUT/bin"
+"$COMPILER" -Tembedded -Px86_64 -n -Fu"$RTL_DIR" \
+  -FU"$FEATURE_OUT/units" -FE"$FEATURE_OUT/bin" -Cn -O- -al \
+  "$ROOT/tests/fpc_embedded_program_features.pas" > "$FEATURE_OUT/compile.txt" 2>&1
+FEATURE_OBJ="$FEATURE_OUT/units/fpc_embedded_program_features.o"
+[[ -s "$FEATURE_OBJ" ]] || {
+  echo "PROBE_FATAL=program_features_object_missing"
+  exit 16
+}
+nm -u "$FEATURE_OBJ" > "$FEATURE_OUT/undefined-symbols.txt" 2>&1 || true
+for symbol in 'FPC_THREADVAR_RELOCATE' 'THREADVARLIST_$SYSTEM$indirect' \
+  'fpc_raiseexception' 'fpc_catches' 'fpc_setjmp' 'fpc_raise_nested' \
+  'fpc_pushexceptaddr' 'fpc_popaddrstack' 'fpc_doneexception'; do
+  grep -Fq "$symbol" "$FEATURE_OUT/undefined-symbols.txt" || {
+    echo "PROGRAM_FEATURE_HOOK_MISSING=$symbol"
+    exit 17
+  }
+done
+echo "PROGRAM_EXCEPTION_THREADVAR_HOOKS=CLASSIFIED"
+echo "PROGRAM_FEATURE_UNDEFINED_SYMBOLS=$(wc -l < "$FEATURE_OUT/undefined-symbols.txt")"
+
 FPC_ASM="$OUT/units/fpc_embedded_probe.s"
 [[ -s "$FPC_ASM" ]] || {
   echo "PROBE_FATAL=generated_assembly_missing"

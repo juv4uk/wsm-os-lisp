@@ -318,3 +318,20 @@ verify, не компілятор.
 порожній програмі, третій компілятор у ланцюзі довіри, окрема межа FFI для C) і
 поетапний перехід із evidence на кожній фазі — і не вдає, що виміри, яких
 рішення не має, вже зроблені.
+
+
+---
+
+## Evidence update — 2026-11-27 (not a language-policy decision)
+
+The pinned FPC 3.3.1 `x86_64-embedded` snapshot now has a bounded UNIT-path witness:
+- archive SHA-256 `a3e9e0a01c06b28acee6aca51c9d7a2980d965ac5180e8f53700fd2e000182a7`, source commit `2e77266e1eafbc802fcb93f59eab356eb588263d`, compiler `3.3.1-22061-g2e77266e1e`;
+- Pascal unit compiled to ELF64, linked through the existing linker, and booted in OVMF/QEMU without no-op RTL stubs;
+- runtime Microsoft x64 ABI function-pointer and Pascal callback assertions passed, including register arguments, shadow space, stack alignment, and nonvolatile registers;
+- the WSM-OS serial transcript matches the committed ASM baseline.
+
+The PROGRAM lifecycle was separately classified: the minimal program object requires five startup/init/finalization/threadvar hooks (plus its external `wsm_cons`); a threadvar + class-exception program emits 30 undefined symbols, including exception, threadvar relocation, Object/VMT and System support. The kernel-oriented UNIT path avoids program startup; unused procedural RTTI is removed only by the explicit test-profile section-GC link. No empty RTL stubs are accepted.
+
+Evidence: [research report](research/FPC-EMBEDDED-PROBE-2026-11-27.md), [CI run #46071610953](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46071610953), [artifact 15232149812](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46071610953/artifacts/15232149812).
+
+This closes the toolchain-feasibility question for a narrow embedded Pascal UNIT, not the production architecture decision. The test does not validate BootInfo in Pascal or call a real UEFI Boot Services entry. P1 handoff and P2 parity remain separate gates; `src/runtime.s` and `src/entry.s` remain unchanged. This addendum does not ratify ADR-006 or authorize production Pascal migration.

@@ -1,9 +1,9 @@
-# FPC x86_64-embedded: compile/link та MS ABI witness
-*FPC x86_64-embedded: compile/link and MS ABI witness*
+# FPC x86_64-embedded: compile/link, ABI та UEFI/QEMU свідок
+*FPC x86_64-embedded: compile/link, ABI and UEFI/QEMU witness*
 
 **Дата:** 2026-11-27  
 **Issue:** [#113](https://github.com/juv4uk/wsm-os-lisp/issues/113)  
-**Статус:** EMBEDDED COMPILE + STATIC LINK + MS ABI CODEGEN PASS; UEFI/QEMU runtime acceptance remains OPEN.
+**Статус:** bounded embedded UNIT + UEFI/QEMU + MS ABI runtime witness PASS; full PROGRAM lifecycle remains classified, not adopted.
 
 ## 1. Точна upstream-публікація / Exact upstream artifact
 
@@ -21,83 +21,108 @@ URL архіву:
 | Compiler binary | `bin/x86_64-linux/ppcrossx64` |
 | Embedded RTL | `units/x86_64-embedded/rtl` |
 
-Upstream snapshot URL є рухомим; тому URL сам по собі не є pin. Harness fail-closed перевіряє archive SHA-256, source commit і compiler version.
+Upstream snapshot URL є рухомим; URL сам по собі не є pin. Harness перевіряє archive SHA-256, source commit і compiler version. Це development snapshot, а не stable release.
 
-## 2. Компіляція / Compile
+## 2. Embedded UNIT compile та freestanding link
 
 Команда:
 
 ```sh
-ppcrossx64 -Tembedded -Px86_64 -n \
-  -Fu<extracted>/units/x86_64-embedded/rtl \
+ppcrossx64 -Tembedded -Px86_64 -n -Fu<embedded-rtl> \
   -FU<out>/units -FE<out>/bin -Cn -O- -al \
   tests/fpc_embedded_probe.pas
 ```
 
-Поточний розширений зріз:
+Перевірено:
 - compile exit code 0;
-- object: ELF64 relocatable x86-64, 2,808 bytes;
+- object — ELF64 relocatable x86-64;
 - exported symbols: `wsm_fpc_embedded_probe`, `wsm_invoke_efi_probe`, `wsm_efi_callback`;
-- object має один unresolved metadata symbol `RTTI_$SYSTEM_$$_QWORD$indirect`, який походить від процедурного типу. Це не виклик runtime-функції.
+- generated assembly пройшов перевірки System V та Microsoft x64 ABI codegen;
+- freestanding link із тестовим Assembly entry і чинним `src/linker.ld` — exit 0;
+- фінальний `nm -u` — порожній.
 
-## 3. Microsoft x64 ABI / UEFI calling-convention codegen
+Окремий kernel-oriented unit `tests/fpc_embedded_kernel_probe.pas` має лише механічні залежності, потрібні для цього шляху: чинний Assembly `wsm_cons` і test-only Microsoft ABI callee. Невикористаний procedural RTTI metadata section відкидається явним `--gc-sections` у тестовому профілі; фінальний kernel знову перевіряється на порожній undefined-symbol table. Жодних no-op RTL stubs не додається.
 
-У Pascal unit оголошено:
+## 3. UEFI/QEMU та реальний Microsoft x64 ABI виклик
 
-- `TEfiProbeFunction = function(A, B, C, D: QWord): QWord; MS_ABI_Default`;
-- `wsm_invoke_efi_probe` викликає переданий function pointer із чотирма аргументами;
-- `wsm_efi_callback` експортується з `MS_ABI_Default`.
+GitHub Actions [run #46071610953](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46071610953) завершився **SUCCESS**. [Артефакт доказів](https://github.com/juv4uk/wsm-os-lisp/actions/runs/46071610953/artifacts/15232149812).
 
-Згенерований FPC assembly містить:
-- аргументи function-pointer call у `RCX/RDX/R8/R9`;
-- непрямий `call *Fn`;
-- callback entry читає перші два аргументи з `RCX/RDX`;
-- FPC виділяє stack frame, що включає Microsoft x64 home/shadow area.
+Тестовий Pascal unit:
+- викликає Assembly function pointer через `MS_ABI_Default`;
+- отримує від нього 22 лише якщо чотири аргументи прийшли в `RCX/RDX/R8/R9`, callback повернув очікуване значення, стек має потрібне вирівнювання й callee-saved регістри збережені;
+- викликає чинний Assembly `wsm_cons` і повертає той самий tagged cons, що й ASM baseline.
 
-Тестовий Assembly entry:
-- викликає Pascal callback за Microsoft x64 convention, резервуючи 32-byte shadow space;
-- містить перевірку alignment `RSP mod 16 = 8` у EFI-shaped stub;
-- записує всі чотири 8-byte home slots;
-- перевіряє збереження `RBX/RDI/RSI/R12-R15` після callback.
+Assembly callee:
+- перевіряє `RSP mod 16 = 8` на вході;
+- записує у чотири 8-byte Microsoft x64 home/shadow slots;
+- викликає Pascal callback `wsm_efi_callback` з Microsoft x64 ABI та 32-byte shadow space;
+- перевіряє `RBX/RBP/RDI/RSI/R12-R15` після callback;
+- повертає success value лише після всіх перевірок.
 
-Це **статична перевірка згенерованого коду та зв'язування**, а не runtime-виконання цих інструкцій. EFI-shaped stub — контрольний assembly callee, не UEFI firmware function.
-
-## 4. Лінкування / Link
-
-```sh
-as --64 tests/fpc_embedded_entry.s -o fpc_embedded_entry.o
-ld --gc-sections -T src/linker.ld -Map=embedded-link.map \
-  -o embedded-link.elf fpc_embedded_entry.o fpc_embedded_probe.o
+Результат QEMU/OVMF:
+```text
+FPC_EMBEDDED_UNIT_COMPILE=PASS
+MS_ABI_FUNCTION_POINTER_AND_CALLBACK_FIXTURE=LINKED
+FREESTANDING_LINK=PASS
+FINAL_KERNEL_UNDEFINED_SYMBOLS=NONE
+UEFI_QEMU_BOOT=PASS
+MS_ABI_FUNCTION_POINTER=PASS
+MS_ABI_CALLBACK=PASS
+MS_ABI_SHADOW_SPACE_ALIGNMENT_CALLEE_SAVED=PASS
+FPC-EMBEDDED-KERNEL-PROBE-PASS
 ```
 
-`--gc-sections` відкидає не використаний процедурний RTTI section, що містить єдине object-level unresolved metadata reference. Це не stub і не підміна функції. Фінальна перевірка `nm -u` має бути порожньою; будь-який залишковий undefined symbol — fail.
+Серійний transcript побайтково звіряється з наявним `artifacts/qemu-serial-transcript.txt`. OVMF завантажує чинний bootloader; він передає керування kernel image, у якому Pascal unit виконується разом із незміненими `src/entry.s` та `src/runtime.s`.
 
-Поточний локально перевірений результат:
-- assembler exit code 0;
-- linker exit code 0;
-- ELF64 x86-64 statically linked executable;
-- entry point: `0x10003e`;
-- text=552 bytes, data=0, bss=4096;
-- фінальний `nm -u` — порожньо.
+**Межа:** Microsoft x64 ABI перевірено контрольним Assembly function pointer/callback, а не викликом реального UEFI Boot Services/System Table entry. QEMU перевіряє UEFI boot path, але Pascal unit не читає BootInfo — це лишається P1 handoff роботою.
 
-## 5. Межа доказу / Evidence boundary
+## 4. Чому kernel path має бути UNIT, а не PROGRAM
+
+Окремо перевірено два program lifecycle профілі на тому самому pinned embedded compiler.
+
+### Мінімальний PROGRAM
+
+`src/pascal_probe.pas` як Pascal `program` експортує `wsm_entry`, але його object має шість undefined symbols:
+- `fpc_initializeunits`;
+- `fpc_do_exit`;
+- `INIT$_$SYSTEM`;
+- `FINALIZE$_$OBJPAS`;
+- `THREADVARLIST_$SYSTEM$indirect`;
+- `wsm_cons`.
+
+Перші п'ять — startup/initialization/finalization/threadvar dependencies; шостий — реальна функція нашого Assembly runtime.
+
+### PROGRAM з exception + threadvar
+
+Окремий `tests/fpc_embedded_program_features.pas` містить `threadvar`, клас-виняток, `raise` та `try/except`. Його object має 30 undefined symbols, включно з:
+- `FPC_THREADVAR_RELOCATE`;
+- `fpc_raiseexception`, `fpc_catches`, `fpc_setjmp`, `fpc_raise_nested`;
+- `fpc_pushexceptaddr`, `fpc_popaddrstack`, `fpc_doneexception`;
+- Object/VMT/constructor/destructor та System exception support.
+
+Ці символи зберігаються в артефакті; harness не лінкує їх із порожніми заглушками. Отже, повноцінний FPC `program` startup/exception/threadvar lifecycle ще потребує окремого runtime контракту.
+
+### Практичний висновок
+
+**Для kernel integration зараз доведений вузький UNIT model:** Pascal надає leaf functions із явним ABI; Assembly лишається власником boot, stack, memory/runtime mechanisms і `wsm_cons`. Не переносити program startup до ядра, доки його залежності не реалізовані та не перевірені. Це не означає, що весь FPC RTL треба переписати.
+
+## 5. Межі та наступний етап
 
 Доведено:
-- pinned FPC 3.3.1 x86_64-embedded компілює вузький Pascal unit;
-- об'єкт має ELF64 формат;
-- System V AMD64 cdecl та Microsoft x64 ABI codegen для function pointer/callback присутні у generated assembly;
-- ASM entry + Pascal object зв'язуються через наш linker script без фінальних undefined symbols.
+- checksum-pinned `OS_TARGET=embedded CPU_TARGET=x86_64` toolchain;
+- unit compile, object format, exports та freestanding link;
+- Microsoft x64 function-pointer/callback codegen і runtime assertions у QEMU;
+- UEFI/OVMF boot із byte-identical WSM-OS serial transcript;
+- конкретний program startup/exception/threadvar dependency surface.
 
 Ще не доведено:
-- реальне виконання ELF або QEMU UEFI boot;
-- виклик через справжню UEFI System Table/Boot Services;
-- реальний BootInfo handoff у поточний kernel;
-- фактичне виконання shadow-space, stack-alignment та callee-saved runtime assertions;
-- FPC program startup, unit initialization/finalization, exceptions, threadvar або повну RTL;
-- сумісність усіх FPC embedded targets із нашою production boot chain.
+- Pascal-side BootInfo validation та missing/malformed handoff negatives;
+- виклик справжнього UEFI Boot Services/System Table function pointer;
+- повний FPC program startup, unit initialization/finalization, exceptions/threadvar у production runtime;
+- parity/production migration для інших компонентів.
 
-Отже: **мінімальний embedded compile/link + статичний MS ABI witness — PASS; UEFI/QEMU runtime acceptance — OPEN.** Не переносити цей висновок на повний kernel/runtime і не замінювати `src/runtime.s` на цьому доказі.
+Тому P0 embedded toolchain witness для UNIT path — **PASS**. P1 лишається відкритим для Pascal-side handoff boundary; P2 лишається окремим parity gate. Production `src/runtime.s` та `src/entry.s` не змінювалися; цей результат не дозволяє Pascal migration до завершення P2.
 
 ## English summary
 
-The pinned FPC 3.3.1 x86_64-embedded snapshot compiles the Pascal probe to ELF64. Generated assembly confirms System V cdecl plus Microsoft x64 `MS_ABI_Default` function-pointer and callback code generation. A freestanding assembly entry and the Pascal object link through the repository linker script; `--gc-sections` removes an unused procedural RTTI metadata section, and the final undefined-symbol table is empty. The linked ABI assertions have not yet been executed: real UEFI Boot Services, BootInfo handoff, and QEMU boot remain unverified.
+The exact FPC 3.3.1 x86_64-embedded snapshot is pinned by SHA-256, source commit, and compiler version. A Pascal unit compiles, links into the existing UEFI/QEMU image without no-op RTL stubs, and boots with a byte-identical serial transcript. The QEMU kernel executes an indirect Microsoft x64 ABI function-pointer call and a Pascal callback, checking register arguments, stack alignment, shadow space, and nonvolatile registers. Separately, program probes classify five startup hooks for a minimal program and 30 dependencies for a threadvar/exception program. The bounded UNIT path is proven; full PROGRAM lifecycle and Pascal-side BootInfo validation remain separate work. No production runtime migration is authorized by this evidence.
