@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# TARGET-OBSERVER-GENERALIZE-1 (issue #33) behavioural witness.
+# TARGET-OBSERVER-GENERALIZE-1 (issue #33), current Contract 12 mechanism witness.
 #
-# Compiles a fixture with THREE distinct symbols through CML and proves the
-# bare-metal target serializes the third symbol (id outside the former
-# 12/20 hardcode window) through the same generic sym<id> renderer.
+# The current CML x86 backend deliberately rejects the old flat SID8 surface
+# parser path. Generate the observer program from current PairConstruct IR
+# instead, then prove the bare-metal target serializes the third symbol (id
+# outside the former 12/20 hardcode window) through the generic sym<id> renderer.
 #
 #   fixture: (cons (quote A) (cons (quote B) (quote C)))
-#   CML interning (BTreeMap order): A=1 -> 12, B=2 -> 20, C=3 -> 28
+#   current CML PairConstruct IR; interning order: A=1 -> 12, B=2 -> 20, C=3 -> 28
 #   expected transcript: value=(sym1 . (sym2 . sym3))
 #
-# On pre-fix main the hardcoded dispatch (12->A, 20->B) could not name C;
-# it fell through the generic path printing the raw decoded id. This witness
-# locks the current bounded behaviour against future fixture-specific name
-# embeds in ASM transport.
+# This proves the runtime observer independently of the retired source-level
+# SID8 call route. The current PairConstruct mechanism emitter is tested in
+# CML tests/current_x86_observer_emission_test.rs.
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 CML="${CML_BIN:-}"
@@ -32,11 +32,17 @@ fi
 work=$(mktemp -d /tmp/wsm-observer.XXXXXX)
 trap 'rm -rf "$work"' EXIT
 
-src="$work/fixture.lisp"
-printf '(cons (quote A) (cons (quote B) (quote C)))\n' > "$src"
+CML_ROOT="${CML_ROOT:-$(cd "$(dirname "$CML")/../.." && pwd)}"
+if [[ ! -f "$CML_ROOT/Cargo.toml" || ! -f "$CML_ROOT/examples/emit-wsm-os-observer.rs" ]]; then
+  echo "TARGET-OBSERVER-BEHAVIOUR: FAIL (current CML source tree unavailable at $CML_ROOT)" >&2
+  exit 1
+fi
 
-"$CML" x86-asm "$src" > "$work/fixture.s" 2>"$work/cml.err" || {
-  echo "TARGET-OBSERVER-BEHAVIOUR: FAIL (CML compile error)" >&2
+# Emit from the current CML PairConstruct mechanism IR. Do not route through
+# cml x86-asm's historical SID8 surface parser/lowerer.
+cargo run --quiet --release --manifest-path "$CML_ROOT/Cargo.toml" \
+  --example emit-wsm-os-observer > "$work/fixture.s" 2>"$work/cml.err" || {
+  echo "TARGET-OBSERVER-BEHAVIOUR: FAIL (current PairConstruct emitter)" >&2
   cat "$work/cml.err" >&2
   exit 1
 }
