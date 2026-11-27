@@ -1,0 +1,40 @@
+name: FPC x86_64 embedded target probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/probe-fpc-embedded.sh"
+      - "tests/fpc_embedded_probe.pas"
+      - ".github/workflows/fpc-embedded-probe.yml"
+      - "src/linker.ld"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fpc-embedded-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  embedded-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install inspection tools
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            binutils file curl
+      - name: Collect pinned upstream embedded evidence
+        run: timeout 300s bash scripts/probe-fpc-embedded.sh
+      - name: Upload embedded probe evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fpc-embedded-probe-${{ github.sha }}
+          path: target/fpc-embedded-probe/
+          if-no-files-found: warn
+          retention-days: 30
