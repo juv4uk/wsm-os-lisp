@@ -4,7 +4,7 @@
 **Date/Дата**: 2026-11-27
 **Status/Статус**: **PROPOSED** — відповіді власника дано в чаті 2026-11-27; git-ратифікація ще не виконана
 **Deciders/Хто вирішив**: власник (`juv4uk`), directive 2026-11-27; коміт-підпис власника потрібен для `ACCEPTED`
-**Related**: [ADR-005](ADR-005-TRUST-BOUNDARY-ARBITER-NOT-KERNELLESS.md), [ADR-006](ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md), [MMIO-PHYS-MAP-FAIL-CLOSED-EVIDENCE](MMIO-PHYS-MAP-FAIL-CLOSED-EVIDENCE.md), [CAPABILITY-IDENTITY-ADVERSARIAL-EVIDENCE](CAPABILITY-IDENTITY-ADVERSARIAL-EVIDENCE.md), `juv4uk/gp107-nvidia-re` `docs/04-bar-identity.md` (commit `c03a171`)
+**Related**: [ADR-005](ADR-005-TRUST-BOUNDARY-ARBITER-NOT-KERNELLESS.md), [ADR-006](ADR-006-FPC-AS-FOUNDATION-PROPOSAL.md), [MMIO-PHYS-MAP-FAIL-CLOSED-EVIDENCE](MMIO-PHYS-MAP-FAIL-CLOSED-EVIDENCE.md), [CAPABILITY-IDENTITY-ADVERSARIAL-EVIDENCE](CAPABILITY-IDENTITY-ADVERSARIAL-EVIDENCE.md), `juv4uk/gp107-nvidia-re` `docs/04-bar-identity.md` (commits `c03a171`, `2c2b746`)
 
 ---
 
@@ -18,6 +18,7 @@
 | D4 | Порядок: **спершу цей ADR, потім ABI v8→v9** у `wsm-target-contract`. v9 — реалізація задокументованого контракту, а не самостійна правка структур. | Оновлювати ABI окремо від архітектурного обґрунтування. |
 | D5 | Відмова доступу — **зелений негативний свідок** з названим кроком, а не падіння інфраструктури. | Пом'якшувати гейт, щоб отримати green. |
 | D6 | Кожне твердження має стан: `statically proven` / `runtime-proven` / `interpretation` / `string-only` / `UNPROVEN`. | Підміняти інтерпретацію виміром, а гіпотезу — свідком. |
+| D7 | У **hosted Linux під активним `nvidia.ko`** легальний user-space шлях ідентифікації чіпа — `PciConfig` + `RmControl` (або `NvRmChannel`). BAR0/MMIO лишається ізольованою capability лише для firmware/bare-metal seam. | Підміняти RM-канал прямим MMIO або вважати успішний RM-результат правом на `resource0`. |
 
 D1 не винаходить нову capability: у `src/runtime.s` уже існують `wsm_pci_config_capability` (kind 0, nonce `0x150434954346`) і `wsm_mmio_capability` (kind 1, nonce `0x1A0495124347`), а cross-class reuse вже відкидається негативним QEMU-свідком. Цей ADR **формалізує межу**, а не додає механізм.
 
@@ -39,8 +40,11 @@ D1 не винаходить нову capability: у `src/runtime.s` уже іс
 | Причина `EINVAL` — exclusive-володіння BAR0 / iomem-конфлікт із драйвером `nvidia` | **interpretation** | `driver → /sys/bus/pci/drivers/nvidia`; прямо з ядра не перевірено |
 | `0x137000A1` і маска `$FFF00000 → $137` | **string-only** | публічний коментар у `libdrm` `cl0080.h`; на цій машині регістр **не прочитано** |
 | У інвентарі рядків `libcuda.so.580.196.11` немає `BOOT_0`, `PMC`, `NV2080_CTRL_CMD` | **statically proven (string inventory)** | REA/Ghidra 12.2, Evidence `ev_4668ff25…`, `ev_ec1aa014…`, `ev_514422e5…`; це не доведення про довільні байти ELF |
-| У публічних headers R580 немає literals `NV2080_CTRL_CMD_MC_GET_ARCH_INFO` | **static search result** | пошук у `/usr/src/nvidia-580.196.11`; є лише коментарі `NV2080_CTRL_MC_ARCH_INFO_ARCHITECTURE_*` у `common/inc/nv_uvm_types.h`. Приватні RM-headers у цьому дереві відсутні |
-| BOOT0 прочитано на hosted-машині | **UNPROVEN** | жодного позитивного свідка; див. два негативні вище |
+| У локальному дереві `/usr/src/nvidia-580.196.11` немає literals `NV2080_CTRL_CMD_MC_GET_ARCH_INFO`; у публічному SDK `NVIDIA/open-gpu-kernel-modules` і в `gvisor/pkg/abi/nvgpu/ctrl.go:822` він є (`0x20801701`) | **statically proven** | пошук у локальному дереві + публічні/browserable джерела; це ABI-факт, а не вимір на цій машині |
+| Ланцюжок `/dev/nvidia0` → `NV_ESC_SYS_PARAMS` → `0x41` → `GPU_GET_PROBED_IDS(0x214)` → `GPU_ATTACH_IDS(0x215)` → `NV01_DEVICE_0(0x80, deviceId=0)` → `NV20_SUBDEVICE_0(0x2080)` → `MC_GET_ARCH_INFO(0x20801701)`, усі `status=0` | **runtime-proven** | власний LD_PRELOAD-зонд на `cuInit(0)` і канонічний FPC-зонд `03_rm_arch_info.pas`, `gp107-nvidia-re@2c2b746`; маркер гейта `rmarch=runtime-proven` |
+| `arch=0x130`, `impl=0x07`, `rev=0xa1`, `subrev=0x02` через `MC_GET_ARCH_INFO` | **runtime-proven** | той самий FPC-зонд; чотири числа знаходяться у заданих RM-полях, а не в BOOT0 |
+| Зіставлення `0x130 → ARCHITECTURE_GP100`, `0x07 → GPU_IMPLEMENTATION_GP107` | **interpretation** | публічні `ctrl2080mc.h` і `src/common/inc/swref/published/nv_arch.h`; у відкритому R580-заголовку немає імені `NV2080_CTRL_MC_ARCH_INFO_IMPLEMENTATION_GP107`, хоча числа збігаються |
+| BOOT0 прочитано на hosted-машині | **UNPROVEN** | жодного позитивного свідка; RM-канал не є MMIO; див. два негативні вище |
 
 ## 3. What changes / Що змінюється
 
@@ -66,14 +70,17 @@ D1 не винаходить нову capability: у `src/runtime.s` уже іс
 
 Стан володіння (`Exclusive`/`HostedDriver`/`Unknown`) поки **не закодований у v8**. Його кодування — робота ABI v9 (`wsm-target-contract`), і вона не виконується до ратифікації цього ADR. Тому таблиця вище — дизайн-намір, а не опис чинного біта в `runtime.s`.
 
-## 5. Фаза RM-arch_info — окремий research-шлях
+## 5. Фаза RM-arch_info — окремий research-шлях, виконаний
 
-Пропозиція шукати архітектуру/ревізію через `NV_ESC_RM_CONTROL` (клас `0x2080`) приймається як **гіпотеза для окремої фази**, не як доведений факт:
+Фаза 03 більше не є гіпотезою. Вона дала **runtime-proven** ланцюжок у межах прав драйвера, і саме тому D7 формулює `RmControl` як легальний hosted-шлях ідентифікації:
 
-1. Назва `NV2080_CTRL_CMD_MC_GET_ARCH_INFO` не знайдена ні в публічних headers R580, ні в REA-інвентарі рядків libcuda. Поки це не перевірено, писати `03_rm_arch_info.pas` як «доведений шлях» заборонено.
-2. Легальний пошук: REA-перегляд `NV_ESC_RM_CONTROL` уlibcuda + публічні `ctrl2080*.h` + runtime-виклик кандидатів з реєстрацією cmd id і struct layout.
-3. Позитивний результат фази 03 може колись дати **arch/implementation** через RM. Він **не перетворює** BOOT0 у прочитаний: це інший канал, і в таблиці доказів він має лишатися окремим рядком.
-4. Прямий MMIO BOOT0 лишається суто за межею bare-metal/UEFI seam.
+1. **Statically proven:** `NV2080_CTRL_CMD_MC_GET_ARCH_INFO = 0x20801701`; params — `architecture`, `implementation`, `revision` (`NvU32`) і `subRevision` (`NvU8`), C-розмір 16; `GPU_ATTACH_IDS_PARAMS` 132 B; `NV0080_ALLOC_PARAMETERS` 56 B. REA-негатив щодо імені команди в інвентарі рядків libcuda лишається чинним: шлях іде через числові константи.
+2. **Runtime-proven:** власний `LD_PRELOAD`-shim на `ioctl` показав точний порядок викликів під `cuInit(0)`. Дві практичні передумови, які раніше були невідомі: `/dev/nvidia0` має бути відкритий протягом усієї RM-послідовності, а `deviceId` у `NV0080_ALLOC_PARAMETERS` має бути логічним `0`, не PCI `0x1c82`. Після `GPU_ATTACH_IDS` усі кроки дають `status=0`.
+3. **Runtime-proven:** канонічний `pascal/03_rm_arch_info.pas` відтворює той самий ланцюжок власним статичним ELF без libcuda. Гейт `gp107-nvidia-re` тепер вимагає маркер `rmarch=runtime-proven`.
+4. **Interpretation:** причину первинної відмови ядром (`0x1f`/`0x1b`) не доведено. Не доведено й те, що RM внутрішньо не читає BOOT0; ми лише знаємо, що наш і libcuda-виклик отримали arch-info через RM-контроль.
+5. **UNPROVEN / string-only:** прямий MMIO BOOT0 не читався; `0x137000A1` лишається рядком із `libdrm cl0080.h`. Збіг `rev=0xa1` із суфіксом цього рядка — `interpretation`, не доказ регістра.
+
+Отже `RmControl` дає **ідентичність чіпа**, але не видає права на BAR0. Прямий MMIO BOOT0 лишається суто за межею bare-metal/UEFI seam.
 
 ## 6. Fail-closed наслідок
 
@@ -81,10 +88,15 @@ D1 не винаходить нову capability: у `src/runtime.s` уже іс
 
 ## 7. Відкриті питання до власника
 
-1. Чи ратифікувати ADR-007 owner-комітом (або рядком у `docs/decisions/OWNER-CONFIRMATIONS.lisp`), щоб зняти статус `PROPOSED`?
-2. Чи кодувати стан володіння ресурсом (`Exclusive`/`HostedDriver`/`Unknown`) у v9 окремим полем, чи лишити його policy-рівнем без ABI-зміни?
-3. Чи запускати фазу 03 (RM arch info) зараз, чи спершу закрити v8→v9 і лише потім повернутися до RM-дослідження?
-4. Чи потрібен окремий `make gate-root` у `gp107-nvidia-re`, чи достатньо ручного sudo-свідка, як ти рекомендував?
+1. Чи ратифікувати ADR-007 **разом із D7** owner-комітом (або owner-підписаним рядком у `docs/decisions/OWNER-CONFIRMATIONS.lisp`), щоб зняти статус `PROPOSED`?
+2. Чи виправити підпис ADR-006: підтвердити його owner-комітом, чи відкотити до `PROPOSED` і повернути ADR-004 у `ACCEPTED`? Поки це не зроблено, `check-adr-ratification.sh` червоний **за призначенням**.
+3. Чи кодувати стан володіння ресурсом (`Exclusive`/`HostedDriver`/`Unknown`) у v9 окремим полем, чи лишити його policy-рівнем без ABI-зміни?
+4. Фазу 03 і root-свідок вважати виконаними: `03_rm_arch_info.pas` зелений у базовому гейті, `make gate-root` — опційний окремий свідок. Чи потрібно підняти root-свідок у CI — окреме питання, не блокер для ADR.
+
+Поки питання 1 і 2 не вирішені власником, `wsm-target-contract` лишається на v8; механічний v8→v9 не виконується.
+
+Готовий запит із точними рядками для owner-коміту:
+[RATIFICATION-REQUEST-2026-11-27](decisions/RATIFICATION-REQUEST-2026-11-27.md).
 
 ## Українською: одне речення
 
