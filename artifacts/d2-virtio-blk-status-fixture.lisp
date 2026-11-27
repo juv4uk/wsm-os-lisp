@@ -1,5 +1,5 @@
 ((lambda (mmio)
    ((lambda (_)
-      (eq (mmio-read32 mmio 20) 1))
+      (mmio-read32 mmio 20))
     (mmio-write32 mmio 20 1)))
  (mmio-capability))
