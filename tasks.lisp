@@ -411,14 +411,16 @@
 
    ("WSM-OS-FPC-C-FFI-BOUNDARY" .
     ((priority . 8.0)
-     (capabilities . (wsm-os c ffi trust-boundary adr-006 policy))
+     (capabilities . (wsm-os pascal c ffi abi ownership testing))
      (origin . wsm-os-lisp)
      (level . c)
-     (user-journey . ("той, хто додає зовнішню бібліотеку" "перед першим FFI-викликом" "бачить явну межу: C лише під third_party/, решта — відмова збірки" "ABI-невідповідність падає на завантаженні, а не посеред роботи"))
-     (evidence-plan . "a policy record in policy-enforcement.lisp with a gate that re-checks the third_party/ rule")
-     (fail-safely . (("library ABI mismatch" . "fail closed at load") ("C source appears outside third_party/" . "gate fails the build")))
+     (github-issue . 116)
+     (user-journey . ("розробник, який повторно використовує C-компонент" "до першого FFI-виклику" "бачить точний ABI, layout структур, правила ownership/lifetime та поведінку помилок" "невідповідність ABI або некоректний покажчик відхиляється до небезпечного доступу"))
+     (evidence-plan . "Extend the isolated Pascal-to-C witness: scalar ABI, C-compatible struct layout, callbacks, borrowed/owned pointer rules, null/invalid argument negatives, and full edit-build-test timing against C-only implementation. Language choice is component-specific; no directory-based C allowlist.")
+     (fail-safely . (("library ABI mismatch" . "fail closed before invoking the external function") ("borrowed pointer is null or invalid by contract" . "return a named error without dereference") ("ownership/lifetime is ambiguous" . "do not expose the binding until allocator/deallocator contract is explicit")))
      (depends-on . ())
-     (description . "ADR-006 §3.3: decide and enforce what C may cross into the image. Today scripts/check-no-rust.sh allows C only under third_party/; this task turns that into a named policy with a witness (which libraries, which ABI, what happens on a missing symbol) instead of a directory rule.")))
+     (context . "2026-11-27: hosted FPC 3.2.2↔GCC scalar cdecl ABI passed (two i32 args/result 439). Expanded C struct layout, callback and null-argument negatives are committed; awaiting GitHub Actions run 46069934031. This remains hosted Linux evidence, not kernel/freestanding/UEFI ABI.")
+     (description . "Define a narrow, testable Pascal↔C ABI boundary for selected system libraries and components. Specify calling convention, integer widths, C record layout, callback rules, ownership/lifetime, error semantics and negative tests. Reuse existing C libraries where they are the technically sound choice; do not impose a blanket directory or language restriction.")))
 
    ("WSM-OS-FPC-HANDOFF-BOUNDARY" .
     ((priority . 9.7)
