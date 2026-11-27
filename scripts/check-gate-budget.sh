@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Gate-suite budget: the static gates must stay inside a wall-clock ceiling.
+# Gate-suite budget: the static gates (including the open-language/Lazarus pin check) must stay inside a wall-clock ceiling.
 #
 # Why a ceiling and not just a published number: a hook or gate developers wait on
 # gets skipped, and skipping it is a security decision made by fatigue rather than

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Open language policy + exact upstream source pin.
+# Open language policy + exact upstream source pin; no programming language is excluded.
 # Adapted from the pin-consistency pattern in juv4uk/wsm-lazarus/scripts/check-pin.sh.
 fail() { printf 'LANGUAGE-POLICY-FAIL: %s\n' "$1" >&2; exit 1; }
 
@@ -12,7 +12,7 @@ manifest="refs/wsm-lazarus-pin.lisp"
 grep -Fq "No blanket language bans" "$policy" || fail "open language policy statement missing"
 grep -Fq "(production-languages unrestricted)" repo.lisp || fail "repo.lisp still has a language allowlist"
 
-if grep -Eq 'RUST[[:space:]]*=[[:space:]]*0|Rust[^\n]*заборонено|Rust[^\n]*forbidden' AGENTS.md; then
+if grep -Eiq 'RUST[[:space:]]*=[[:space:]]*0|Rust.*(заборонено|forbidden)|C.*лише.*third_party|Pascal.*лише.*src/' AGENTS.md; then
   fail "active agent instructions still contain a Rust/language ban"
 fi
 
