@@ -102,8 +102,6 @@ jobs:
             "semantic_scope": ["D1 EQ", "two-field D3 COND"],
             "machine_scope": ["MMIO capability", "MMIO write32 device_status=1", "MMIO read32 device_status"],
             "device": "QEMU q35 virtio-blk-pci common-config device_status offset 20",
-            "machine_scope": ["MMIO capability", "MMIO write32 device_status=1", "MMIO read32 device_status"],
-            "device": "QEMU q35 virtio-blk-pci common-config device_status offset 20",
             "conformance_note": "The CML SENS submodule is pinned to the 11.8-era API. This is a current-domain D1/COND runtime witness, not a claim of complete SENS Contract 12.0 conformance."
           }
           EOF
