@@ -20,6 +20,8 @@
 | D6 | Кожне твердження має стан: `statically proven` / `runtime-proven` / `interpretation` / `string-only` / `UNPROVEN`. | Підміняти інтерпретацію виміром, а гіпотезу — свідком. |
 | D7 | У **hosted Linux під активним `nvidia.ko`** легальний user-space шлях ідентифікації чіпа — `PciConfig` + `RmControl` (або `NvRmChannel`). BAR0/MMIO лишається ізольованою capability лише для firmware/bare-metal seam. | Підміняти RM-канал прямим MMIO або вважати успішний RM-результат правом на `resource0`. |
 
+**Уточнення нумерації:** `D7` вище — локальний пункт рішення **цього** ADR, а не ратифікований SENS-домен D7. У `juv4uk/sens` ADR-007 «Значення первинне: людські поверхні» має статус `Accepted` з owner-комітами 2026-09-08/13, а `knowledge/d7-keyboard-v2-ratified.json` — `owner-ratified` від 2026-10-13 (7 бітів, 128/128). SENS володіє семантикою; цей ADR лише фіксує межу механізму в `wsm-os-lisp` і **не перератифіковує** SENS D7.
+
 D1 не винаходить нову capability: у `src/runtime.s` уже існують `wsm_pci_config_capability` (kind 0, nonce `0x150434954346`) і `wsm_mmio_capability` (kind 1, nonce `0x1A0495124347`), а cross-class reuse вже відкидається негативним QEMU-свідком. Цей ADR **формалізує межу**, а не додає механізм.
 
 ## 1. Why / Навіщо
@@ -88,7 +90,7 @@ D1 не винаходить нову capability: у `src/runtime.s` уже іс
 
 ## 7. Відкриті питання до власника
 
-1. Чи ратифікувати ADR-007 **разом із D7** owner-комітом (або owner-підписаним рядком у `docs/decisions/OWNER-CONFIRMATIONS.lisp`), щоб зняти статус `PROPOSED`?
+1. Чи ратифікувати **цей локальний** ADR-007 разом із його локальним пунктом D7 owner-комітом (або owner-підписаним рядком у `docs/decisions/OWNER-CONFIRMATIONS.lisp`), щоб зняти статус `PROPOSED`? SENS ADR-007 і SENS D7 уже ратифіковані й не потребують повторного підпису.
 2. Чи виправити підпис ADR-006: підтвердити його owner-комітом, чи відкотити до `PROPOSED` і повернути ADR-004 у `ACCEPTED`? Поки це не зроблено, `check-adr-ratification.sh` червоний **за призначенням**.
 3. Чи кодувати стан володіння ресурсом (`Exclusive`/`HostedDriver`/`Unknown`) у v9 окремим полем, чи лишити його policy-рівнем без ABI-зміни?
 4. Фазу 03 і root-свідок вважати виконаними: `03_rm_arch_info.pas` зелений у базовому гейті, `make gate-root` — опційний окремий свідок. Чи потрібно підняти root-свідок у CI — окреме питання, не блокер для ADR.

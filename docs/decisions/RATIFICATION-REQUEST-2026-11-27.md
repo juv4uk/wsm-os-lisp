@@ -65,13 +65,19 @@ bash scripts/check-adr-ratification.sh
 
 ## 3. Варіант для ADR-007
 
-ADR-007 тепер містить **D7**: у hosted Linux легальний шлях ідентифікації —
-`PciConfig` + `RmControl` / `NvRmChannel`; BAR0/MMIO — окрема capability для
-firmware/bare-metal seam. Це додано на підставі **runtime-proven** зонда
-`gp107-nvidia-re@2c2b746`, але статус лишається `PROPOSED`.
+ADR-007 тепер містить локальний пункт **D7**: у hosted Linux легальний шлях
+ідентифікації — `PciConfig` + `RmControl` / `NvRmChannel`; BAR0/MMIO — окрема
+capability для firmware/bare-metal seam. Це додано на підставі **runtime-proven**
+зонда `gp107-nvidia-re@2c2b746`, але статус лишається `PROPOSED`.
 
-Якщо ти підтверджуєш саме такий склад, зроби owner-коміт, що змінює рядок
-статусу на:
+**Не плутати з SENS:** у `juv4uk/sens` ADR-007 «Значення первинне: людські
+поверхні» вже `Accepted` owner-комітами 2026-09-08/13; `D7` там — ратифікований
+7-бітний домен Text/Data (`knowledge/d7-keyboard-v2-ratified.json`,
+`owner-ratified`, 2026-10-13, 128/128). Цей запит **не** стосується повторної
+ратифікації SENS-семантики й не змінює жодної доменної таблиці.
+
+Якщо ти підтверджуєш саме цей `wsm-os-lisp` ADR із таким локальним пунктом D7,
+зроби owner-коміт, що змінює рядок статусу на:
 
 ```text
 **Status/Статус**: **ACCEPTED** — owner-ратифікація 2026-11-27
