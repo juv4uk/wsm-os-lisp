@@ -9,6 +9,7 @@ on:
       - "tests/fpc_embedded_probe.pas"
       - "tests/fpc_embedded_entry.s"
       - "tests/fpc_embedded_kernel_probe.pas"
+      - "tests/fpc_embedded_efi_abi_stub.s"
       - "scripts/check-fpc-embedded-kernel-probe.sh"
       - "scripts/build-uefi-image.sh"
       - "scripts/run-qemu-uefi.sh"
@@ -39,7 +40,7 @@ jobs:
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             binutils file curl qemu-system-x86 ovmf mtools dosfstools gdisk
-      - name: Collect checksum-pinned FPC embedded compile/link and MS ABI evidence
+      - name: Collect checksum-pinned FPC embedded compile/link and MS ABI evidence (runtime witness)
         run: timeout 300s bash scripts/probe-fpc-embedded.sh
       - name: Prove embedded Pascal unit in UEFI QEMU without RTL stubs
         run: timeout 300s bash scripts/check-fpc-embedded-kernel-probe.sh
