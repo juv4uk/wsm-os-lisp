@@ -5,7 +5,7 @@
 ## Authorities
 
 - **Language meaning:** [SENS Contract 12.0](https://github.com/juv4uk/sens/blob/main/contracts/language-contract-12.lisp).
-- **Machine representation:** [wsm-target-contract](https://github.com/juv4uk/wsm-target-contract), pinned by `target-abi-pin.lisp` to commit `33dea24a949b4e6e0808a6c770a3c9cac63d6765`, ABI version 10.
+- **Machine representation:** [wsm-target-contract](https://github.com/juv4uk/wsm-target-contract), pinned by `target-abi-pin.lisp` to commit `8e2e761661ef2a49901f68c0b2e333b5b06c3f1e`, ABI version 11.
 - **Compiler/lowering:** CML. It lowers admitted SENS identities to the versioned target imports; it does not define language semantics.
 - **Runtime/OS mechanism and execution evidence:** this repository.
 
@@ -28,7 +28,7 @@ Values are 64-bit little-endian words with three low tag bits (mask `7`).
 | capability | `110` | opaque boot-provisioned capability id |
 | boxed | `111` | nonzero session-local handle into runtime-owned boxed values |
 
-The boxed kind discriminant lives inside the boxed object. Active kinds in ABI v10 are `string`, `game-handle`, `rational`, and `predicate-bit`; `SID8`, `Sens8`, and `Function8` are not active identities or executable routes. Historical mentions are provenance only.
+The boxed kind discriminant lives inside the boxed object. Active kinds in ABI v11 are `string`, `game-handle`, `rational`, and `predicate-bit`; `SID8`, `Sens8`, and `Function8` are not active identities or executable routes. Historical mentions are provenance only.
 
 `()` is structural D3:000, not D1:0, not a numeric zero, and not an implicit false predicate result. The legacy `true` tag is reserved and is not a semantic substitute for D1:1.
 
@@ -44,7 +44,7 @@ A PredicateBit is a runtime-owned boxed singleton carrying exactly one bit, eith
 | `wsm_atom_predicate_bit(ctx, value)` | context, value | D1:1 for an admitted atom, D1:0 for a pair |
 | `wsm_eq_predicate_bit(ctx, left, right)` | context, two atoms | D1:1 for exact identity/equality, otherwise D1:0; a pair operand raises named Type |
 
-The runtime exports historical `wsm_atom` and `wsm_eq` symbols for old fixtures and migration comparison only. They return legacy WSM values and are **not** the active Contract 12.0 predicate route. Current CML emission must call the `*_predicate_bit` imports.
+The ABI v11 projection no longer lists `wsm_atom` or `wsm_eq` as runtime imports. The assembly file still exports these legacy symbols temporarily for old fixtures, but they are not part of the active Contract 12.0 ABI and must not be called by current CML. Current lowering calls only the `*_predicate_bit` imports.
 
 Predicate semantics belong to SENS. The runtime only implements the admitted machine boundary: pair-vs-atom classification, atom-only equality, and canonical PredicateBit transport. It does not infer generic truthiness or coerce lists/numbers into predicate answers.
 
@@ -83,7 +83,7 @@ The freestanding P0 profile does not yet claim all of these semantic paths are i
 ## Джерела влади
 
 - **Мовне значення:** [SENS Contract 12.0](https://github.com/juv4uk/sens/blob/main/contracts/language-contract-12.lisp).
-- **Машинне представлення:** [wsm-target-contract](https://github.com/juv4uk/wsm-target-contract), pin у `target-abi-pin.lisp`: commit `33dea24a949b4e6e0808a6c770a3c9cac63d6765`, ABI версії 10.
+- **Машинне представлення:** [wsm-target-contract](https://github.com/juv4uk/wsm-target-contract), pin у `target-abi-pin.lisp`: commit `8e2e761661ef2a49901f68c0b2e333b5b06c3f1e`, ABI версії 10.
 - **Компілятор і lowering:** CML. Він знижує допущені SENS-ідентичності до версійованих target imports, але не визначає семантику мови.
 - **Runtime, ОС і докази виконання:** цей репозиторій.
 
@@ -106,7 +106,7 @@ The freestanding P0 profile does not yet claim all of these semantic paths are i
 | capability | `110` | opaque capability id, виданий під час boot |
 | boxed | `111` | ненульовий session-local handle на runtime-owned boxed value |
 
-Дискримінант boxed-kind зберігається всередині об'єкта. Активні види ABI v10: `string`, `game-handle`, `rational`, `predicate-bit`. `SID8`, `Sens8` і `Function8` не є активними ідентичностями чи виконуваними маршрутами; історичні згадки — лише provenance.
+Дискримінант boxed-kind зберігається всередині об'єкта. Активні види ABI v11: `string`, `game-handle`, `rational`, `predicate-bit`. `SID8`, `Sens8` і `Function8` не є активними ідентичностями чи виконуваними маршрутами; історичні згадки — лише provenance.
 
 `()` — структурне D3:000, а не D1:0, не числовий нуль і не неявна хибна відповідь предиката. Legacy-тег `true` зарезервований і не замінює D1:1.
 
@@ -122,7 +122,7 @@ PredicateBit — runtime-owned boxed singleton із рівно одним біт
 | `wsm_atom_predicate_bit(ctx, value)` | context, value | D1:1 для допущеного атома, D1:0 для пари |
 | `wsm_eq_predicate_bit(ctx, left, right)` | context, два атоми | D1:1 для точної рівності, інакше D1:0; пара спричиняє named Type |
 
-Історичні символи `wsm_atom` і `wsm_eq` залишені для старих fixtures та порівняння під час міграції. Вони повертають legacy WSM-значення й **не є активним шляхом предикатів Contract 12.0**. Поточна генерація CML має викликати `*_predicate_bit`.
+Проєкція ABI v11 більше не містить `wsm_atom` і `wsm_eq` серед runtime imports. Файл assembly тимчасово експортує ці legacy-символи для старих fixtures, але вони не належать до активного ABI Contract 12.0 і не можуть викликатися сучасним CML. Поточний lowering викликає лише імпорти `*_predicate_bit`.
 
 Семантика предикатів належить SENS. Runtime реалізує лише допущену машинну межу: класифікацію пара/атом, рівність лише атомів і канонічне перенесення PredicateBit. Він не виводить загальну truthiness і не перетворює списки чи числа на відповіді предиката.
 
