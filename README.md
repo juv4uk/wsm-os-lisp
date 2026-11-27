@@ -6,11 +6,9 @@
 > **KEEP REPOSITORIES DISTINCT:** `wsm-os` (`juv4uk/wsm-os`) remains a separate physical-platform research laboratory for `juv4uk/wsm`; this repository does not absorb or redefine that project's scope. `wsm-os-lisp` continues its own OS/kernel roadmap under issue [#12](https://github.com/juv4uk/wsm-os-lisp/issues/12).
 
 Research and executable prototypes for a WSM-native Lisp machine control target.
-The architecture is strictly **Pure Lisp + x86-64 Assembly (Zero Rust, Zero C in production)** per [ADR-004](docs/ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md).
+The architecture has **no blanket language bans**. The active owner directive and code-reuse policy are recorded in [ADR-009](docs/ADR-009-OPEN-LANGUAGE-AND-CODE-REUSE.md); [ADR-004](docs/ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md) is historical and does not prohibit Rust, C, Pascal, Assembly, or other suitable languages.
 
-The project starts with a clear, verified baseline: boot on UEFI, establish a
-minimal System V AMD64 assembly runtime (`src/runtime.s`), execute compiled WSM expressions,
-and prove execution parity against canonical SENS-owned semantic witnesses in QEMU and on real hardware.
+The project starts from a verified UEFI + System V AMD64 baseline and evolves toward SENS Contract 12.0. No programming language is prohibited by name: each component is selected by ABI fit, reuse, maintainability, and measured evidence. The current boot/runtime mechanism is assembly; that is an implementation fact, not a language restriction. Contract 12.0 migration status and remaining compiler/runtime gaps are recorded in [docs/TARGET-ABI.md](docs/TARGET-ABI.md) and issue [#109](https://github.com/juv4uk/wsm-os-lisp/issues/109).
 
 
 ## Goal
@@ -25,10 +23,10 @@ pinned artifact. Hardware/platform research and evolution belong to the
 separate `wsm-os` project, not to this repository.
 
 That one machine is a graduation target, not the boundary of the driver
-architecture. [ADR-004](docs/ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md)'s
-pure Lisp + x86-64 assembly model (irreducible machine primitives in ASM
-below, pure Lisp system semantics & device policy above, zero Rust in production)
-is deliberately not specialized to this one board or this one CPU generation:
+architecture. The target ABI and capability boundary are deliberately not
+specialized to this one board or this one CPU generation. Components may use
+Assembly, Lisp, Pascal, C, Rust, or another language when the choice is justified
+by measured performance, ABI safety, code reuse, and evidence:
 a driver written against that capability boundary should have no reason to
 assume Skylake, H170, or any detail specific to the owner's machine. A
 different physical platform may require different capability provisioning, but
@@ -142,7 +140,7 @@ This is `QEMU-BOOT-PARITY`, not a physical-hardware claim.
 > **РЕПОЗИТОРІЇ ЗАЛИШАЮТЬСЯ ОКРЕМИМИ:** `wsm-os` (`juv4uk/wsm-os`) залишається окремою лабораторією дослідження фізичної платформи для `juv4uk/wsm`; цей репозиторій не поглинає й не перевизначає її межі. Власний roadmap ОС/ядра `wsm-os-lisp` ведеться в issue [#12](https://github.com/juv4uk/wsm-os-lisp/issues/12).
 
 Дослідження та виконувані прототипи контрольного таргета WSM-нативної Lisp-машини.
-Архітектура є виключно **Чистий Lisp + x86-64 асемблер (нуль Rust, нуль C у production)** згідно з [ADR-004](docs/ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md).
+**Загальних заборон на мови програмування немає.** Чинна директива власника та правила повторного використання коду зафіксовані в [ADR-009](docs/ADR-009-OPEN-LANGUAGE-AND-CODE-REUSE.md); [ADR-004](docs/ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md) є історичним рішенням і більше не забороняє Rust, C, Pascal, Assembly чи інші технічно придатні мови.
 
 Проєкт починається з чіткого верифікованого фундаменту: завантаження через UEFI,
 встановлення мінімального асемблерного рантайму System V AMD64 (`src/runtime.s`), виконання
@@ -163,10 +161,10 @@ per [docs/QEMU-LOCAL-RUN.md](docs/QEMU-LOCAL-RUN.md); фізичний бут �
 а не цьому репозиторію.
 
 Ця одна машина — graduation-ціль, а не межа драйверної архітектури.
-Модель чистого Lisp + x86-64 асемблера [ADR-004](docs/ADR-004-LISP-ASSEMBLY-PURE-ARCHITECTURE.md)
-(незвідні машинні примітиви в асемблері внизу, системна семантика та політика
-драйверів у Lisp нагорі, нуль Rust у production) свідомо не спеціалізована
-під цю плату чи це покоління CPU: драйвер, написаний проти цієї capability-межі,
+Цільовий ABI та capability-межа свідомо не спеціалізовані
+під цю плату чи це покоління CPU. Для кожного компонента можна обрати
+Assembly, Lisp, Pascal, C, Rust або іншу мову за виміряною швидкодією,
+безпекою ABI, повторним використанням коду та доказами: драйвер, написаний проти цієї capability-межі,
 не повинен мати причин припускати Skylake, H170 чи будь-яку деталь, властиву
 саме машині власника. Інша фізична платформа може вимагати іншого
 capability provisioning, але platform-research зміни мають жити в окремій
