@@ -836,7 +836,51 @@ wsm_atom:
     ret
 
 # ---------------------------------------------------------------------------
-# Target ABI v8 PredicateBit representation-only accessors.
+# Contract 12.0 D1 predicate imports.
+#
+# These are the active CML routes. They return the exact runtime-owned
+# PredicateBit singleton, never legacy WSM T/NIL or a host boolean.
+# ATOM? is true for every admitted non-pair atom (including structural NIL).
+# EQ? accepts atoms only; a pair operand is a named Type condition.
+# ---------------------------------------------------------------------------
+.globl wsm_atom_predicate_bit
+.type wsm_atom_predicate_bit, @function
+wsm_atom_predicate_bit:
+    movq %rsi, %rax
+    andq $WSM_TAG_MASK, %rax
+    cmpq $WSM_TAG_CONS, %rax
+    je .Latom_predicate_no
+    jmp wsm_predicate_bit_1
+.Latom_predicate_no:
+    jmp wsm_predicate_bit_0
+
+.globl wsm_eq_predicate_bit
+.type wsm_eq_predicate_bit, @function
+wsm_eq_predicate_bit:
+    movq %rsi, %rax
+    andq $WSM_TAG_MASK, %rax
+    cmpq $WSM_TAG_CONS, %rax
+    je .Leq_predicate_left_type
+    movq %rdx, %rax
+    andq $WSM_TAG_MASK, %rax
+    cmpq $WSM_TAG_CONS, %rax
+    je .Leq_predicate_right_type
+    cmpq %rsi, %rdx
+    jne .Leq_predicate_no
+    jmp wsm_predicate_bit_1
+.Leq_predicate_no:
+    jmp wsm_predicate_bit_0
+.Leq_predicate_left_type:
+    movq %rsi, %rdx
+    movl $ERR_TYPE, %esi
+    jmp wsm_fail
+.Leq_predicate_right_type:
+    movq %rdx, %rdx
+    movl $ERR_TYPE, %esi
+    jmp wsm_fail
+
+# ---------------------------------------------------------------------------
+# Target ABI v10 PredicateBit representation-only accessors.
 #
 # These do not define truth, branch selection or predicate semantics.
 # They only expose two canonical boxed singleton words and recover exact bit
