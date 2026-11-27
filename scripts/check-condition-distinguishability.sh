@@ -31,6 +31,16 @@ else
   exit 1
 fi
 
+if [[ -n "${CML_SOURCE_DIR:-}" ]]; then
+  CML_ROOT="$CML_SOURCE_DIR"
+else
+  CML_ROOT="$(cd "$(dirname "$CML")/../.." && pwd)"
+fi
+if [[ ! -f "$CML_ROOT/Cargo.toml" || ! -f "$CML_ROOT/tests/wsm_os_current_x86_bridge_test.rs" ]]; then
+  echo "CONDITION-DISTINGUISHABILITY: FAIL (cannot resolve CML source tree; set CML_SOURCE_DIR)" >&2
+  exit 1
+fi
+
 work=$(mktemp -d /tmp/wsm-cond-dist.XXXXXX)
 trap 'rm -rf "$work"' EXIT
 
@@ -71,8 +81,32 @@ run_fixture() { # <fixture> <transcript> [with-device]
   printf '%s\n' "$observed"
 }
 
-echo "--- Lisp semantic failure ---"
-semantic="$(run_fixture d9-lisp-type-failure-fixture d9-lisp-type-failure-fixture-qemu-serial-transcript.txt 0)" || true
+echo "--- Current SENS semantic failure ---"
+semantic_asm="$work/current-sens-type-failure.s"
+(
+  cd "$CML_ROOT"
+  CML_CURRENT_SENS_TYPE_FAILURE_ASM_OUT="$semantic_asm" \
+    cargo test --test wsm_os_current_x86_bridge_test \
+      current_sens_selector_on_fixnum_emits_typed_runtime_failure \
+      -- --exact --nocapture
+) || {
+  fail "current SENS SelectorHead did not emit a verified x86 runtime object"
+}
+semantic=""
+if [[ -s "$semantic_asm" ]]; then
+  as --64 "$semantic_asm" -o "$work/current-sens-type-failure.o"
+  bash "$ROOT_DIR/scripts/build-uefi-image.sh" \
+    "$work/current-sens-type-failure.o" "$work/current-sens-type-failure.img" >/dev/null
+  semantic="$(bash "$ROOT_DIR/scripts/run-qemu-uefi.sh" \
+    "$work/current-sens-type-failure.img" \
+    WSM_QEMU_TRANSCRIPT="$ROOT_DIR/artifacts/d9-lisp-type-failure-fixture-qemu-serial-transcript.txt" \
+    2>"$work/current-sens-type-failure.qemu.err")" || {
+      fail "current SENS Type fixture did not reach the structured runtime condition"
+      cat "$work/current-sens-type-failure.qemu.err" >&2
+    }
+else
+  fail "current SENS Type fixture did not produce assembly"
+fi
 if ! grep -q 'kind=TYPE source=0 value=91' <<<"$semantic"; then
   fail "semantic failure is not reported as kind=TYPE source=0 value=91"
 fi
