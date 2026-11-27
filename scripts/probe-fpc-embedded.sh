@@ -98,12 +98,21 @@ if [ "$COMPILE_RC" -eq 0 ] && [ -f "$OBJ" ]; then
   if [ -f "$FPC_ASM" ]; then
     cp "$FPC_ASM" "$OUT/fpc-generated-assembly.s"
     ABI_ASM_OK=1
-    for pattern in 
-      if ! grep -Fq "$pattern" "$FPC_ASM"; then
+    require_abi_pattern() {
+      local pattern="$1"
+      if ! grep -Eq "$pattern" "$FPC_ASM"; then
         echo "MS_ABI_PATTERN_MISSING=$pattern"
         ABI_ASM_OK=0
       fi
-    done
+    }
+    require_abi_pattern 'movq[[:space:]]+\\$4,%r9'
+    require_abi_pattern 'movq[[:space:]]+\\$3,%r8'
+    require_abi_pattern 'movq[[:space:]]+\\$2,%rdx'
+    require_abi_pattern 'movq[[:space:]]+\\$1,%rcx'
+    require_abi_pattern 'call[[:space:]]+\\*'
+    require_abi_pattern 'movq[[:space:]]+%rcx,-8\\(%rbp\\)'
+    require_abi_pattern 'movq[[:space:]]+%rdx,-16\\(%rbp\\)'
+    require_abi_pattern 'leaq[[:space:]]+-80\\(%rsp\\),%rsp'
     if [ "$ABI_ASM_OK" -eq 1 ]; then
       echo "MS_ABI_DISASSEMBLY=PASS"
     else
