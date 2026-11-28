@@ -77,7 +77,7 @@ begin
     Exit;
   end;
 
-  if Tag <> WSM_BOOTINFO_OPTIONAL_SOME_TAGthen
+  if Tag <> WSM_BOOTINFO_OPTIONAL_SOME_TAG then
   begin
     DiagnosticValue := QWord(Tag);
     Result := WSM_BOOTINFO_STATUS_INVALID_TAG;
