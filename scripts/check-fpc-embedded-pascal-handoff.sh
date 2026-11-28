@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# P1 test-only witness: the embedded Pascal UNIT reads BootInfo itself,
-# compares with the independent Assembly reading, and fails closed on defects.
-# No FPC program startup or no-op RTL stubs are linked.
+# P1 test-only witness: the embedded Pascal UNIT uses the reusable wsm.bootinfo
+# decoder, compares with the independent Assembly reading, and fails closed.
+# No FPC PROGRAM startup or no-op RTL stubs are linked.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -12,6 +12,7 @@ OUT="$ROOT/target/fpc-embedded-pascal-handoff"
 COMPILER="$BASE/install/bin/x86_64-linux/ppcrossx64"
 RTL_DIR="$BASE/install/units/x86_64-embedded/rtl"
 OBJ="$OUT/units/pascal_handoff.o"
+BOOTINFO_OBJ="$OUT/units/wsm.bootinfo.o"
 FIXTURE="$OUT/pascal-handoff-fixture.o"
 
 fail() {
@@ -24,21 +25,28 @@ fail() {
 rm -rf "$OUT"
 mkdir -p "$OUT/units" "$OUT/bin"
 
-"$COMPILER" -Tembedded -Px86_64 -n -Fu"$RTL_DIR" \
+"$COMPILER" -Tembedded -Px86_64 -n -Fu"$RTL_DIR" -Fu"$ROOT/src" \
   -FU"$OUT/units" -FE"$OUT/bin" -Cn -O- -al \
   src/pascal_handoff.pas > "$OUT/compile.txt" 2>&1 \
   || { cat "$OUT/compile.txt" >&2; fail "embedded handoff unit compile failed"; }
 
 [[ -s "$OBJ" ]] || fail "pascal_handoff.o missing"
-file "$OBJ" > "$OUT/object-format.txt"
-nm -g "$OBJ" > "$OUT/object-global-symbols.txt"
-nm -u "$OBJ" > "$OUT/object-undefined-symbols.txt" 2>&1 || true
-actual_undefined="$(awk '{print $2}' "$OUT/object-undefined-symbols.txt" | sort | tr '\n' ' ')"
-expected_undefined="$(printf '%s\n' 'RTTI_$SYSTEM_$$_BYTE$indirect' saved_boot_info wsm_cons wsm_fail_src wsm_target_phys_mem_offset | sort | tr '\n' ' ')"
-[[ "$actual_undefined" == "$expected_undefined" ]] || {
-  cat "$OUT/object-undefined-symbols.txt" >&2
-  fail "unexpected handoff unit imports"
-}
+[[ -s "$BOOTINFO_OBJ" ]] || fail "wsm.bootinfo.o missing"
+ld -r "$BOOTINFO_OBJ" "$OBJ" -o "$FIXTURE" \
+  || fail "could not combine the Pascal units into the embedded handoff fixture"
+file "$FIXTURE" > "$OUT/object-format.txt"
+nm -g "$FIXTURE" > "$OUT/object-global-symbols.txt"
+nm -u "$FIXTURE" > "$OUT/object-undefined-symbols.txt" 2>&1 || true
+while read -r _binding symbol _rest; do
+  case "$symbol" in
+    saved_boot_info|wsm_target_phys_mem_offset|wsm_cons|wsm_fail_src|RTTI_\$SYSTEM_\$\$_BYTE\$indirect)
+      ;;
+    *)
+      cat "$OUT/object-undefined-symbols.txt" >&2
+      fail "unexpected import from the combined Pascal units: $symbol"
+      ;;
+  esac
+done < "$OUT/object-undefined-symbols.txt"
 
 for symbol in saved_boot_info wsm_target_phys_mem_offset wsm_cons wsm_fail_src; do
   grep -Fq "$symbol" "$OUT/object-undefined-symbols.txt" \
@@ -50,7 +58,7 @@ for forbidden in fpc_initializeunits fpc_do_exit INIT\$_\$SYSTEM FINALIZE\$_\$OB
   fi
 done
 
-echo "EMBEDDED_HANDOFF_UNIT_COMPILE=PASS"
+echo "EMBEDDED_HANDOFF_UNITS=PASS"
 echo "HANDOFF_EXTERNALS=saved_boot_info,wsm_target_phys_mem_offset,wsm_cons,wsm_fail_src"
 
 run_cell() {
@@ -65,7 +73,7 @@ run_cell() {
   if [[ -n "$env_name" ]]; then
     build_env+=("$env_name=1")
   fi
-  env "${build_env[@]}" timeout 180s bash scripts/build-uefi-image.sh "$OBJ" "$image" > "$OUT/$cell-build.txt" \
+  env "${build_env[@]}" timeout 180s bash scripts/build-uefi-image.sh "$FIXTURE" "$image" > "$OUT/$cell-build.txt" \
     || fail "image build failed: $cell"
 
   nm -u target/kernel-x86_64 > "$OUT/$cell-kernel-undefined.txt" 2>&1 || true
@@ -76,7 +84,7 @@ run_cell() {
 
   WSM_QEMU_TRANSCRIPT="$ROOT/$transcript" \
   WSM_QEMU_RAW_SERIAL_COPY="$log" \
-    timeout 90s bash scripts/run-qemu-uefi.sh "$image" > "$OUT/$cell-qemu.stdout" 2> "$OUT/$cell-qemu.stderr" \
+    timeout 90s bash scripts/run-qemu-uefi.sh "$image" > "$OUT/$cell-qemu-stdout" 2> "$OUT/$cell-qemu.stderr" \
     || {
       cat "$OUT/$cell-qemu.stdout" "$OUT/$cell-qemu.stderr" >&2
       [[ ! -f "$log" ]] || cat "$log" >&2

@@ -94,3 +94,22 @@ Pascal тепер сам читає `BootInfo`, сам вирішує, чи за
 `Some` зі нулем), а четверта перевірка ловить розбіжність між Pascal і
 асемблером у читанні того самого запису — тобто межа передачі керування більше
 не «домовленість у документі», а виконувана умова з чотирма свідками.
+
+
+## 7. Повторно використовуваний FPC decoder
+
+Декодування винесено з тестового `pascal_handoff` в окремий unit
+[`wsm.bootinfo`](FPC-BOOTINFO-PACKAGE.md). Тепер його API повертає фіксований
+Byte-status і два вихідні слова: декодований physical-memory offset та
+діагностичне значення. Unit не викликає Assembly failure handler і не містить
+залежностей від SENS/Core. Адаптер `pascal_handoff` лише зіставляє статуси з
+чинними `HAN_ERR_*` кодами та звіряє offset з незалежним ASM reader.
+
+`tests/fpc/test_wsm_bootinfo.lpr` перевіряє п'ять hosted випадків: відсутній
+покажчик, `None`, невирівняний `Some(nonzero)` з little-endian декодуванням,
+невідомий tag і `Some(0)`. Скрипт `check-pascal-handoff.sh` запускає ці тести
+до QEMU, а потім лінкує обидва Pascal unit objects в один handoff fixture.
+Embedded workflow робить те саме з checksum-pinned `x86_64-embedded` compiler.
+
+Це перше виділення повторно використовуваного Pascal mechanism unit, а не
+дозвіл переводити BootInfo discovery, entry, stack або runtime з ASM у Pascal.
