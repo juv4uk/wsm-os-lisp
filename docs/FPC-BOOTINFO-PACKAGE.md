@@ -62,6 +62,10 @@ ASM-символи. Hosted-тести перевіряють API окремо; L
 UEFI/QEMU гейти перевіряють той самий unit у складі handoff fixture. Перевірка
 не означає, що ASM production entry/runtime уже перенесено на Pascal.
 
+Адаптер `pascal_handoff` зіставляє повернуті статуси послідовними умовами,
+а не Pascal `case` labels: так зберігається сумісність FPC 3.2.2 і pinned
+embedded compiler з типізованими константами статусу.
+
 ## Відтворення
 
 ```sh

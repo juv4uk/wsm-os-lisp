@@ -46,17 +46,17 @@ begin
     diagnostic
   );
 
-  case status of
-    WSM_BOOTINFO_STATUS_OK:
-      ;
-    WSM_BOOTINFO_STATUS_MISSING:
-      wsm_fail_src(ctx, ERR_ABI, HAN_ERR_MISSING, diagnostic);
-    WSM_BOOTINFO_STATUS_INVALID_TAG:
-      wsm_fail_src(ctx, ERR_ABI, HAN_ERR_TAG, diagnostic);
-    WSM_BOOTINFO_STATUS_ZERO_OFFSET:
-      wsm_fail_src(ctx, ERR_ABI, HAN_ERR_ZERO, diagnostic);
-  else
-    wsm_fail_src(ctx, ERR_ABI, HAN_ERR_TAG, TWord(status));
+  { Avoid case labels on exported typed constants across FPC targets. }
+  if status <> WSM_BOOTINFO_STATUS_OK then
+  begin
+    if status = WSM_BOOTINFO_STATUS_MISSING then
+      wsm_fail_src(ctx, ERR_ABI, HAN_ERR_MISSING, diagnostic)
+    else if status = WSM_BOOTINFO_STATUS_INVALID_TAG then
+      wsm_fail_src(ctx, ERR_ABI, HAN_ERR_TAG, diagnostic)
+    else if status = WSM_BOOTINFO_STATUS_ZERO_OFFSET then
+      wsm_fail_src(ctx, ERR_ABI, HAN_ERR_ZERO, diagnostic)
+    else
+      wsm_fail_src(ctx, ERR_ABI, HAN_ERR_TAG, TWord(status));
   end;
 
   if offset <> wsm_target_phys_mem_offset then
